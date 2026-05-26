@@ -396,6 +396,55 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .btn-sp-reset:hover { border-color: var(--ink-lt); color: var(--navy); }
 
+/* ── SPLIT BUTTON ── */
+.split-btn-wrap {
+  position: relative; display: inline-flex; align-items: stretch;
+  border-radius: var(--r); box-shadow: 0 2px 10px rgba(154,110,16,.3);
+}
+.split-btn-main {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 20px; border-radius: var(--r) 0 0 var(--r);
+  background: var(--gold); color: #fff;
+  font-family: var(--sans); font-size: 14px; font-weight: 600;
+  cursor: pointer; border: none; transition: background .16s; white-space: nowrap;
+}
+.split-btn-main:hover { background: var(--gold-h); }
+.split-btn-arrow {
+  display: flex; align-items: center; justify-content: center;
+  width: 38px; padding: 0; flex-shrink: 0;
+  border-radius: 0 var(--r) var(--r) 0;
+  background: var(--gold); color: #fff;
+  border: none; border-left: 1px solid rgba(255,255,255,.3);
+  font-size: 13px; cursor: pointer; transition: background .16s;
+}
+.split-btn-arrow:hover { background: var(--gold-h); }
+.split-dropdown {
+  display: none; position: absolute; top: calc(100% + 6px); left: 0;
+  min-width: 230px; z-index: 100;
+  background: var(--white); border: 1px solid var(--navy);
+  border-radius: var(--rl); box-shadow: var(--sh-lg); overflow: hidden;
+}
+.split-dropdown.open { display: block; }
+.split-drop-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 11px 16px; background: none; border: none;
+  cursor: pointer; font-family: var(--sans); font-size: 14px; color: var(--navy);
+  text-align: left; transition: background .12s;
+}
+.split-drop-item:hover { background: var(--paper); }
+.split-drop-item + .split-drop-item { border-top: 1px solid var(--rule); }
+@media (max-width: 600px) {
+  .split-btn-wrap { width: 100%; }
+  .split-btn-main { flex: 1; }
+}
+/* ── ADVOKÁT CLEAR LINK ── */
+.btn-clear-storage {
+  background: none; border: none; cursor: pointer; padding: 0;
+  font-family: var(--sans); font-size: 11px; color: var(--ink-fnt);
+  text-decoration: none; display: inline;
+}
+.btn-clear-storage:hover { color: var(--ink-lt); }
+
 /* ── DIAGRAM HIT + HIGHLIGHT ── */
 .sp-input.sp-highlighted { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(154,110,16,.15); background: var(--white); }
 
@@ -475,6 +524,9 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
               </div>
             </div>
           </div>
+          <div style="margin-top:6px;text-align:right;">
+            <button class="btn-clear-storage" onclick="clearAdvokatStorage()">Vymazat uložené údaje</button>
+          </div>
         </div>
 
         <!-- Upload -->
@@ -503,17 +555,20 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
             <strong>Před stažením vyplňte:</strong>
             <ul id="validationList"></ul>
           </div>
-          <div class="btn-row">
-            <button class="btn-download" onclick="downloadDocx().catch(e => showToast('Chyba: ' + (e?.message || e)))">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M8 2v8M5 7l3 3 3-3"/><rect x="2.5" y="11" width="11" height="2.5" rx="1"/>
-              </svg>
-              Stáhnout doložku (.docx)
-            </button>
-            <button class="btn-print" onclick="openPrintFlow()" aria-label="Tisknout do knihy">
+          <div class="split-btn-wrap" id="splitBtnWrap">
+            <button class="split-btn-main" onclick="openPrintFlow()">
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="7" rx="1"/><path d="M5 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M5 11h6"/></svg>
               Tisknout do knihy
             </button>
+            <button class="split-btn-arrow" onclick="toggleSplitMenu(event)" aria-label="Více možností" aria-haspopup="true">▾</button>
+            <div class="split-dropdown" id="splitDropdown" role="menu">
+              <button class="split-drop-item" role="menuitem" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)));closeSplitMenu()">
+                📄 Stáhnout doložku (.docx)
+              </button>
+              <button class="split-drop-item" role="menuitem" onclick="openPrintFlow();closeSplitMenu()">
+                🖨 Tisknout do knihy
+              </button>
+            </div>
           </div>
           <div class="format-panel" id="formatPanel">
             <div class="format-panel-title">Jaké etikety používáte?</div>
@@ -765,7 +820,19 @@ if ('serviceWorker' in navigator) {
 // ── Init ──────────────────────────────────────────────────────────
 function init() {
   prefillDates();
+  try {
+    const saved = JSON.parse(localStorage.getItem('legalid_advokat') || 'null');
+    if (saved) {
+      if (saved.jmeno)       document.getElementById('aJmeno').value = saved.jmeno;
+      if (saved.role)        document.getElementById('aRole').value = saved.role;
+      if (saved.ev_cislo)    document.getElementById('aEvCislo').value = saved.ev_cislo;
+      if (saved.cislo_knihy) document.getElementById('aCisloKnihy').value = saved.cislo_knihy;
+      if (saved.sidlo)       document.getElementById('aSidlo').value = saved.sidlo;
+      updateAdvokat();
+    }
+  } catch {}
   document.getElementById('fileInput').addEventListener('change', e => handleFiles(e.target.files));
+  document.addEventListener('click', () => closeSplitMenu());
   updatePreview();
   initPrintOffset();
 }
@@ -777,7 +844,22 @@ function updateAdvokat() {
   advokat.ev_cislo    = document.getElementById('aEvCislo').value.trim();
   advokat.cislo_knihy = document.getElementById('aCisloKnihy').value.trim();
   advokat.sidlo       = document.getElementById('aSidlo').value.trim();
+  localStorage.setItem('legalid_advokat', JSON.stringify({
+    jmeno: advokat.jmeno, role: advokat.role, ev_cislo: advokat.ev_cislo,
+    cislo_knihy: advokat.cislo_knihy, sidlo: advokat.sidlo,
+  }));
   updatePreview();
+}
+
+function clearAdvokatStorage() {
+  localStorage.removeItem('legalid_advokat');
+  ['aJmeno','aRole','aEvCislo','aCisloKnihy','aSidlo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  advokat = { jmeno: '', role: '', ev_cislo: '', cislo_knihy: '', sidlo: '' };
+  updatePreview();
+  showToast('Uložené údaje advokáta smazány');
 }
 
 // ── Upload ────────────────────────────────────────────────────────
@@ -1285,6 +1367,15 @@ function onSettingsInput() {
   s.border = document.getElementById('sp_border')?.checked ?? s.border;
   renderStitek(s);
   renderDiagram(s);
+}
+
+// ── SPLIT MENU ────────────────────────────────────────────────────
+function toggleSplitMenu(e) {
+  e.stopPropagation();
+  document.getElementById('splitDropdown').classList.toggle('open');
+}
+function closeSplitMenu() {
+  document.getElementById('splitDropdown').classList.remove('open');
 }
 
 // ── DIAGRAM ───────────────────────────────────────────────────────

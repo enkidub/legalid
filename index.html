@@ -88,13 +88,14 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); li
 
 /* ── FORM ── */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.form-group { display: flex; flex-direction: column; }
+.form-group { display: flex; flex-direction: column; min-width: 0; }
 .form-group.full { grid-column: 1 / -1; }
 .form-label { font-size: 10px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-lt); margin-bottom: 5px; }
 .form-input {
-  padding: 9px 12px; border-radius: var(--r); border: 1.5px solid var(--rule);
+  width: 100%; padding: 9px 12px; border-radius: var(--r); border: 1.5px solid var(--rule);
   font-family: var(--sans); font-size: 13px; color: var(--ink);
   background: var(--paper); transition: border-color .14s, box-shadow .14s; outline: none;
+  min-width: 0;
 }
 .form-input:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(11,25,41,.08); background: var(--white); }
 .form-input.warn { border-color: #d97706; }
@@ -225,6 +226,52 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   body { padding-bottom: env(safe-area-inset-bottom); }
 }
+
+/* ── PRINT BUTTON ── */
+.btn-row { display: flex; gap: 10px; align-items: stretch; }
+.btn-print {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 20px; border-radius: var(--r);
+  background: transparent; color: var(--navy);
+  border: 1.5px solid var(--navy);
+  font-family: var(--sans); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .16s; white-space: nowrap; flex-shrink: 0;
+}
+.btn-print:hover { background: var(--navy); color: #fff; }
+.btn-print:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+@media (max-width: 600px) {
+  .btn-row { flex-direction: column; }
+  .btn-print { width: 100%; justify-content: center; flex-shrink: unset; }
+}
+
+/* ── FORMAT PANEL ── */
+.format-panel {
+  display: none; margin-top: 12px;
+  background: var(--white); border: 1px solid var(--rule);
+  border-radius: var(--rl); padding: 18px 20px;
+  box-shadow: var(--sh);
+}
+.format-panel.open { display: block; }
+.format-panel-title { font-size: 14px; font-weight: 600; color: var(--navy); margin-bottom: 14px; }
+.format-cards { display: flex; gap: 10px; }
+@media (max-width: 600px) { .format-cards { flex-direction: column; } }
+.format-card {
+  flex: 1; min-height: 80px; padding: 14px 12px; border-radius: var(--r);
+  border: 1.5px solid var(--rule); cursor: pointer;
+  background: var(--white); transition: border-color .14s, background .14s;
+  display: flex; flex-direction: column; gap: 5px; text-align: left;
+}
+.format-card:hover { border-color: var(--navy); background: rgba(11,25,41,.04); }
+.format-card.selected { border-color: var(--navy); background: rgba(11,25,41,.05); }
+.format-card:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+.format-card-name { font-size: 14px; font-weight: 600; color: var(--navy); }
+.format-card-desc { font-size: 11px; color: var(--ink-lt); line-height: 1.4; }
+.format-panel-footer { margin-top: 14px; display: flex; justify-content: flex-end; }
+.btn-panel-close {
+  font-size: 13px; font-weight: 500; color: var(--ink-lt);
+  background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: var(--r);
+}
+.btn-panel-close:hover { color: var(--navy); background: var(--paper); }
 </style>
 </head>
 <body>
@@ -313,12 +360,38 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
             <strong>Před stažením vyplňte:</strong>
             <ul id="validationList"></ul>
           </div>
-          <button class="btn-download" onclick="downloadDocx().catch(e => showToast('Chyba: ' + (e?.message || e)))">
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M8 2v8M5 7l3 3 3-3"/><rect x="2.5" y="11" width="11" height="2.5" rx="1"/>
-            </svg>
-            Stáhnout doložku (.docx)
-          </button>
+          <div class="btn-row">
+            <button class="btn-download" onclick="downloadDocx().catch(e => showToast('Chyba: ' + (e?.message || e)))">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M8 2v8M5 7l3 3 3-3"/><rect x="2.5" y="11" width="11" height="2.5" rx="1"/>
+              </svg>
+              Stáhnout doložku (.docx)
+            </button>
+            <button class="btn-print" onclick="openPrintFlow()" aria-label="Tisknout do knihy">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="7" rx="1"/><path d="M5 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M5 11h6"/></svg>
+              Tisknout do knihy
+            </button>
+          </div>
+          <div class="format-panel" id="formatPanel">
+            <div class="format-panel-title">Jaké etikety používáte?</div>
+            <div class="format-cards">
+              <button class="format-card" data-format="standard" onclick="selectFormat('standard')" aria-label="210 × 40 mm, Nejběžnější — Avery, Logo">
+                <span class="format-card-name">210 × 40 mm</span>
+                <span class="format-card-desc">Nejběžnější — Avery, Logo</span>
+              </button>
+              <button class="format-card" data-format="dolozky" onclick="selectFormat('dolozky')" aria-label="195 × 37 mm, Pro etikety s okraji">
+                <span class="format-card-name">195 × 37 mm</span>
+                <span class="format-card-desc">Pro etikety s okraji</span>
+              </button>
+              <button class="format-card" data-format="custom" onclick="selectFormat('custom')" aria-label="Vlastní rozměry">
+                <span class="format-card-name">Vlastní rozměry</span>
+                <span class="format-card-desc">Nastavím si sám →</span>
+              </button>
+            </div>
+            <div class="format-panel-footer">
+              <button class="btn-panel-close" onclick="closeFormatPanel()" aria-label="Zavřít panel výběru formátu">Zavřít</button>
+            </div>
+          </div>
         </div>
 
         <!-- Údaje z OP -->
@@ -743,6 +816,28 @@ async function downloadDocx() {
 
   saveAs(blob, `dolozka_${dateToYMD(datumOver)}_${slugify(getPrijmeni(jmeno))}.docx`);
   if (!gdprShown) { gdprShown=true; document.getElementById('gdprNotice').classList.add('visible'); }
+}
+
+// ── PRINT FLOW ────────────────────────────────────────────────────
+function openPrintFlow() {
+  const saved = localStorage.getItem('legalid_format');
+  const panel = document.getElementById('formatPanel');
+  panel.classList.toggle('open');
+  document.querySelectorAll('.format-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.format === saved);
+  });
+}
+
+function selectFormat(key) {
+  localStorage.setItem('legalid_format', key);
+  document.querySelectorAll('.format-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.format === key);
+  });
+  setTimeout(closeFormatPanel, 220);
+}
+
+function closeFormatPanel() {
+  document.getElementById('formatPanel').classList.remove('open');
 }
 
 // ── Toast ─────────────────────────────────────────────────────────

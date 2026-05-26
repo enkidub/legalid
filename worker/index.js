@@ -115,7 +115,8 @@ export default {
     }
 
     if (!anthropicRes.ok) {
-      return new Response(JSON.stringify({ error: 'ocr_failed', message: 'Nepodařilo se rozpoznat údaje.' }), {
+      const errBody = await anthropicRes.text();
+      return new Response(JSON.stringify({ error: 'ocr_failed', message: `Anthropic ${anthropicRes.status}: ${errBody}` }), {
         status: 502,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

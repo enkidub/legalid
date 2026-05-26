@@ -275,7 +275,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
 /* ── ŠTÍTEK PREVIEW ── */
 .stitek-preview-section {
-  display: none; margin-top: 12px;
+  display: none; margin-top: 12px; position: relative;
   background: var(--white); border: 1px solid var(--rule);
   border-radius: var(--rl); padding: 18px 20px; box-shadow: var(--sh);
 }
@@ -284,10 +284,17 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
   color: var(--ink-fnt); margin-bottom: 12px;
 }
-.stitek-scale-outer { position: relative; overflow-x: auto; }
+.btn-settings-gear {
+  position: absolute; top: 13px; right: 14px;
+  background: none; border: none; cursor: pointer; color: var(--ink-fnt);
+  font-size: 15px; line-height: 1; padding: 4px 6px; border-radius: var(--r);
+  transition: color .14s;
+}
+.btn-settings-gear:hover { color: var(--navy); }
+.stitek-scale-outer { position: relative; overflow: hidden; }
 .stitek {
   position: absolute; top: 0; left: 0;
-  transform: scale(0.6); transform-origin: top left;
+  transform-origin: top left;
   display: grid; font-size: 6.5pt; font-family: var(--sans); line-height: 1.3;
   border: 0.3mm solid rgba(11,25,41,.4); box-sizing: border-box;
 }
@@ -311,13 +318,81 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   padding: 10px 22px; border-radius: var(--r);
   background: var(--navy); color: #fff;
   font-family: var(--sans); font-size: 13px; font-weight: 600;
-  border: none; opacity: 0.45; cursor: default;
+  border: none; cursor: pointer; transition: background .14s;
 }
+.btn-tisk-stitek:hover { background: var(--navy-h); }
 .btn-zmen-format {
   font-size: 13px; color: var(--ink-lt); background: none; border: none;
   cursor: pointer; text-decoration: underline; padding: 0;
 }
 .btn-zmen-format:hover { color: var(--navy); }
+
+/* ── SETTINGS PANEL ── */
+.settings-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 200;
+}
+.settings-overlay.open { display: block; }
+.settings-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 300px;
+  background: var(--white); box-shadow: var(--sh-lg); z-index: 201;
+  display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform .25s ease;
+}
+.settings-panel.open { transform: translateX(0); }
+@media (max-width: 600px) {
+  .settings-panel {
+    top: auto; left: 0; right: 0; width: 100%; max-height: 85vh;
+    border-radius: 16px 16px 0 0; transform: translateY(100%);
+  }
+  .settings-panel.open { transform: translateY(0); }
+}
+.settings-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--rule); flex-shrink: 0;
+}
+.settings-head-title { font-size: 14px; font-weight: 600; color: var(--navy); }
+.btn-sp-close {
+  background: none; border: none; cursor: pointer; color: var(--ink-lt);
+  font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: var(--r);
+}
+.btn-sp-close:hover { color: var(--navy); background: var(--paper); }
+.settings-body { padding: 16px 20px; flex: 1; overflow-y: auto; }
+.sp-section { margin-bottom: 18px; }
+.sp-section-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--ink-fnt); margin-bottom: 10px;
+}
+.sp-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.sp-field { display: flex; flex-direction: column; gap: 4px; }
+.sp-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-lt); }
+.sp-input {
+  width: 70px; padding: 7px 9px; border-radius: var(--r); border: 1.5px solid var(--rule);
+  font-family: var(--sans); font-size: 13px; color: var(--ink);
+  background: var(--paper); outline: none; transition: border-color .14s;
+}
+.sp-input:focus { border-color: var(--navy); background: var(--white); }
+.sp-sum { font-size: 11px; margin-top: 6px; font-weight: 500; }
+.sp-sum.ok { color: #16a34a; }
+.sp-sum.err { color: #dc2626; }
+.sp-checkbox-row {
+  display: flex; align-items: center; gap: 8px; font-size: 13px;
+  color: var(--ink); cursor: pointer; user-select: none;
+}
+.sp-checkbox-row input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
+.settings-footer {
+  display: flex; gap: 10px; padding: 14px 20px;
+  border-top: 1px solid var(--rule); flex-shrink: 0;
+}
+.btn-sp-save {
+  flex: 1; padding: 10px; border-radius: var(--r); background: var(--navy); color: #fff;
+  font-family: var(--sans); font-size: 13px; font-weight: 600; border: none; cursor: pointer;
+}
+.btn-sp-save:hover { background: var(--navy-h); }
+.btn-sp-reset {
+  padding: 10px 12px; border-radius: var(--r); background: var(--paper); color: var(--ink-lt);
+  font-family: var(--sans); font-size: 13px; border: 1.5px solid var(--rule); cursor: pointer;
+}
+.btn-sp-reset:hover { border-color: var(--ink-lt); color: var(--navy); }
 </style>
 </head>
 <body>
@@ -442,6 +517,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
         <div class="stitek-preview-section" id="stitkPreview">
           <div class="stitek-preview-lbl">Náhled štítku</div>
+          <button class="btn-settings-gear" onclick="openSettings()" aria-label="Nastavení etiket">⚙</button>
           <div class="stitek-scale-outer" id="stitkScaleOuter">
             <div class="stitek" id="stitek">
               <div class="st-col" id="stCol1"></div>
@@ -454,7 +530,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
             </div>
           </div>
           <div class="stitek-preview-actions">
-            <button class="btn-tisk-stitek" aria-label="Tisknout štítky do knihy" disabled>Tisknout</button>
+            <button class="btn-tisk-stitek" onclick="printStitky()" aria-label="Tisknout štítky do knihy">Tisknout</button>
             <button class="btn-zmen-format" onclick="zmenFormat()" aria-label="Změnit formát etiket">Změnit formát</button>
           </div>
         </div>
@@ -545,16 +621,76 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
 <div class="toast" id="toast"></div>
 
+<div class="settings-overlay" id="settingsOverlay" onclick="closeSettings()"></div>
+<div class="settings-panel" id="settingsPanel" role="dialog" aria-label="Nastavení etiket">
+  <div class="settings-head">
+    <span class="settings-head-title">Nastavení etiket</span>
+    <button class="btn-sp-close" onclick="closeSettings()" aria-label="Zavřít nastavení">×</button>
+  </div>
+  <div class="settings-body">
+    <div class="sp-section">
+      <div class="sp-section-title">Rozměry štítku</div>
+      <div class="sp-row">
+        <div class="sp-field"><label class="sp-label" for="sp_H">H — výška</label><input class="sp-input" id="sp_H" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+        <div class="sp-field"><label class="sp-label" for="sp_H1">H1 — horní část</label><input class="sp-input" id="sp_H1" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+      </div>
+    </div>
+    <div class="sp-section">
+      <div class="sp-section-title">Okraje archu</div>
+      <div class="sp-row">
+        <div class="sp-field"><label class="sp-label" for="sp_X">X — vlevo</label><input class="sp-input" id="sp_X" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+        <div class="sp-field"><label class="sp-label" for="sp_Y">Y — nahoře</label><input class="sp-input" id="sp_Y" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+      </div>
+    </div>
+    <div class="sp-section">
+      <div class="sp-section-title">Odsazení textu</div>
+      <div class="sp-row">
+        <div class="sp-field"><label class="sp-label" for="sp_PX">PX — horiz.</label><input class="sp-input" id="sp_PX" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+        <div class="sp-field"><label class="sp-label" for="sp_PY">PY — vertik.</label><input class="sp-input" id="sp_PY" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+      </div>
+    </div>
+    <div class="sp-section">
+      <div class="sp-section-title">Šířky sloupců (mm)</div>
+      <div class="sp-row">
+        <div class="sp-field"><label class="sp-label" for="sp_W1">W1</label><input class="sp-input" id="sp_W1" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+        <div class="sp-field"><label class="sp-label" for="sp_W2">W2</label><input class="sp-input" id="sp_W2" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+        <div class="sp-field"><label class="sp-label" for="sp_W3">W3</label><input class="sp-input" id="sp_W3" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+        <div class="sp-field"><label class="sp-label" for="sp_W4">W4</label><input class="sp-input" id="sp_W4" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+      </div>
+      <div class="sp-sum" id="sp_sum"></div>
+    </div>
+    <div class="sp-section">
+      <label class="sp-checkbox-row">
+        <input type="checkbox" id="sp_border" oninput="onSettingsInput()">
+        Tisknout rámeček štítku
+      </label>
+    </div>
+  </div>
+  <div class="settings-footer">
+    <button class="btn-sp-save" onclick="saveSettings()">Uložit</button>
+    <button class="btn-sp-reset" onclick="resetSettings()">Obnovit výchozí</button>
+  </div>
+</div>
+
 <script>
 const CONFIG = { workerUrl: "https://legalid.kuba-houser.workers.dev" };
 
 const MM = 3.7795;
 const SCALE = 0.6;
-const FORMATS = {
-  standard: { H: 40, W1: 40, W2: 80, W3: 55, W4: 35, H1: 28 },
-  dolozky:  { H: 37, W1: 35, W2: 50, W3: 69, W4: 40, H1: 24 },
-  custom:   { H: 40, W1: 40, W2: 80, W3: 55, W4: 35, H1: 28 },
+const FORMAT_DEFAULTS = {
+  standard: { H: 40, W1: 40, W2: 80, W3: 55, W4: 35, H1: 28, X: 0,  Y: 0,  PX: 3, PY: 2, border: true },
+  dolozky:  { H: 37, W1: 35, W2: 50, W3: 69, W4: 40, H1: 24, X: 8,  Y: 20, PX: 2, PY: 2, border: true },
+  custom:   { H: 40, W1: 40, W2: 80, W3: 55, W4: 35, H1: 28, X: 0,  Y: 0,  PX: 3, PY: 2, border: true },
 };
+
+function getSettings() {
+  const fmtKey = localStorage.getItem('legalid_format') || 'standard';
+  const defaults = FORMAT_DEFAULTS[fmtKey] || FORMAT_DEFAULTS.standard;
+  try {
+    const saved = JSON.parse(localStorage.getItem('legalid_settings') || 'null');
+    return saved ? { ...defaults, ...saved } : { ...defaults };
+  } catch { return { ...defaults }; }
+}
 
 let advokat = { jmeno: '', role: '', ev_cislo: '', cislo_knihy: '', sidlo: '' };
 let uploadedImages = [];
@@ -917,7 +1053,7 @@ function closeFormatPanel() {
 
 function showStitkPreview() {
   document.getElementById('stitkPreview').classList.add('visible');
-  updateStitek();
+  requestAnimationFrame(() => updateStitek());
 }
 
 function zmenFormat() {
@@ -937,20 +1073,32 @@ function sph(val, placeholder) {
   return (val && val.trim()) ? val.trim() : `<span class="st-ph">${placeholder}</span>`;
 }
 
-function updateStitek() {
+function renderStitek(s) {
   const preview = document.getElementById('stitkPreview');
   if (!preview || !preview.classList.contains('visible')) return;
-  const fmtKey = localStorage.getItem('legalid_format') || 'standard';
-  const fmt = FORMATS[fmtKey] || FORMATS.standard;
-  const totalW = fmt.W1 + fmt.W2 + fmt.W3 + fmt.W4;
-
+  const totalW = s.W1 + s.W2 + s.W3 + s.W4;
   const stitek = document.getElementById('stitek');
   const outer = document.getElementById('stitkScaleOuter');
-  stitek.style.width = `${totalW * MM}px`;
-  stitek.style.height = `${fmt.H * MM}px`;
-  stitek.style.gridTemplateColumns = `${fmt.W1*MM}px ${fmt.W2*MM}px ${fmt.W3*MM}px ${fmt.W4*MM}px`;
-  outer.style.width = `${totalW * MM * SCALE}px`;
-  outer.style.height = `${fmt.H * MM * SCALE}px`;
+
+  const containerW = outer.parentElement ? outer.parentElement.clientWidth : 0;
+  const naturalW = totalW * MM;
+  const scale = containerW > 10 ? Math.min(SCALE, containerW / naturalW) : SCALE;
+
+  stitek.style.width = `${naturalW}px`;
+  stitek.style.height = `${s.H * MM}px`;
+  stitek.style.gridTemplateColumns = `${s.W1*MM}px ${s.W2*MM}px ${s.W3*MM}px ${s.W4*MM}px`;
+  stitek.style.transform = `scale(${scale})`;
+  stitek.style.border = s.border !== false ? '0.3mm solid rgba(11,25,41,.4)' : 'none';
+  outer.style.width = `${naturalW * scale}px`;
+  outer.style.height = `${s.H * MM * scale}px`;
+
+  const p = `${s.PY * MM}px ${s.PX * MM}px`;
+  ['stCol1','stCol3','stCol4'].forEach(id => { document.getElementById(id).style.padding = p; });
+  const col2top = document.getElementById('stCol2top');
+  const col2bot = document.getElementById('stCol2bot');
+  col2top.style.height = `${s.H1 * MM}px`;
+  col2top.style.padding = p;
+  col2bot.style.padding = p;
 
   const v = id => document.getElementById(id)?.value.trim() || '';
   const datumOver = v('fDatumOver'), jmeno = v('fJmeno');
@@ -958,9 +1106,6 @@ function updateStitek() {
   const adresa = v('fAdresa'), cisloOp = v('fCisloOp');
   const listina = v('fListina'), pocet = v('fPocetVyh');
   const city = extractCity(advokat.sidlo);
-
-  const col2top = document.getElementById('stCol2top');
-  col2top.style.height = `${fmt.H1 * MM}px`;
 
   document.getElementById('stCol1').innerHTML =
     `${sph(datumOver,'datum')}<br>${sph(city,'místo')}`;
@@ -971,8 +1116,7 @@ function updateStitek() {
     `<div>${narLine || '<span class="st-ph">nar. datum, místo</span>'}</div>` +
     `<div>${sph(adresa,'adresa')}</div>`;
 
-  document.getElementById('stCol2bot').innerHTML =
-    `OP: ${sph(cisloOp,'000000000')}`;
+  document.getElementById('stCol2bot').innerHTML = `OP: ${sph(cisloOp,'000000000')}`;
 
   document.getElementById('stCol3').innerHTML =
     `${sph(listina,'specifikace listiny')}<br><br>Počet: ${sph(pocet,'1')}x`;
@@ -981,6 +1125,108 @@ function updateStitek() {
     `<div style="font-weight:600">${sph(advokat.jmeno,'Jméno advokáta')}</div>` +
     `<div>${sph(advokat.role,'role')}</div>` +
     `<div>ev.č. ČAK: ${sph(advokat.ev_cislo,'00000')}</div>`;
+}
+
+function updateStitek() { renderStitek(getSettings()); }
+
+// ── PRINT ─────────────────────────────────────────────────────────
+function printStitky() {
+  const s = getSettings();
+  const v = id => document.getElementById(id)?.value.trim() || '';
+  const datumOver = v('fDatumOver'), jmeno = v('fJmeno');
+  const datumNar = v('fDatumNar'), mistoNar = v('fMistoNar');
+  const adresa = v('fAdresa'), cisloOp = v('fCisloOp');
+  const listina = v('fListina'), pocet = v('fPocetVyh');
+  const city = extractCity(advokat.sidlo);
+  const totalW = s.W1 + s.W2 + s.W3 + s.W4;
+  const dc = 'rgba(11,25,41,.5)';
+  const narLine = [datumNar && `nar. ${datumNar}`, mistoNar].filter(Boolean).join(', ');
+  const brd = s.border !== false ? 'border:0.3mm solid #0b1929;' : '';
+
+  const one = `<div class="st" style="${brd}">
+    <div class="c1"><div>${datumOver}</div><div>${city}</div></div>
+    <div class="c2">
+      <div class="c2t"><div class="fw">${jmeno}</div><div>${narLine}</div><div>${adresa}</div></div>
+      <div class="c2b">OP: ${cisloOp}</div>
+    </div>
+    <div class="c3"><div>${listina}</div><div class="mt">Počet: ${pocet}x</div></div>
+    <div class="c4"><div class="fw">${advokat.jmeno}</div><div>${advokat.role}</div><div>ev.č. ČAK: ${advokat.ev_cislo}</div></div>
+  </div>`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+@page{size:A4 portrait;margin:0}
+body{margin:0;padding:${s.Y}mm 0 0 ${s.X}mm;font-family:'DM Sans',system-ui,sans-serif;font-size:6.5pt;line-height:1.3;color:#1a2233;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.st{display:grid;grid-template-columns:${s.W1}mm ${s.W2}mm ${s.W3}mm ${s.W4}mm;width:${totalW}mm;height:${s.H}mm;box-sizing:border-box;page-break-inside:avoid;break-inside:avoid}
+.c1,.c3,.c4{padding:${s.PY}mm ${s.PX}mm;overflow:hidden;box-sizing:border-box}
+.c1,.c2,.c3{border-right:0.3mm solid ${dc}}
+.c2{display:flex;flex-direction:column;overflow:hidden}
+.c2t{padding:${s.PY}mm ${s.PX}mm;height:${s.H1}mm;border-bottom:0.3mm solid ${dc};overflow:hidden;flex-shrink:0;box-sizing:border-box}
+.c2b{padding:${s.PY}mm ${s.PX}mm;flex:1;overflow:hidden}
+.fw{font-weight:600}.mt{margin-top:2mm}
+</style></head><body>
+${Array(7).fill(one).join('')}
+<script>window.addEventListener('load',()=>window.print())<\/script>
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { showToast('Povolte popup v adresním řádku.'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────
+function openSettings() {
+  const s = getSettings();
+  ['H','H1','X','Y','PX','PY','W1','W2','W3','W4'].forEach(f => {
+    const el = document.getElementById('sp_' + f);
+    if (el) el.value = s[f];
+  });
+  document.getElementById('sp_border').checked = s.border !== false;
+  updateSettingsSum();
+  document.getElementById('settingsOverlay').classList.add('open');
+  document.getElementById('settingsPanel').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+  document.getElementById('settingsPanel').classList.remove('open');
+}
+
+function saveSettings() {
+  const s = {};
+  ['H','H1','X','Y','PX','PY','W1','W2','W3','W4'].forEach(f => {
+    s[f] = parseFloat(document.getElementById('sp_' + f)?.value) || 0;
+  });
+  s.border = document.getElementById('sp_border').checked;
+  localStorage.setItem('legalid_settings', JSON.stringify(s));
+  closeSettings();
+  updateStitek();
+}
+
+function resetSettings() {
+  localStorage.removeItem('legalid_settings');
+  openSettings();
+}
+
+function updateSettingsSum() {
+  const w = ['W1','W2','W3','W4'].reduce((sum, f) =>
+    sum + (parseFloat(document.getElementById('sp_' + f)?.value) || 0), 0);
+  const el = document.getElementById('sp_sum');
+  if (!el) return;
+  el.textContent = `Součet: ${w.toFixed(1)} mm`;
+  el.className = 'sp-sum ' + (w <= 210 ? 'ok' : 'err');
+}
+
+function onSettingsInput() {
+  updateSettingsSum();
+  const fmtKey = localStorage.getItem('legalid_format') || 'standard';
+  const s = { ...(FORMAT_DEFAULTS[fmtKey] || FORMAT_DEFAULTS.standard) };
+  ['H','H1','X','Y','PX','PY','W1','W2','W3','W4'].forEach(f => {
+    const el = document.getElementById('sp_' + f);
+    if (el && el.value !== '') s[f] = parseFloat(el.value) || 0;
+  });
+  s.border = document.getElementById('sp_border')?.checked ?? s.border;
+  renderStitek(s);
 }
 
 // ── Toast ─────────────────────────────────────────────────────────

@@ -1,0 +1,38 @@
+{
+  "name": "LegalID – Generátor doložky",
+  "short_name": "LegalID",
+  "description": "Generátor doložky o pravosti podpisu s AI rozpoznáváním OP",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0b1929",
+  "background_color": "#f9f8f5",
+  "lang": "cs",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["productivity", "utilities"],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {}
+  }
+}

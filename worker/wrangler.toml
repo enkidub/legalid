@@ -1,0 +1,6 @@
+name = "legalid-ocr-proxy"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://legalid.cz,http://localhost:8080"

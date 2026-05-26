@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b1929">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LegalID">
+<title>LegalID – Generátor doložky</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<style>
+:root {
+  --navy:   #0b1929;
+  --navy-h: #132540;
+  --ink:    #1a2233;
+  --ink-mid:#3d4f6a;
+  --ink-lt: #6b7d96;
+  --ink-fnt:#9babbe;
+  --paper:  #f9f8f5;
+  --paper-w:#f2f0eb;
+  --rule:   #ddd9d0;
+  --gold:   #9a6e10;
+  --gold-h: #7d5808;
+  --gold-p: #fdf8ec;
+  --white:  #ffffff;
+  --serif:  'Cormorant Garamond', Georgia, serif;
+  --sans:   'DM Sans', system-ui, sans-serif;
+  --sh:     0 1px 3px rgba(11,25,41,.06), 0 4px 16px rgba(11,25,41,.06);
+  --sh-lg:  0 8px 40px rgba(11,25,41,.13), 0 2px 8px rgba(11,25,41,.05);
+  --r:      5px; --rl: 10px;
+  --max:    1160px; --pad: clamp(16px, 3vw, 36px);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; -webkit-font-smoothing: antialiased; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.6; }
+
+/* ── HEADER ── */
+.app-header {
+  background: var(--navy);
+  padding: 0 var(--pad);
+  position: sticky; top: 0; z-index: 50;
+}
+.app-header-i {
+  max-width: var(--max); margin: 0 auto; height: 56px;
+  display: flex; align-items: center; gap: 12px;
+}
+.app-logo-mark {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--gold); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.app-logo-mark svg { display: block; }
+.app-wordmark { font-family: var(--serif); font-size: 21px; font-weight: 700; color: #fff; letter-spacing: -.3px; line-height: 1; }
+.app-wordmark span { color: var(--gold); }
+.app-tagline { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 2px; letter-spacing: .2px; }
+
+/* ── LAYOUT ── */
+.wrap { max-width: var(--max); margin: 0 auto; padding: 0 var(--pad); }
+.page { padding: clamp(24px, 3vw, 40px) 0 80px; }
+.main-cols { display: grid; grid-template-columns: 340px 1fr; gap: 28px; align-items: start; }
+@media (max-width: 800px) { .main-cols { grid-template-columns: 1fr; } }
+
+.sec-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-fnt); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+}
+.sec-label::before { content: ''; width: 10px; height: 1px; background: var(--ink-fnt); }
+.left-block { margin-bottom: 20px; }
+
+/* ── CARD ── */
+.card {
+  background: var(--white); border: 1px solid var(--rule);
+  border-radius: var(--rl); padding: 20px; margin-bottom: 16px; box-shadow: var(--sh);
+}
+.card-title {
+  font-family: var(--serif); font-size: 16px; font-weight: 600;
+  color: var(--navy); margin-bottom: 14px; padding-bottom: 11px;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ── FORM ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-group { display: flex; flex-direction: column; }
+.form-group.full { grid-column: 1 / -1; }
+.form-label { font-size: 10px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-lt); margin-bottom: 5px; }
+.form-input {
+  padding: 9px 12px; border-radius: var(--r); border: 1.5px solid var(--rule);
+  font-family: var(--sans); font-size: 13px; color: var(--ink);
+  background: var(--paper); transition: border-color .14s, box-shadow .14s; outline: none;
+}
+.form-input:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(11,25,41,.08); background: var(--white); }
+.form-input.warn { border-color: #d97706; }
+.form-input.danger { border-color: #dc2626; }
+.form-input.invalid { border-color: #dc2626; }
+.field-hint { font-size: 10px; color: var(--ink-fnt); margin-top: 3px; }
+.field-hint.warn { color: #d97706; }
+.field-hint.danger { color: #dc2626; }
+input[type=number].form-input { -moz-appearance: textfield; }
+input[type=number].form-input::-webkit-outer-spin-button,
+input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+/* ── UPLOAD ── */
+.upload-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.btn-upload {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px; border-radius: var(--r);
+  background: var(--white); color: var(--navy);
+  border: 1.5px solid var(--rule);
+  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .14s; flex-shrink: 0;
+}
+.btn-upload:hover { border-color: var(--ink-lt); background: var(--paper-w); box-shadow: var(--sh); }
+.btn-upload svg { flex-shrink: 0; color: var(--ink-lt); }
+
+.photo-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+.photo-chip {
+  position: relative; width: 58px; height: 42px;
+  border-radius: var(--r); overflow: hidden; border: 1.5px solid var(--rule); flex-shrink: 0;
+}
+.photo-chip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-chip-x {
+  position: absolute; top: 1px; right: 1px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: rgba(11,25,41,.75); color: #fff;
+  font-size: 9px; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.ocr-loading { display: none; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-lt); }
+.ocr-loading.visible { display: flex; }
+.spinner {
+  width: 15px; height: 15px; border: 2px solid var(--rule);
+  border-top-color: var(--gold); border-radius: 50%;
+  animation: spin .8s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.upload-hint { font-size: 11px; color: var(--ink-fnt); margin-top: 6px; }
+
+/* ── PREVIEW ── */
+.preview-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+.preview-arrow { color: var(--ink-lt); transition: transform .2s; }
+.preview-arrow.open { transform: rotate(180deg); }
+.preview-body { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--rule); }
+.preview-body.open { display: block; }
+.dolozka-preview {
+  background: #fff; border: 1px solid #e8e4de; border-radius: 4px;
+  padding: 22px 26px; font-family: 'Times New Roman', Times, serif;
+  font-size: 12px; line-height: 1.65; color: #111;
+}
+.dolozka-title { text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 14px; font-size: 12px; }
+.dolozka-p { margin-bottom: 9px; text-align: justify; }
+.dolozka-sig { margin-top: 20px; }
+.dolozka-placeholder { color: #bbb; font-style: italic; }
+.dolozka-table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 11px; }
+.dolozka-table td { border: 1px solid #888; padding: 5px 7px; vertical-align: top; line-height: 1.5; }
+.dolozka-table tr td:first-child { width: 48%; }
+
+/* ── DOWNLOAD ── */
+.sticky-download { position: sticky; top: 72px; z-index: 10; margin-bottom: 16px; }
+.btn-download {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 28px; border-radius: var(--r); background: var(--gold); color: #fff;
+  font-family: var(--sans); font-size: 14px; font-weight: 600;
+  cursor: pointer; border: none; transition: all .16s;
+  box-shadow: 0 2px 10px rgba(154,110,16,.3);
+}
+.btn-download:hover { background: var(--gold-h); transform: translateY(-1px); box-shadow: 0 5px 18px rgba(154,110,16,.35); }
+.gdpr-notice {
+  margin-top: 10px; padding: 9px 13px;
+  background: var(--gold-p); border: 1px solid rgba(154,110,16,.2);
+  border-radius: var(--r); font-size: 11px; color: var(--gold-h); line-height: 1.5; display: none;
+}
+.gdpr-notice.visible { display: block; }
+.validation-errors {
+  background: #fff5f5; border: 1px solid #fed7d7; border-radius: var(--r);
+  padding: 9px 13px; margin-bottom: 10px; font-size: 12px; color: #dc2626; display: none;
+}
+.validation-errors.visible { display: block; }
+.validation-errors ul { margin: 4px 0 0 14px; }
+.validation-errors li { margin-bottom: 2px; }
+
+/* ── INSTALL BANNER ── */
+#installBanner {
+  display: none; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--navy-h); color: #fff; padding: 10px var(--pad);
+  font-size: 13px;
+}
+#installBanner.visible { display: flex; }
+#installBanner button {
+  background: var(--gold); color: #fff; border: none; border-radius: var(--r);
+  padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+}
+#installBanner .ib-close { background: transparent; color: rgba(255,255,255,.5); padding: 4px 8px; font-size: 18px; line-height: 1; }
+
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .app-tagline { display: none; }
+  .page { padding: 16px 0 60px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-group.full { grid-column: 1; }
+  .sticky-download { position: static; margin-bottom: 16px; }
+  .btn-download { width: 100%; justify-content: center; }
+  .upload-row { flex-direction: column; align-items: flex-start; }
+  .card { padding: 16px; }
+  .dolozka-preview { padding: 16px; }
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(70px);
+  background: var(--navy); color: #fff; padding: 10px 20px; border-radius: var(--r);
+  font-size: 13px; font-weight: 500; box-shadow: var(--sh-lg);
+  transition: transform .3s cubic-bezier(.4,0,.2,1); z-index: 300; white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* safe area for notched phones */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body { padding-bottom: env(safe-area-inset-bottom); }
+}
+</style>
+</head>
+<body>
+
+<div id="installBanner">
+  <span>Nainstalujte LegalID jako aplikaci — funguje i offline.</span>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button id="installBtn">Instalovat</button>
+    <button class="ib-close" onclick="document.getElementById('installBanner').classList.remove('visible')">×</button>
+  </div>
+</div>
+
+<header class="app-header">
+  <div class="app-header-i">
+    <div class="app-logo-mark">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M4 14V7l5-4 5 4v7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="6.5" y="9" width="5" height="5" rx="1" fill="#fff" opacity=".85"/>
+      </svg>
+    </div>
+    <div>
+      <div class="app-wordmark">Legal<span>ID</span></div>
+      <div class="app-tagline">Generátor doložky o pravosti podpisu</div>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="wrap">
+    <div class="main-cols">
+
+      <!-- LEFT -->
+      <div>
+        <!-- Advokát -->
+        <div class="left-block">
+          <div class="sec-label">Advokát</div>
+          <div class="card" style="padding:16px;margin-bottom:0;">
+            <div class="form-grid">
+              <div class="form-group full">
+                <label class="form-label" for="aJmeno">Celé jméno *</label>
+                <input class="form-input" id="aJmeno" type="text" placeholder="JUDr. Jana Nováková" oninput="updateAdvokat()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="aRole">Role *</label>
+                <input class="form-input" id="aRole" type="text" placeholder="advokátka" oninput="updateAdvokat()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="aEvCislo">Ev. č. ČAK *</label>
+                <input class="form-input" id="aEvCislo" type="text" placeholder="12345" oninput="updateAdvokat()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="aCisloKnihy">Číslo knihy *</label>
+                <input class="form-input" id="aCisloKnihy" type="text" placeholder="012345" oninput="updateAdvokat()">
+              </div>
+              <div class="form-group full">
+                <label class="form-label" for="aSidlo">Sídlo *</label>
+                <input class="form-input" id="aSidlo" type="text" placeholder="Ulice 1, Praha 1, 110 00" oninput="updateAdvokat()">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload -->
+        <div class="left-block">
+          <div class="sec-label">Fotografie OP</div>
+          <div class="upload-row">
+            <button class="btn-upload" id="btnUpload" onclick="triggerUpload()">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="1" y="3" width="14" height="11" rx="2"/><circle cx="8" cy="8.5" r="2.5"/><path d="M5.5 3V2a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v1"/></svg>
+              <span id="btnUploadLabel">Nahrát a rozpoznat</span>
+            </button>
+            <div class="photo-chips" id="photoChips"></div>
+            <div class="ocr-loading" id="ocrLoading">
+              <div class="spinner"></div>
+              <span>Rozpoznávám…</span>
+            </div>
+          </div>
+          <div class="upload-hint" id="uploadHint">JPG · PNG · HEIC · max. 2 fotografie (přední a zadní strana)</div>
+          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/heic,image/*" multiple style="display:none">
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div>
+        <div class="sticky-download">
+          <div class="validation-errors" id="validationErrors">
+            <strong>Před stažením vyplňte:</strong>
+            <ul id="validationList"></ul>
+          </div>
+          <button class="btn-download" onclick="downloadDocx().catch(e => showToast('Chyba: ' + (e?.message || e)))">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M8 2v8M5 7l3 3 3-3"/><rect x="2.5" y="11" width="11" height="2.5" rx="1"/>
+            </svg>
+            Stáhnout doložku (.docx)
+          </button>
+        </div>
+
+        <!-- Údaje z OP -->
+        <div class="card">
+          <div class="card-title">Údaje z občanského průkazu</div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label class="form-label" for="fJmeno">Jméno a příjmení *</label>
+              <input class="form-input" id="fJmeno" type="text" placeholder="Jan Novák" oninput="updatePreview()">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="fDatumNar">Datum narození *</label>
+              <input class="form-input" id="fDatumNar" type="text" placeholder="01.01.1980" oninput="updatePreview()">
+              <span class="field-hint">DD.MM.YYYY</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="fMistoNar">Místo narození *</label>
+              <input class="form-input" id="fMistoNar" type="text" placeholder="Praha" oninput="updatePreview()">
+            </div>
+            <div class="form-group full">
+              <label class="form-label" for="fAdresa">Adresa trvalého pobytu *</label>
+              <input class="form-input" id="fAdresa" type="text" placeholder="Ulice 1, Praha 1, 110 00" oninput="updatePreview()">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="fCisloOp">Číslo OP *</label>
+              <input class="form-input" id="fCisloOp" type="text" placeholder="123456789" maxlength="9" oninput="updatePreview()">
+              <span class="field-hint">9 číslic</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="fStatOb">Státní občanství</label>
+              <input class="form-input" id="fStatOb" type="text" placeholder="Česká republika" readonly tabindex="-1" style="background:var(--paper-w);color:var(--ink-lt);cursor:default;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Údaje doložky -->
+        <div class="card">
+          <div class="card-title">Údaje doložky</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="fCisloRadku">Číslo řádku *</label>
+              <input class="form-input" id="fCisloRadku" type="number" min="1" step="1" placeholder="1" oninput="updatePreview()">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="fRok">Rok *</label>
+              <input class="form-input" id="fRok" type="number" min="2000" max="2099" step="1" oninput="updatePreview()">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="fDatumOver">Datum ověření *</label>
+              <input class="form-input" id="fDatumOver" type="text" placeholder="20.05.2026" oninput="updatePreview()">
+              <span class="field-hint">DD.MM.YYYY</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="fPocetVyh">Počet vyhotovení *</label>
+              <input class="form-input" id="fPocetVyh" type="number" min="1" step="1" value="1" oninput="updatePreview()">
+            </div>
+            <div class="form-group full">
+              <label class="form-label" for="fListina">Specifikace listiny *</label>
+              <input class="form-input" id="fListina" type="text" placeholder="Kupní smlouva" oninput="updatePreview()">
+              <span class="field-hint">Název podpisované listiny</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Náhled -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="preview-toggle" onclick="togglePreview()">
+            <div class="card-title" style="margin:0;padding:0;border:none;">Náhled doložky</div>
+            <div class="preview-arrow" id="previewArrow">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+            </div>
+          </div>
+          <div class="preview-body" id="previewBody">
+            <div class="dolozka-preview" id="dolozkaPreview"></div>
+          </div>
+        </div>
+
+        <div class="gdpr-notice" id="gdprNotice">
+          Fotografie a rozpoznané údaje jsou uloženy pouze v paměti prohlížeče a smažou se při zavření záložky.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CONFIG = { workerUrl: "https://legalid-ocr-proxy.kuba-houser.workers.dev" };
+
+let advokat = { jmeno: '', role: '', ev_cislo: '', cislo_knihy: '', sidlo: '' };
+let uploadedImages = [];
+let ocrDone = false;
+let gdprShown = false;
+let deferredInstallPrompt = null;
+
+// ── PWA install prompt ─────────────────────────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('installBanner').classList.add('visible');
+});
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  document.getElementById('installBanner').classList.remove('visible');
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBanner').classList.remove('visible');
+});
+
+// ── Service worker registration ────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+function init() {
+  prefillDates();
+  document.getElementById('fileInput').addEventListener('change', e => handleFiles(e.target.files));
+  updatePreview();
+}
+
+// ── Advokát ───────────────────────────────────────────────────────
+function updateAdvokat() {
+  advokat.jmeno       = document.getElementById('aJmeno').value.trim();
+  advokat.role        = document.getElementById('aRole').value.trim();
+  advokat.ev_cislo    = document.getElementById('aEvCislo').value.trim();
+  advokat.cislo_knihy = document.getElementById('aCisloKnihy').value.trim();
+  advokat.sidlo       = document.getElementById('aSidlo').value.trim();
+  updatePreview();
+}
+
+// ── Upload ────────────────────────────────────────────────────────
+function triggerUpload() {
+  document.getElementById('fileInput').click();
+}
+
+function handleFiles(files) {
+  const allowed = ['image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp'];
+  const newFiles = Array.from(files).filter(f => allowed.includes(f.type) || f.name.toLowerCase().endsWith('.heic'));
+  const remaining = 2 - uploadedImages.length;
+  if (remaining <= 0) { showToast('Maximálně 2 fotografie.'); return; }
+  let loaded = 0;
+  newFiles.slice(0, remaining).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      uploadedImages.push({ file, dataUrl: e.target.result, mediaType: file.type || 'image/jpeg' });
+      loaded++;
+      renderChips();
+      if (loaded === Math.min(newFiles.length, remaining)) {
+        ocrDone = false;
+        runOcr();
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById('fileInput').value = '';
+}
+
+function renderChips() {
+  document.getElementById('photoChips').innerHTML = uploadedImages.map((img, i) => `
+    <div class="photo-chip">
+      <img src="${img.dataUrl}" alt="foto ${i+1}">
+      <button class="photo-chip-x" onclick="removePhoto(${i})" title="Odstranit">×</button>
+    </div>`).join('');
+  document.getElementById('btnUploadLabel').textContent = uploadedImages.length > 0 ? 'Přidat / změnit' : 'Nahrát a rozpoznat';
+}
+
+function removePhoto(index) {
+  uploadedImages.splice(index, 1);
+  ocrDone = false;
+  renderChips();
+}
+
+// ── OCR ───────────────────────────────────────────────────────────
+async function runOcr() {
+  if (uploadedImages.length === 0) return;
+  setOcrLoading(true);
+  const images = uploadedImages.map(img => ({
+    data: img.dataUrl.split(',')[1],
+    media_type: img.mediaType.startsWith('image/') ? img.mediaType : 'image/jpeg'
+  }));
+  try {
+    const res = await fetch(`${CONFIG.workerUrl}/ocr`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ images })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.message || 'OCR selhalo.');
+    fillForm(data);
+    ocrDone = true;
+    openPreview();
+    showToast('Údaje rozpoznány — zkontrolujte prosím.');
+  } catch (err) {
+    showToast('Chyba: ' + err.message);
+  } finally {
+    setOcrLoading(false);
+  }
+}
+
+function setOcrLoading(on) {
+  document.getElementById('ocrLoading').classList.toggle('visible', on);
+  document.getElementById('uploadHint').style.visibility = on ? 'hidden' : 'visible';
+}
+
+function fillForm(data) {
+  const fields = {
+    fJmeno:    'jmeno_prijmeni',
+    fDatumNar: 'datum_narozeni',
+    fMistoNar: 'misto_narozeni',
+    fAdresa:   'adresa_trvaleho_pobytu',
+    fCisloOp:  'cislo_op',
+    fStatOb:   'statni_obcanstvi',
+  };
+  const lowConf = new Set(data.pole_s_nizkou_jistotou || []);
+  const conf = data.confidence ?? 1;
+  Object.entries(fields).forEach(([elId, key]) => {
+    const el = document.getElementById(elId);
+    el.value = data[key] ?? '';
+    el.classList.remove('warn', 'danger');
+    const hint = el.nextElementSibling;
+    if (hint?.classList.contains('field-hint')) {
+      hint.classList.remove('warn', 'danger');
+      hint.textContent = hint.dataset.orig || hint.textContent;
+    }
+    if (lowConf.has(key)) {
+      const cls = conf < 0.5 ? 'danger' : 'warn';
+      el.classList.add(cls);
+      if (hint?.classList.contains('field-hint')) {
+        hint.dataset.orig = hint.textContent;
+        hint.classList.add(cls);
+        hint.textContent = conf < 0.5 ? 'Nízká jistota — zkontrolujte.' : 'Možná chyba — zkontrolujte.';
+      }
+    }
+  });
+  updatePreview();
+}
+
+// ── Preview ───────────────────────────────────────────────────────
+function ph(val, fb) {
+  return (val && val.trim()) ? val : `<span class="dolozka-placeholder">${fb}</span>`;
+}
+function togglePreview() {
+  document.getElementById('previewBody').classList.toggle('open');
+  document.getElementById('previewArrow').classList.toggle('open');
+}
+function openPreview() {
+  document.getElementById('previewBody').classList.add('open');
+  document.getElementById('previewArrow').classList.add('open');
+}
+function updatePreview() {
+  const a = advokat;
+  const v = id => document.getElementById(id).value.trim();
+  const jmeno = v('fJmeno'), datumNar = v('fDatumNar'), mistoNar = v('fMistoNar');
+  const adresa = v('fAdresa'), cisloOp = v('fCisloOp');
+  const cisloRadku = v('fCisloRadku'), rok = v('fRok');
+  const datumOver = v('fDatumOver'), pocet = v('fPocetVyh'), listina = v('fListina');
+  const aJ = a.jmeno||null, aR = a.role||null, aK = a.cislo_knihy||null;
+  const aE = a.ev_cislo||null, aS = a.sidlo||null;
+  const kniha = (cisloRadku && rok)
+    ? `${ph(aK,'[č.knihy]')}/${cisloRadku}/${rok}`
+    : `${ph(aK,'[č.knihy]')}/${ph(cisloRadku,'[č.řádku]')}/${ph(rok,'[rok]')}`;
+  document.getElementById('dolozkaPreview').innerHTML = `
+    <div class="dolozka-title">Prohlášení o pravosti podpisu</div>
+    <div class="dolozka-p">Běžné číslo knihy o prohlášeních o pravosti podpisu ${kniha}</div>
+    <div class="dolozka-p">${ph(aJ,'[advokát]')}, ${ph(aR,'[role]')}, ev. č. ${ph(aE,'[č.ev.]')}, se sídlem ${ph(aS,'[sídlo]')};</div>
+    <div class="dolozka-p">Prohlašuji, že ${ph(jmeno,'[JMÉNO]')}, nar. ${ph(datumNar,'[DATUM NAR.]')}, místo narození ${ph(mistoNar,'[MÍSTO]')}, bytem ${ph(adresa,'[ADRESA]')}, jehož/jejíž totožnost byla prokázána z občanského průkazu č. ${ph(cisloOp,'[ČÍSLO OP]')},</div>
+    <div class="dolozka-p">tuto listinu v ${ph(pocet,'[POČET]')} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>
+    <div class="dolozka-sig">V Praze dne ${ph(datumOver,'[DATUM]')}<br><br>${ph(aJ,'[advokát]')}, ${ph(aR,'[role]')}</div>
+    <table class="dolozka-table">
+      <tr>
+        <td>V Praze, ${ph(aS,'[sídlo]')} dne ${ph(datumOver,'[datum]')}</td>
+        <td>${ph(jmeno,'[JMÉNO]')} nar. ${ph(datumNar,'[DATUM]')}, místo narození ${ph(mistoNar,'[MÍSTO]')}, bytem ${ph(adresa,'[ADRESA]')}</td>
+      </tr>
+      <tr>
+        <td>OP: ${ph(cisloOp,'[ČÍSLO OP]')}</td>
+        <td>${ph(pocet,'[počet]')}x ${ph(listina,'[LISTINA]')}</td>
+      </tr>
+    </table>`;
+}
+
+// ── Dates ─────────────────────────────────────────────────────────
+function prefillDates() {
+  const t = new Date();
+  const dd = String(t.getDate()).padStart(2,'0');
+  const mm = String(t.getMonth()+1).padStart(2,'0');
+  const yyyy = t.getFullYear();
+  document.getElementById('fDatumOver').value = `${dd}.${mm}.${yyyy}`;
+  document.getElementById('fRok').value = yyyy;
+}
+
+// ── Validation ────────────────────────────────────────────────────
+function validateForm() {
+  const errors = [];
+  const a = advokat;
+  if (!a.jmeno)       errors.push('Advokát: jméno');
+  if (!a.role)        errors.push('Advokát: role');
+  if (!a.ev_cislo)    errors.push('Advokát: ev. číslo ČAK');
+  if (!a.cislo_knihy) errors.push('Advokát: číslo knihy');
+  if (!a.sidlo)       errors.push('Advokát: sídlo');
+  const checks = [
+    ['fJmeno','Jméno a příjmení'],
+    ['fDatumNar','Datum narození', v => /^\d{2}\.\d{2}\.\d{4}$/.test(v),'DD.MM.YYYY'],
+    ['fMistoNar','Místo narození'],
+    ['fAdresa','Adresa trvalého pobytu'],
+    ['fCisloOp','Číslo OP', v => /^\d{9}$/.test(v),'9 číslic'],
+    ['fCisloRadku','Číslo řádku', v => parseInt(v) > 0,'kladné číslo'],
+    ['fRok','Rok', v => /^\d{4}$/.test(v),'4 číslice'],
+    ['fDatumOver','Datum ověření', v => /^\d{2}\.\d{2}\.\d{4}$/.test(v),'DD.MM.YYYY'],
+    ['fPocetVyh','Počet vyhotovení', v => parseInt(v) > 0,'kladné číslo'],
+    ['fListina','Specifikace listiny'],
+  ];
+  checks.forEach(([id, label, validator, hint]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const val = el.value.trim();
+    el.classList.remove('invalid');
+    if (!val) { errors.push(`${label} je povinné`); el.classList.add('invalid'); }
+    else if (validator && !validator(val)) { errors.push(`${label}: ${hint}`); el.classList.add('invalid'); }
+  });
+  return errors;
+}
+
+function slugify(s) {
+  return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+}
+function dateToYMD(s) {
+  const p = s.split('.'); return p.length===3 ? `${p[2]}${p[1]}${p[0]}` : s;
+}
+function getPrijmeni(s) { const p=(s||'').trim().split(/\s+/); return p[p.length-1]||'klient'; }
+
+// ── DOCX ──────────────────────────────────────────────────────────
+async function downloadDocx() {
+  const errors = validateForm();
+  const errBox = document.getElementById('validationErrors');
+  const errList = document.getElementById('validationList');
+  if (errors.length > 0) {
+    errList.innerHTML = errors.map(e=>`<li>${e}</li>`).join('');
+    errBox.classList.add('visible');
+    errBox.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    return;
+  }
+  errBox.classList.remove('visible');
+
+  const a = advokat;
+  const v = id => document.getElementById(id).value.trim();
+  const jmeno=v('fJmeno'), datumNar=v('fDatumNar'), mistoNar=v('fMistoNar');
+  const adresa=v('fAdresa'), cisloOp=v('fCisloOp'), cisloRadku=v('fCisloRadku');
+  const rok=v('fRok'), datumOver=v('fDatumOver'), pocet=v('fPocetVyh'), listina=v('fListina');
+
+  const { Document, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeightRule } = docx;
+
+  const sz=13, font='Times New Roman', sp={before:0,after:40};
+  const run = (text, opts={}) => new TextRun({text, font, size:sz, ...opts});
+  const para = (children, alignment=AlignmentType.BOTH) =>
+    new Paragraph({ children: Array.isArray(children)?children:[children], alignment, spacing:sp });
+  const emptyPara = () => new Paragraph({ children:[run('')], spacing:sp });
+  const nil = { style:"nil", size:0, color:"auto" };
+  const noB = () => ({ top:nil, bottom:nil, left:nil, right:nil });
+
+  const pageWidth=11906, pageHeight=16838, margin=720;
+  const tableWidth = pageWidth - margin*2;
+  const colLeft = Math.round(tableWidth*0.55);
+  const colRight = tableWidth - colLeft;
+  const rowHeight = Math.floor((pageHeight - margin*2) / 4);
+
+  const makeLeft = () => [
+    para([run('Prohlášení o pravosti podpisu',{bold:true,allCaps:true})], AlignmentType.CENTER),
+    emptyPara(),
+    para([run(`Běžné číslo knihy o prohlášeních o pravosti podpisu ${a.cislo_knihy}/${cisloRadku}/${rok}`)]),
+    emptyPara(),
+    para([run(`${a.jmeno}, ${a.role}, ev. č. ${a.ev_cislo}, se sídlem ${a.sidlo};`)]),
+    emptyPara(),
+    para([run(`Prohlašuji, že ${jmeno}, nar. ${datumNar}, místo narození ${mistoNar}, bytem ${adresa}, jehož/jejíž totožnost byla prokázána z občanského průkazu č. ${cisloOp},`)]),
+    emptyPara(),
+    para([run(`tuto listinu v ${pocet} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.`)]),
+    emptyPara(),
+    para([run(`V Praze dne ${datumOver}`)], AlignmentType.LEFT),
+    para([run(`${a.jmeno}, ${a.role}`)], AlignmentType.LEFT),
+  ];
+
+  const makeRight = () => {
+    const half = Math.floor((colRight-200)/2);
+    const cell = (children) => new TableCell({ width:{size:half,type:WidthType.DXA}, borders:noB(), children });
+    const p = text => new Paragraph({ children:[run(text)], spacing:sp });
+    return [new Table({
+      width:{size:colRight-200,type:WidthType.DXA},
+      borders:{top:nil,bottom:nil,left:nil,right:nil,insideH:nil,insideV:nil},
+      rows:[
+        new TableRow({ children:[
+          cell([p(`V Praze, ${a.sidlo}`), p(`dne ${datumOver}`)]),
+          cell([p(jmeno), p(`nar. ${datumNar}, místo`), p(`narození ${mistoNar},`), p(`bytem ${adresa}`)]),
+        ]}),
+        new TableRow({ children:[
+          cell([p(`OP: ${cisloOp}`)]),
+          cell([p(`${pocet}x`), p(listina)]),
+        ]}),
+      ],
+    })];
+  };
+
+  const rows = Array.from({length:4}, () => new TableRow({
+    height:{value:rowHeight, rule:HeightRule.ATLEAST},
+    children:[
+      new TableCell({ width:{size:colLeft,type:WidthType.DXA}, borders:noB(), children:makeLeft() }),
+      new TableCell({ width:{size:colRight,type:WidthType.DXA}, borders:noB(), children:makeRight() }),
+    ],
+  }));
+
+  const doc = new Document({ sections:[{ properties:{ page:{
+    size:{width:pageWidth,height:pageHeight},
+    margin:{top:margin,bottom:margin,left:margin,right:margin},
+  }}, children:[new Table({width:{size:tableWidth,type:WidthType.DXA},borders:{top:nil,bottom:nil,left:nil,right:nil,insideH:nil,insideV:nil},rows})] }] });
+
+  let blob;
+  try { blob = await docx.Packer.toBlob(doc); }
+  catch(err) { showToast('Chyba DOCX: '+(err?.message||err)); return; }
+
+  saveAs(blob, `dolozka_${dateToYMD(datumOver)}_${slugify(getPrijmeni(jmeno))}.docx`);
+  if (!gdprShown) { gdprShown=true; document.getElementById('gdprNotice').classList.add('visible'); }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+init();
+</script>
+</body>
+</html>

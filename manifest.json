@@ -1,6 +1,6 @@
 {
-  "name": "LegalID – Generátor doložky",
-  "short_name": "LegalID",
+  "name": "Doložka – Generátor doložky",
+  "short_name": "Doložka",
   "description": "Generátor doložky o pravosti podpisu s AI rozpoznáváním OP",
   "start_url": "/",
   "display": "standalone",

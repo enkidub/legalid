@@ -635,6 +635,59 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     <button class="btn-sp-close" onclick="closeSettings()" aria-label="Zavřít nastavení">×</button>
   </div>
   <div class="settings-body">
+    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--rule);">
+      <svg viewBox="0 0 260 140" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+        <!-- A4 sheet background -->
+        <rect x="38" y="14" width="185" height="108" rx="2" fill="#f2f0eb" stroke="#d0ccc4" stroke-width="0.8"/>
+        <!-- Label rectangle -->
+        <rect x="70" y="36" width="138" height="50" fill="#fff" stroke="#0b1929" stroke-width="1.5" opacity="0.85"/>
+        <!-- Column dividers -->
+        <line x1="97" y1="36" x2="97" y2="86" stroke="#0b1929" stroke-width="0.8" opacity="0.5"/>
+        <line x1="149" y1="36" x2="149" y2="86" stroke="#0b1929" stroke-width="0.8" opacity="0.5"/>
+        <line x1="185" y1="36" x2="185" y2="86" stroke="#0b1929" stroke-width="0.8" opacity="0.5"/>
+        <!-- H1 horizontal divider in W2 column -->
+        <line x1="97" y1="71" x2="149" y2="71" stroke="#0b1929" stroke-width="0.8" opacity="0.5"/>
+        <!-- PX dotted (horizontal text-padding indicator) -->
+        <line x1="76" y1="36" x2="76" y2="86" stroke="#0b1929" stroke-width="0.8" stroke-dasharray="2.5,2" opacity="0.4"/>
+        <!-- PY dotted (vertical text-padding indicator) -->
+        <line x1="70" y1="43" x2="97" y2="43" stroke="#0b1929" stroke-width="0.8" stroke-dasharray="2.5,2" opacity="0.4"/>
+        <!-- X dimension arrow -->
+        <polygon points="38,61 43,58 43,64" fill="#0b1929" opacity="0.6"/>
+        <line x1="43" y1="61" x2="65" y2="61" stroke="#0b1929" stroke-width="1" opacity="0.6"/>
+        <polygon points="70,61 65,58 65,64" fill="#0b1929" opacity="0.6"/>
+        <line x1="38" y1="55" x2="38" y2="67" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
+        <line x1="70" y1="55" x2="70" y2="67" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
+        <text x="54" y="54" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">X</text>
+        <!-- Y dimension arrow -->
+        <polygon points="25,14 22,19 28,19" fill="#0b1929" opacity="0.6"/>
+        <line x1="25" y1="19" x2="25" y2="31" stroke="#0b1929" stroke-width="1" opacity="0.6"/>
+        <polygon points="25,36 22,31 28,31" fill="#0b1929" opacity="0.6"/>
+        <line x1="19" y1="14" x2="31" y2="14" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
+        <line x1="19" y1="36" x2="31" y2="36" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
+        <text x="12" y="28" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">Y</text>
+        <!-- H dimension arrow -->
+        <polygon points="218,36 215,41 221,41" fill="#0b1929" opacity="0.6"/>
+        <line x1="218" y1="41" x2="218" y2="81" stroke="#0b1929" stroke-width="1" opacity="0.6"/>
+        <polygon points="218,86 215,81 221,81" fill="#0b1929" opacity="0.6"/>
+        <line x1="208" y1="36" x2="224" y2="36" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
+        <line x1="208" y1="86" x2="224" y2="86" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
+        <text x="232" y="63" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">H</text>
+        <!-- H1 label inside W2 top section -->
+        <text x="99" y="57" font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="#9a6e10">H1</text>
+        <!-- W column labels -->
+        <line x1="83"  y1="86" x2="83"  y2="93" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
+        <line x1="123" y1="86" x2="123" y2="93" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
+        <line x1="167" y1="86" x2="167" y2="93" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
+        <line x1="196" y1="86" x2="196" y2="93" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
+        <text x="83"  y="103" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">W1</text>
+        <text x="123" y="103" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">W2</text>
+        <text x="167" y="103" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">W3</text>
+        <text x="196" y="103" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">W4</text>
+        <!-- PX and PY labels -->
+        <text x="78" y="84" font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="#9a6e10">PX</text>
+        <text x="72" y="42" font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="#9a6e10">PY</text>
+      </svg>
+    </div>
     <div class="sp-section">
       <div class="sp-section-title">Rozměry štítku</div>
       <div class="sp-row">

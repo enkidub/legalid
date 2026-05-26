@@ -68,7 +68,29 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); li
 .wrap { max-width: var(--max); margin: 0 auto; padding: 0 var(--pad); }
 .page { padding: clamp(24px, 3vw, 40px) 0 80px; }
 .main-cols { display: grid; grid-template-columns: 340px 1fr; gap: 28px; align-items: start; }
-@media (max-width: 800px) { .main-cols { grid-template-columns: 1fr; } }
+@media (max-width: 800px) {
+  .main-cols { grid-template-columns: 1fr; }
+  .main-cols > div:first-child { order: 2; }
+  .main-cols > div:last-child { order: 1; }
+  .advokat-toggle { display: flex !important; }
+  .advokat-sec-label { display: none; }
+  .advokat-body { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
+  .advokat-body.open { max-height: 1000px; }
+}
+
+/* ── ADVOKÁT TOGGLE ── */
+.advokat-toggle {
+  display: none; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none;
+  padding: 12px 0; margin-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+.advokat-toggle-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-fnt); display: flex; align-items: center; gap: 8px;
+}
+.advokat-toggle-lbl::before { content: ''; width: 10px; height: 1px; background: var(--ink-fnt); }
+.advokat-arrow-icon { font-size: 16px; color: var(--ink-lt); line-height: 1; }
 
 .sec-label {
   font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
@@ -111,17 +133,16 @@ input[type=number].form-input::-webkit-outer-spin-button,
 input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: none; }
 
 /* ── UPLOAD ── */
-.upload-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.upload-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .btn-upload {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 16px; border-radius: var(--r);
-  background: var(--white); color: var(--navy);
-  border: 1.5px solid var(--rule);
-  font-family: var(--sans); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all .14s; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 52px; border-radius: var(--rl);
+  background: var(--navy); color: var(--white);
+  border: none;
+  font-family: var(--sans); font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: background .14s;
 }
-.btn-upload:hover { border-color: var(--ink-lt); background: var(--paper-w); box-shadow: var(--sh); }
-.btn-upload svg { flex-shrink: 0; color: var(--ink-lt); }
+.btn-upload:hover { background: var(--navy-h); }
 
 .photo-chips { display: flex; gap: 7px; flex-wrap: wrap; }
 .photo-chip {
@@ -208,9 +229,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   .page { padding: 16px 0 60px; }
   .form-grid { grid-template-columns: 1fr; }
   .form-group.full { grid-column: 1; }
-  .sticky-download { position: static; margin-bottom: 16px; }
   .btn-download { width: 100%; justify-content: center; }
-  .upload-row { flex-direction: column; align-items: flex-start; }
   .card { padding: 16px; }
   .dolozka-preview { padding: 16px; }
 }
@@ -497,9 +516,12 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
       <!-- LEFT -->
       <div>
-        <!-- Advokát -->
-        <div class="left-block">
-          <div class="sec-label">Advokát</div>
+        <div class="advokat-toggle" id="advokatToggle" onclick="toggleAdvokat()">
+          <span class="advokat-toggle-lbl">Advokát</span>
+          <span class="advokat-arrow-icon" id="advokatArrow">›</span>
+        </div>
+        <div class="advokat-body" id="advokatBody">
+          <div class="sec-label advokat-sec-label">Advokát</div>
           <div class="card" style="padding:16px;margin-bottom:0;">
             <div class="form-grid">
               <div class="form-group full">
@@ -527,24 +549,6 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
           <div style="margin-top:6px;text-align:right;">
             <button class="btn-clear-storage" onclick="clearAdvokatStorage()">Vymazat uložené údaje</button>
           </div>
-        </div>
-
-        <!-- Upload -->
-        <div class="left-block">
-          <div class="sec-label">Fotografie OP</div>
-          <div class="upload-row">
-            <button class="btn-upload" id="btnUpload" onclick="triggerUpload()">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="1" y="3" width="14" height="11" rx="2"/><circle cx="8" cy="8.5" r="2.5"/><path d="M5.5 3V2a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v1"/></svg>
-              <span id="btnUploadLabel">Nahrát a rozpoznat</span>
-            </button>
-            <div class="photo-chips" id="photoChips"></div>
-            <div class="ocr-loading" id="ocrLoading">
-              <div class="spinner"></div>
-              <span>Rozpoznávám…</span>
-            </div>
-          </div>
-          <div class="upload-hint" id="uploadHint">JPG · PNG · HEIC · max. 2 fotografie (přední a zadní strana)</div>
-          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/heic,image/*" multiple style="display:none">
         </div>
       </div>
 
@@ -590,6 +594,20 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
               <button class="btn-panel-close" onclick="closeFormatPanel()" aria-label="Zavřít panel výběru formátu">Zavřít</button>
             </div>
           </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">Fotografie OP</div>
+          <button class="btn-upload" id="btnUpload" onclick="triggerUpload()">📷&nbsp; Nahrát OP</button>
+          <div class="upload-row">
+            <div class="photo-chips" id="photoChips"></div>
+            <div class="ocr-loading" id="ocrLoading">
+              <div class="spinner"></div>
+              <span>Rozpoznávám…</span>
+            </div>
+          </div>
+          <div class="upload-hint" id="uploadHint">JPG · PNG · HEIC · přední i zadní strana</div>
+          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/heic,image/*" multiple style="display:none">
         </div>
 
         <div class="stitek-preview-section" id="stitkPreview">
@@ -820,6 +838,7 @@ if ('serviceWorker' in navigator) {
 // ── Init ──────────────────────────────────────────────────────────
 function init() {
   prefillDates();
+  let hasAdvokatData = false;
   try {
     const saved = JSON.parse(localStorage.getItem('legalid_advokat') || 'null');
     if (saved) {
@@ -828,9 +847,18 @@ function init() {
       if (saved.ev_cislo)    document.getElementById('aEvCislo').value = saved.ev_cislo;
       if (saved.cislo_knihy) document.getElementById('aCisloKnihy').value = saved.cislo_knihy;
       if (saved.sidlo)       document.getElementById('aSidlo').value = saved.sidlo;
+      hasAdvokatData = !!(saved.jmeno);
       updateAdvokat();
     }
   } catch {}
+  const advokatBody = document.getElementById('advokatBody');
+  const advokatArrow = document.getElementById('advokatArrow');
+  if (hasAdvokatData) {
+    if (advokatArrow) advokatArrow.textContent = '›';
+  } else {
+    if (advokatBody) advokatBody.classList.add('open');
+    if (advokatArrow) advokatArrow.textContent = '∧';
+  }
   document.getElementById('fileInput').addEventListener('change', e => handleFiles(e.target.files));
   document.addEventListener('click', () => closeSplitMenu());
   updatePreview();
@@ -860,6 +888,14 @@ function clearAdvokatStorage() {
   advokat = { jmeno: '', role: '', ev_cislo: '', cislo_knihy: '', sidlo: '' };
   updatePreview();
   showToast('Uložené údaje advokáta smazány');
+}
+
+function toggleAdvokat() {
+  const body = document.getElementById('advokatBody');
+  const arrow = document.getElementById('advokatArrow');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if (arrow) arrow.textContent = !isOpen ? '∧' : '›';
 }
 
 // ── Upload ────────────────────────────────────────────────────────
@@ -895,7 +931,6 @@ function renderChips() {
       <img src="${img.dataUrl}" alt="foto ${i+1}">
       <button class="photo-chip-x" onclick="removePhoto(${i})" title="Odstranit">×</button>
     </div>`).join('');
-  document.getElementById('btnUploadLabel').textContent = uploadedImages.length > 0 ? 'Přidat / změnit' : 'Nahrát a rozpoznat';
 }
 
 function removePhoto(index) {

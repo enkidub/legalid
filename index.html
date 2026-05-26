@@ -69,28 +69,24 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); li
 .page { padding: clamp(24px, 3vw, 40px) 0 80px; }
 .main-cols { display: grid; grid-template-columns: 340px 1fr; gap: 28px; align-items: start; }
 @media (max-width: 800px) {
-  .main-cols { grid-template-columns: 1fr; }
-  .main-cols > div:first-child { order: 2; }
-  .main-cols > div:last-child { order: 1; }
-  .advokat-toggle { display: flex !important; }
-  .advokat-sec-label { display: none; }
-  .advokat-body { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
-  .advokat-body.open { max-height: 1000px; }
+  .main-cols { grid-template-columns: 1fr; row-gap: 0; }
+  .main-cols > div { display: contents; }
+  .sticky-download  { order: 1; }
+  .card-foto        { order: 2; }
+  .stitek-preview-section { order: 3; }
+  .card-op          { order: 4; }
+  .card-dolozka-data{ order: 5; }
+  .card-advokat     { order: 6; }
+  .card-nahled      { order: 7; }
+  .gdpr-notice      { order: 8; }
+  #advokatBody { display: none; }
+  #advokatBody.open { display: block; }
 }
-
-/* ── ADVOKÁT TOGGLE ── */
-.advokat-toggle {
-  display: none; align-items: center; justify-content: space-between;
-  cursor: pointer; user-select: none;
-  padding: 12px 0; margin-bottom: 8px;
-  border-bottom: 1px solid var(--rule);
+@media (min-width: 801px) {
+  .card-advokat .preview-arrow { display: none; }
+  .card-advokat .preview-toggle { cursor: default; pointer-events: none; }
+  #advokatBody { display: block; }
 }
-.advokat-toggle-lbl {
-  font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-  color: var(--ink-fnt); display: flex; align-items: center; gap: 8px;
-}
-.advokat-toggle-lbl::before { content: ''; width: 10px; height: 1px; background: var(--ink-fnt); }
-.advokat-arrow-icon { font-size: 16px; color: var(--ink-lt); line-height: 1; }
 
 .sec-label {
   font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
@@ -109,6 +105,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); li
   color: var(--navy); margin-bottom: 14px; padding-bottom: 11px;
   border-bottom: 1px solid var(--rule);
 }
+#advokatBody { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--rule); }
 
 /* ── FORM ── */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -296,7 +293,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
 /* ── ŠTÍTEK PREVIEW ── */
 .stitek-preview-section {
-  display: none; margin-top: 12px; position: relative;
+  display: none; margin-top: 12px; margin-bottom: 16px; position: relative;
   background: var(--white); border: 1px solid var(--rule);
   border-radius: var(--rl); padding: 18px 20px; box-shadow: var(--sh);
 }
@@ -516,13 +513,14 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
       <!-- LEFT -->
       <div>
-        <div class="advokat-toggle" id="advokatToggle" onclick="toggleAdvokat()">
-          <span class="advokat-toggle-lbl">Advokát</span>
-          <span class="advokat-arrow-icon" id="advokatArrow">›</span>
-        </div>
-        <div class="advokat-body" id="advokatBody">
-          <div class="sec-label advokat-sec-label">Advokát</div>
-          <div class="card" style="padding:16px;margin-bottom:0;">
+        <div class="card card-advokat">
+          <div class="preview-toggle" onclick="toggleAdvokat()">
+            <div class="card-title" style="margin:0;padding:0;border:none;">Advokát</div>
+            <div class="preview-arrow" id="advokatArrow">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+            </div>
+          </div>
+          <div id="advokatBody">
             <div class="form-grid">
               <div class="form-group full">
                 <label class="form-label" for="aJmeno">Celé jméno *</label>
@@ -545,9 +543,9 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
                 <input class="form-input" id="aSidlo" type="text" placeholder="Ulice 1, Praha 1, 110 00" oninput="updateAdvokat()">
               </div>
             </div>
-          </div>
-          <div style="margin-top:6px;text-align:right;">
-            <button class="btn-clear-storage" onclick="clearAdvokatStorage()">Vymazat uložené údaje</button>
+            <div style="margin-top:10px;text-align:right;">
+              <button class="btn-clear-storage" onclick="clearAdvokatStorage()">Vymazat uložené údaje</button>
+            </div>
           </div>
         </div>
       </div>
@@ -596,7 +594,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
           </div>
         </div>
 
-        <div class="card" style="margin-bottom:16px;">
+        <div class="card card-foto" style="margin-bottom:16px;">
           <div class="card-title">Fotografie OP</div>
           <button class="btn-upload" id="btnUpload" onclick="triggerUpload()">📷&nbsp; Nahrát OP</button>
           <div class="upload-row">
@@ -647,7 +645,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
         </div>
 
         <!-- Údaje z OP -->
-        <div class="card">
+        <div class="card card-op">
           <div class="card-title">Údaje z občanského průkazu</div>
           <div class="form-grid">
             <div class="form-group full">
@@ -680,7 +678,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
         </div>
 
         <!-- Údaje doložky -->
-        <div class="card">
+        <div class="card card-dolozka-data">
           <div class="card-title">Údaje doložky</div>
           <div class="form-grid">
             <div class="form-group">
@@ -709,7 +707,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
         </div>
 
         <!-- Náhled -->
-        <div class="card" style="margin-bottom:16px;">
+        <div class="card card-nahled" style="margin-bottom:16px;">
           <div class="preview-toggle" onclick="togglePreview()">
             <div class="card-title" style="margin:0;padding:0;border:none;">Náhled doložky</div>
             <div class="preview-arrow" id="previewArrow">
@@ -853,11 +851,9 @@ function init() {
   } catch {}
   const advokatBody = document.getElementById('advokatBody');
   const advokatArrow = document.getElementById('advokatArrow');
-  if (hasAdvokatData) {
-    if (advokatArrow) advokatArrow.textContent = '›';
-  } else {
+  if (!hasAdvokatData) {
     if (advokatBody) advokatBody.classList.add('open');
-    if (advokatArrow) advokatArrow.textContent = '∧';
+    if (advokatArrow) advokatArrow.classList.add('open');
   }
   document.getElementById('fileInput').addEventListener('change', e => handleFiles(e.target.files));
   document.addEventListener('click', () => closeSplitMenu());
@@ -895,7 +891,7 @@ function toggleAdvokat() {
   const arrow = document.getElementById('advokatArrow');
   const isOpen = body.classList.contains('open');
   body.classList.toggle('open', !isOpen);
-  if (arrow) arrow.textContent = !isOpen ? '∧' : '›';
+  if (arrow) arrow.classList.toggle('open', !isOpen);
 }
 
 // ── Upload ────────────────────────────────────────────────────────

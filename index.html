@@ -329,6 +329,8 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   padding: 1.5mm; box-sizing: border-box; overflow: hidden; min-width: 0; font-size: 6.5pt;
 }
 .st-col:last-child { border-right: none; }
+.stitek.no-lines .st-col { border-right: none; }
+.stitek.no-lines .st-col2-top { border-bottom: none; }
 .st-col2 { display: flex; flex-direction: column; padding: 0; }
 .st-col2-top {
   padding: 1.5mm; border-bottom: 0.3mm solid rgba(11,25,41,.4);
@@ -407,19 +409,27 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .sp-checkbox-row input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
 .settings-footer {
-  display: flex; gap: 10px; padding: 14px 20px;
+  display: flex; gap: 8px; align-items: center; padding: 14px 20px;
   border-top: 1px solid var(--rule); flex-shrink: 0;
 }
-.btn-sp-save {
-  flex: 1; padding: 10px; border-radius: var(--r); background: var(--navy); color: #fff;
-  font-family: var(--sans); font-size: 13px; font-weight: 600; border: none; cursor: pointer;
-}
-.btn-sp-save:hover { background: var(--navy-h); }
 .btn-sp-reset {
-  padding: 10px 12px; border-radius: var(--r); background: var(--paper); color: var(--ink-lt);
-  font-family: var(--sans); font-size: 13px; border: 1.5px solid var(--rule); cursor: pointer;
+  margin-right: auto; padding: 8px 0; background: none; border: none;
+  font-family: var(--sans); font-size: 12px; color: var(--ink-lt);
+  cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
 }
-.btn-sp-reset:hover { border-color: var(--ink-lt); color: var(--navy); }
+.btn-sp-reset:hover { color: var(--navy); }
+.btn-sp-save {
+  padding: 10px 16px; border-radius: var(--r); background: var(--paper); color: var(--ink);
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  border: 1.5px solid var(--rule); cursor: pointer; transition: border-color .14s, color .14s;
+}
+.btn-sp-save:hover { border-color: var(--ink-lt); color: var(--navy); }
+.btn-sp-print {
+  padding: 10px 18px; border-radius: var(--r); background: var(--gold); color: #fff;
+  font-family: var(--sans); font-size: 13px; font-weight: 600; border: none; cursor: pointer;
+  transition: background .14s;
+}
+.btn-sp-print:hover { background: var(--gold-h); }
 
 /* ── SPLIT BUTTON ── */
 .split-btn-wrap {
@@ -748,13 +758,18 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     <div class="sp-section">
       <label class="sp-checkbox-row">
         <input type="checkbox" id="sp_border" oninput="onSettingsInput()">
-        Tisknout rámeček štítku
+        Vnější rámeček štítku
+      </label>
+      <label class="sp-checkbox-row" style="margin-top:8px;">
+        <input type="checkbox" id="sp_lines" oninput="onSettingsInput()">
+        Vodicí čáry sloupců
       </label>
     </div>
   </div>
   <div class="settings-footer">
-    <button class="btn-sp-save" onclick="saveSettings()">Uložit</button>
     <button class="btn-sp-reset" onclick="resetSettings()">Obnovit výchozí</button>
+    <button class="btn-sp-save" onclick="saveSettings()">Uložit</button>
+    <button class="btn-sp-print" onclick="saveAndPrint()">Uložit a tisknout</button>
   </div>
 </div>
 
@@ -764,9 +779,9 @@ const CONFIG = { workerUrl: "https://legalid.kuba-houser.workers.dev" };
 const MM = 3.7795;
 const SCALE = 0.6;
 const FORMAT_DEFAULTS = {
-  standard: { H: 40, W1: 40, W2: 80, W3: 55, W4: 35, H1: 28, X: 0,  Y: 0,  PX: 3, PY: 2, border: true },
-  dolozky:  { H: 37, W1: 35, W2: 50, W3: 69, W4: 40, H1: 24, X: 8,  Y: 20, PX: 2, PY: 2, border: true },
-  custom:   { H: 40, W1: 40, W2: 80, W3: 55, W4: 35, H1: 28, X: 0,  Y: 0,  PX: 3, PY: 2, border: true },
+  standard: { H: 40, W1: 40, W2: 80, W3: 55, W4: 35, H1: 28, X: 0,  Y: 0,  PX: 3, PY: 2, border: true, lines: true },
+  dolozky:  { H: 37, W1: 35, W2: 50, W3: 69, W4: 40, H1: 24, X: 8,  Y: 20, PX: 2, PY: 2, border: true, lines: true },
+  custom:   { H: 40, W1: 40, W2: 80, W3: 55, W4: 35, H1: 28, X: 0,  Y: 0,  PX: 3, PY: 2, border: true, lines: true },
 };
 
 function getSettings() {
@@ -1231,6 +1246,7 @@ function renderStitek(s) {
   stitek.style.gridTemplateColumns = `${s.W1*MM}px ${s.W2*MM}px ${s.W3*MM}px ${s.W4*MM}px`;
   stitek.style.transform = `scale(${scale})`;
   stitek.style.border = s.border !== false ? '0.3mm solid rgba(11,25,41,.4)' : 'none';
+  stitek.classList.toggle('no-lines', s.lines === false);
   outer.style.width = `${naturalW * scale}px`;
   outer.style.height = `${s.H * MM * scale}px`;
 
@@ -1292,6 +1308,8 @@ function printStitky() {
   const dc = 'rgba(11,25,41,.5)';
   const narLine = [datumNar && `nar. ${datumNar}`, mistoNar].filter(Boolean).join(', ');
   const brd = s.border !== false ? 'border:0.3mm solid #0b1929;' : '';
+  const colBrd = s.lines !== false ? `border-right:0.3mm solid ${dc}` : 'border-right:none';
+  const rowBrd = s.lines !== false ? `border-bottom:0.3mm solid ${dc}` : 'border-bottom:none';
 
   const one = `<div class="st" style="${brd}">
     <div class="c1"><div>${datumOver}</div><div>${city}</div></div>
@@ -1308,9 +1326,9 @@ function printStitky() {
 body{margin:0;padding:${s.Y||0}mm 0 0 ${s.X||0}mm;font-family:'DM Sans',system-ui,sans-serif;font-size:6.5pt;line-height:1.3;color:#1a2233;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .st{display:grid;grid-template-columns:${s.W1}mm ${s.W2}mm ${s.W3}mm ${s.W4}mm;width:${totalW}mm;height:${s.H}mm;box-sizing:border-box;page-break-inside:avoid;break-inside:avoid}
 .c1,.c3,.c4{padding:${s.PY}mm ${s.PX}mm;overflow:hidden;box-sizing:border-box}
-.c1,.c2,.c3{border-right:0.3mm solid ${dc}}
+.c1,.c2,.c3{${colBrd}}
 .c2{display:flex;flex-direction:column;overflow:hidden}
-.c2t{padding:${s.PY}mm ${s.PX}mm;height:${s.H1}mm;border-bottom:0.3mm solid ${dc};overflow:hidden;flex-shrink:0;box-sizing:border-box}
+.c2t{padding:${s.PY}mm ${s.PX}mm;height:${s.H1}mm;${rowBrd};overflow:hidden;flex-shrink:0;box-sizing:border-box}
 .c2b{padding:${s.PY}mm ${s.PX}mm;flex:1;overflow:hidden}
 .fw{font-weight:600}.mt{margin-top:2mm}
 </style></head><body>
@@ -1332,6 +1350,7 @@ function openSettings() {
     if (el) el.value = s[f];
   });
   document.getElementById('sp_border').checked = s.border !== false;
+  document.getElementById('sp_lines').checked = s.lines !== false;
   updateSettingsSum();
   document.getElementById('settingsOverlay').classList.add('open');
   document.getElementById('settingsPanel').classList.add('open');
@@ -1350,10 +1369,24 @@ function saveSettings() {
     s[f] = parseFloat(document.getElementById('sp_' + f)?.value) || 0;
   });
   s.border = document.getElementById('sp_border').checked;
+  s.lines = document.getElementById('sp_lines').checked;
   localStorage.setItem('legalid_settings', JSON.stringify(s));
   closeSettings();
   updateStitek();
   showToast('Nastavení uloženo');
+}
+
+function saveAndPrint() {
+  const s = {};
+  ['H','H1','X','Y','PX','PY','W1','W2','W3','W4'].forEach(f => {
+    s[f] = parseFloat(document.getElementById('sp_' + f)?.value) || 0;
+  });
+  s.border = document.getElementById('sp_border').checked;
+  s.lines = document.getElementById('sp_lines').checked;
+  localStorage.setItem('legalid_settings', JSON.stringify(s));
+  closeSettings();
+  updateStitek();
+  printStitky();
 }
 
 function resetSettings() {
@@ -1379,6 +1412,7 @@ function onSettingsInput() {
     if (el && el.value !== '') s[f] = parseFloat(el.value) || 0;
   });
   s.border = document.getElementById('sp_border')?.checked ?? s.border;
+  s.lines = document.getElementById('sp_lines')?.checked ?? s.lines;
   renderStitek(s);
   renderDiagram(s);
 }

@@ -1,13 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#ffffff" stroke="#ddd9d0" stroke-width="1"/>
-  <rect x="5" y="9" width="54" height="34" rx="7" fill="#f9f8f5" stroke="#0b1929" stroke-width="1.8"/>
-  <rect x="10" y="14" width="15" height="15" rx="3" fill="#0b1929" opacity="0.12"/>
-  <circle cx="17" cy="19" r="4" fill="#0b1929" opacity="0.28"/>
-  <rect x="30" y="15" width="24" height="4" rx="2" fill="#0b1929" opacity="0.55"/>
-  <rect x="30" y="23" width="18" height="3" rx="1.5" fill="#0b1929" opacity="0.28"/>
-  <rect x="10" y="33" width="44" height="3" rx="1.5" fill="#0b1929" opacity="0.15"/>
-  <circle cx="48" cy="42" r="14" fill="#ffffff" stroke="#ddd9d0" stroke-width="1"/>
-  <circle cx="48" cy="42" r="11" fill="#9a6e10"/>
-  <path d="M43 42 L47 46 L54 36" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="24" y="60" text-anchor="middle" fill="#0b1929" font-size="8" font-family="Georgia,serif" font-weight="700">Legal<tspan fill="#9a6e10">ID</tspan></text>
+  <rect width="64" height="64" rx="12" fill="#ffffff"/>
+  <rect x="5" y="10" width="54" height="38" rx="7" fill="#f9f8f5" stroke="#0b1929" stroke-width="1.8"/>
+  <rect x="10" y="15" width="15" height="15" rx="3" fill="#0b1929" opacity="0.12"/>
+  <circle cx="17" cy="20" r="4" fill="#0b1929" opacity="0.28"/>
+  <rect x="30" y="16" width="24" height="4" rx="2" fill="#0b1929" opacity="0.55"/>
+  <rect x="30" y="24" width="18" height="3" rx="1.5" fill="#0b1929" opacity="0.28"/>
+  <rect x="10" y="35" width="44" height="3" rx="1.5" fill="#0b1929" opacity="0.15"/>
+  <circle cx="48" cy="46" r="14" fill="#ffffff" stroke="#ddd9d0" stroke-width="1"/>
+  <circle cx="48" cy="46" r="11" fill="#9a6e10"/>
+  <path d="M43 46 L47 50 L54 40" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

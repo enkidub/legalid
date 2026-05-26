@@ -272,6 +272,52 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: var(--r);
 }
 .btn-panel-close:hover { color: var(--navy); background: var(--paper); }
+
+/* ── ŠTÍTEK PREVIEW ── */
+.stitek-preview-section {
+  display: none; margin-top: 12px;
+  background: var(--white); border: 1px solid var(--rule);
+  border-radius: var(--rl); padding: 18px 20px; box-shadow: var(--sh);
+}
+.stitek-preview-section.visible { display: block; }
+.stitek-preview-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--ink-fnt); margin-bottom: 12px;
+}
+.stitek-scale-outer { position: relative; overflow-x: auto; }
+.stitek {
+  position: absolute; top: 0; left: 0;
+  transform: scale(0.6); transform-origin: top left;
+  display: grid; font-size: 6.5pt; font-family: var(--sans); line-height: 1.3;
+  border: 0.3mm solid rgba(11,25,41,.4); box-sizing: border-box;
+}
+.st-col {
+  border-right: 0.3mm solid rgba(11,25,41,.4);
+  padding: 1.5mm; box-sizing: border-box; overflow: hidden; min-width: 0; font-size: 6.5pt;
+}
+.st-col:last-child { border-right: none; }
+.st-col2 { display: flex; flex-direction: column; padding: 0; }
+.st-col2-top {
+  padding: 1.5mm; border-bottom: 0.3mm solid rgba(11,25,41,.4);
+  overflow: hidden; flex-shrink: 0; box-sizing: border-box;
+}
+.st-col2-bot { padding: 1.5mm; flex: 1; overflow: hidden; }
+.st-ph { color: #bbb; font-style: italic; }
+.stitek-preview-actions {
+  margin-top: 12px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.btn-tisk-stitek {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 10px 22px; border-radius: var(--r);
+  background: var(--navy); color: #fff;
+  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  border: none; opacity: 0.45; cursor: default;
+}
+.btn-zmen-format {
+  font-size: 13px; color: var(--ink-lt); background: none; border: none;
+  cursor: pointer; text-decoration: underline; padding: 0;
+}
+.btn-zmen-format:hover { color: var(--navy); }
 </style>
 </head>
 <body>
@@ -394,6 +440,25 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
           </div>
         </div>
 
+        <div class="stitek-preview-section" id="stitkPreview">
+          <div class="stitek-preview-lbl">Náhled štítku</div>
+          <div class="stitek-scale-outer" id="stitkScaleOuter">
+            <div class="stitek" id="stitek">
+              <div class="st-col" id="stCol1"></div>
+              <div class="st-col st-col2">
+                <div class="st-col2-top" id="stCol2top"></div>
+                <div class="st-col2-bot" id="stCol2bot"></div>
+              </div>
+              <div class="st-col" id="stCol3"></div>
+              <div class="st-col" id="stCol4"></div>
+            </div>
+          </div>
+          <div class="stitek-preview-actions">
+            <button class="btn-tisk-stitek" aria-label="Tisknout štítky do knihy" disabled>Tisknout</button>
+            <button class="btn-zmen-format" onclick="zmenFormat()" aria-label="Změnit formát etiket">Změnit formát</button>
+          </div>
+        </div>
+
         <!-- Údaje z OP -->
         <div class="card">
           <div class="card-title">Údaje z občanského průkazu</div>
@@ -482,6 +547,14 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
 <script>
 const CONFIG = { workerUrl: "https://legalid.kuba-houser.workers.dev" };
+
+const MM = 3.7795;
+const SCALE = 0.6;
+const FORMATS = {
+  standard: { H: 40, W1: 40, W2: 80, W3: 55, W4: 35, H1: 28 },
+  dolozky:  { H: 37, W1: 35, W2: 50, W3: 69, W4: 40, H1: 24 },
+  custom:   { H: 40, W1: 40, W2: 80, W3: 55, W4: 35, H1: 28 },
+};
 
 let advokat = { jmeno: '', role: '', ev_cislo: '', cislo_knihy: '', sidlo: '' };
 let uploadedImages = [];
@@ -675,6 +748,7 @@ function updatePreview() {
         <td>${ph(pocet,'[počet]')}x ${ph(listina,'[LISTINA]')}</td>
       </tr>
     </table>`;
+  updateStitek();
 }
 
 // ── Dates ─────────────────────────────────────────────────────────
@@ -821,11 +895,12 @@ async function downloadDocx() {
 // ── PRINT FLOW ────────────────────────────────────────────────────
 function openPrintFlow() {
   const saved = localStorage.getItem('legalid_format');
-  const panel = document.getElementById('formatPanel');
-  panel.classList.toggle('open');
-  document.querySelectorAll('.format-card').forEach(c => {
-    c.classList.toggle('selected', c.dataset.format === saved);
-  });
+  if (saved) {
+    showStitkPreview();
+  } else {
+    document.getElementById('formatPanel').classList.toggle('open');
+    document.querySelectorAll('.format-card').forEach(c => c.classList.remove('selected'));
+  }
 }
 
 function selectFormat(key) {
@@ -833,11 +908,79 @@ function selectFormat(key) {
   document.querySelectorAll('.format-card').forEach(c => {
     c.classList.toggle('selected', c.dataset.format === key);
   });
-  setTimeout(closeFormatPanel, 220);
+  setTimeout(() => { closeFormatPanel(); showStitkPreview(); }, 220);
 }
 
 function closeFormatPanel() {
   document.getElementById('formatPanel').classList.remove('open');
+}
+
+function showStitkPreview() {
+  document.getElementById('stitkPreview').classList.add('visible');
+  updateStitek();
+}
+
+function zmenFormat() {
+  localStorage.removeItem('legalid_format');
+  document.getElementById('stitkPreview').classList.remove('visible');
+  document.getElementById('formatPanel').classList.add('open');
+  document.querySelectorAll('.format-card').forEach(c => c.classList.remove('selected'));
+}
+
+function extractCity(sidlo) {
+  if (!sidlo) return '';
+  const parts = sidlo.split(',');
+  return (parts[1] || parts[0]).trim().replace(/\s+\d+$/, '').trim();
+}
+
+function sph(val, placeholder) {
+  return (val && val.trim()) ? val.trim() : `<span class="st-ph">${placeholder}</span>`;
+}
+
+function updateStitek() {
+  const preview = document.getElementById('stitkPreview');
+  if (!preview || !preview.classList.contains('visible')) return;
+  const fmtKey = localStorage.getItem('legalid_format') || 'standard';
+  const fmt = FORMATS[fmtKey] || FORMATS.standard;
+  const totalW = fmt.W1 + fmt.W2 + fmt.W3 + fmt.W4;
+
+  const stitek = document.getElementById('stitek');
+  const outer = document.getElementById('stitkScaleOuter');
+  stitek.style.width = `${totalW * MM}px`;
+  stitek.style.height = `${fmt.H * MM}px`;
+  stitek.style.gridTemplateColumns = `${fmt.W1*MM}px ${fmt.W2*MM}px ${fmt.W3*MM}px ${fmt.W4*MM}px`;
+  outer.style.width = `${totalW * MM * SCALE}px`;
+  outer.style.height = `${fmt.H * MM * SCALE}px`;
+
+  const v = id => document.getElementById(id)?.value.trim() || '';
+  const datumOver = v('fDatumOver'), jmeno = v('fJmeno');
+  const datumNar = v('fDatumNar'), mistoNar = v('fMistoNar');
+  const adresa = v('fAdresa'), cisloOp = v('fCisloOp');
+  const listina = v('fListina'), pocet = v('fPocetVyh');
+  const city = extractCity(advokat.sidlo);
+
+  const col2top = document.getElementById('stCol2top');
+  col2top.style.height = `${fmt.H1 * MM}px`;
+
+  document.getElementById('stCol1').innerHTML =
+    `${sph(datumOver,'datum')}<br>${sph(city,'místo')}`;
+
+  const narLine = [datumNar && `nar. ${datumNar}`, mistoNar].filter(Boolean).join(', ');
+  col2top.innerHTML =
+    `<div style="font-weight:600">${sph(jmeno,'Jméno Příjmení')}</div>` +
+    `<div>${narLine || '<span class="st-ph">nar. datum, místo</span>'}</div>` +
+    `<div>${sph(adresa,'adresa')}</div>`;
+
+  document.getElementById('stCol2bot').innerHTML =
+    `OP: ${sph(cisloOp,'000000000')}`;
+
+  document.getElementById('stCol3').innerHTML =
+    `${sph(listina,'specifikace listiny')}<br><br>Počet: ${sph(pocet,'1')}x`;
+
+  document.getElementById('stCol4').innerHTML =
+    `<div style="font-weight:600">${sph(advokat.jmeno,'Jméno advokáta')}</div>` +
+    `<div>${sph(advokat.role,'role')}</div>` +
+    `<div>ev.č. ČAK: ${sph(advokat.ev_cislo,'00000')}</div>`;
 }
 
 // ── Toast ─────────────────────────────────────────────────────────

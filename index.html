@@ -296,10 +296,20 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   border-radius: var(--rl); padding: 18px 20px; box-shadow: var(--sh);
 }
 .stitek-preview-section.visible { display: block; }
+.stitek-preview-lbl-row {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+}
 .stitek-preview-lbl {
   font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-  color: var(--ink-fnt); margin-bottom: 12px;
+  color: var(--ink-fnt);
 }
+.btn-stitek-settings {
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer; color: var(--ink-fnt);
+  padding: 4px; border-radius: var(--r); transition: color .14s;
+  flex-shrink: 0;
+}
+.btn-stitek-settings:hover { color: var(--navy); }
 .btn-settings-gear {
   position: absolute; top: 13px; right: 14px;
   background: none; border: none; cursor: pointer; color: var(--ink-fnt);
@@ -372,6 +382,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: var(--r);
 }
 .btn-sp-close:hover { color: var(--navy); background: var(--paper); }
+.settings-diagram { padding: 12px 20px 0; border-bottom: 1px solid var(--rule); flex-shrink: 0; }
 .settings-body { padding: 16px 20px; flex: 1; overflow-y: auto; }
 .sp-section { margin-bottom: 18px; }
 .sp-section-title {
@@ -584,7 +595,12 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
         </div>
 
         <div class="stitek-preview-section" id="stitkPreview">
-          <div class="stitek-preview-lbl">Náhled štítku</div>
+          <div class="stitek-preview-lbl-row">
+            <span class="stitek-preview-lbl" id="stitkPreviewLbl">Náhled štítku</span>
+            <button class="btn-stitek-settings" onclick="openSettings()" title="Nastavení etiket">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1M8 13.5v1M1.5 8h1M13.5 8h1M3.2 3.2l.7.7M12.1 12.1l.7.7M12.1 3.9l-.7.7M3.9 12.1l-.7.7"/></svg>
+            </button>
+          </div>
           <div class="stitek-scale-outer" id="stitkScaleOuter">
             <div class="stitek" id="stitek">
               <div class="st-col" id="stCol1"></div>
@@ -694,10 +710,10 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     <span class="settings-head-title">Nastavení etiket</span>
     <button class="btn-sp-close" onclick="closeSettings()" aria-label="Zavřít nastavení">×</button>
   </div>
+  <div class="settings-diagram">
+    <svg id="spDiagram" viewBox="0 0 260 140" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;"></svg>
+  </div>
   <div class="settings-body">
-    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--rule);">
-      <svg id="spDiagram" viewBox="0 0 260 140" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;"></svg>
-    </div>
     <div class="sp-section">
       <div class="sp-section-title">Rozměry štítku</div>
       <div class="sp-row">
@@ -756,10 +772,13 @@ const FORMAT_DEFAULTS = {
 function getSettings() {
   const fmtKey = localStorage.getItem('legalid_format') || 'standard';
   const defaults = FORMAT_DEFAULTS[fmtKey] || FORMAT_DEFAULTS.standard;
-  try {
-    const saved = JSON.parse(localStorage.getItem('legalid_settings') || 'null');
-    return saved ? { ...defaults, ...saved } : { ...defaults };
-  } catch { return { ...defaults }; }
+  if (fmtKey === 'custom') {
+    try {
+      const saved = JSON.parse(localStorage.getItem('legalid_settings') || 'null');
+      return saved ? { ...defaults, ...saved } : { ...defaults };
+    } catch {}
+  }
+  return { ...defaults };
 }
 
 let advokat = { jmeno: '', role: '', ev_cislo: '', cislo_knihy: '', sidlo: '' };
@@ -1178,6 +1197,7 @@ function showStitkPreview() {
   requestAnimationFrame(() => updateStitek());
 }
 
+
 function zmenFormat() {
   localStorage.removeItem('legalid_format');
   document.getElementById('stitkPreview').classList.remove('visible');
@@ -1249,7 +1269,15 @@ function renderStitek(s) {
     `<div>ev.č. ČAK: ${sph(advokat.ev_cislo,'00000')}</div>`;
 }
 
-function updateStitek() { renderStitek(getSettings()); }
+function updateStitek() {
+  const s = getSettings();
+  renderStitek(s);
+  const lbl = document.getElementById('stitkPreviewLbl');
+  if (lbl) {
+    const totalW = (s.W1||0) + (s.W2||0) + (s.W3||0) + (s.W4||0);
+    lbl.textContent = `Náhled štítku · ${totalW} × ${s.H} mm`;
+  }
+}
 
 // ── PRINT ─────────────────────────────────────────────────────────
 function printStitky() {

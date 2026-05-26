@@ -7,8 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="LegalID">
-<title>LegalID – Generátor doložky</title>
+<meta name="apple-mobile-web-app-title" content="Doložka">
+<title>Doložka – Generátor doložky</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
@@ -351,7 +351,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .settings-overlay.open { display: block; }
 .settings-panel {
-  position: fixed; top: 0; right: 0; bottom: 0; width: 300px;
+  position: fixed; top: 0; right: 0; bottom: 0; width: 480px;
   background: var(--white); box-shadow: var(--sh-lg); z-index: 201;
   display: flex; flex-direction: column;
   transform: translateX(100%); transition: transform .25s ease;
@@ -359,7 +359,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .settings-panel.open { transform: translateX(0); }
 @media (max-width: 600px) {
   .settings-panel {
-    top: auto; left: 0; right: 0; width: 100%; max-height: 85vh;
+    top: auto; left: 0; right: 0; width: 100%; max-height: 90vh;
     border-radius: 16px 16px 0 0; transform: translateY(100%);
   }
   .settings-panel.open { transform: translateY(0); }
@@ -380,11 +380,11 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
   color: var(--ink-fnt); margin-bottom: 10px;
 }
-.sp-row { display: flex; gap: 10px; flex-wrap: wrap; }
-.sp-field { display: flex; flex-direction: column; gap: 4px; }
+.sp-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.sp-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 80px; }
 .sp-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-lt); }
 .sp-input {
-  width: 70px; padding: 7px 9px; border-radius: var(--r); border: 1.5px solid var(--rule);
+  width: 100%; padding: 8px 10px; border-radius: var(--r); border: 1.5px solid var(--rule);
   font-family: var(--sans); font-size: 13px; color: var(--ink);
   background: var(--paper); outline: none; transition: border-color .14s;
 }
@@ -414,11 +414,11 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
 /* ── SPLIT BUTTON ── */
 .split-btn-wrap {
-  position: relative; display: inline-flex; align-items: stretch;
+  position: relative; display: flex; align-items: stretch; width: 100%;
   border-radius: var(--r); box-shadow: 0 2px 10px rgba(154,110,16,.3);
 }
 .split-btn-main {
-  display: inline-flex; align-items: center; gap: 8px;
+  display: inline-flex; align-items: center; gap: 8px; flex: 1;
   padding: 12px 20px; border-radius: var(--r) 0 0 var(--r);
   background: var(--gold); color: #fff;
   font-family: var(--sans); font-size: 14px; font-weight: 600;
@@ -427,7 +427,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .split-btn-main:hover { background: var(--gold-h); }
 .split-btn-arrow {
   display: flex; align-items: center; justify-content: center;
-  width: 38px; padding: 0; flex-shrink: 0;
+  width: 44px; padding: 0; flex-shrink: 0;
   border-radius: 0 var(--r) var(--r) 0;
   background: var(--gold); color: #fff;
   border: none; border-left: 1px solid rgba(255,255,255,.3);
@@ -435,8 +435,8 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .split-btn-arrow:hover { background: var(--gold-h); }
 .split-dropdown {
-  display: none; position: absolute; top: calc(100% + 6px); left: 0;
-  min-width: 230px; z-index: 100;
+  display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  z-index: 100;
   background: var(--white); border: 1px solid var(--navy);
   border-radius: var(--rl); box-shadow: var(--sh-lg); overflow: hidden;
 }
@@ -449,10 +449,6 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .split-drop-item:hover { background: var(--paper); }
 .split-drop-item + .split-drop-item { border-top: 1px solid var(--rule); }
-@media (max-width: 600px) {
-  .split-btn-wrap { width: 100%; }
-  .split-btn-main { flex: 1; }
-}
 /* ── ADVOKÁT CLEAR LINK ── */
 .btn-clear-storage {
   background: none; border: none; cursor: pointer; padding: 0;
@@ -1340,6 +1336,7 @@ function saveSettings() {
   localStorage.setItem('legalid_settings', JSON.stringify(s));
   closeSettings();
   updateStitek();
+  showToast('Nastavení uloženo');
 }
 
 function resetSettings() {

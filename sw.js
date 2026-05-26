@@ -1,4 +1,4 @@
-const CACHE = 'legalid-v9';
+const CACHE = 'legalid-v10';
 
 const APP_SHELL = [
   '/',

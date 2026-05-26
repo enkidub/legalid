@@ -395,6 +395,20 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   font-family: var(--sans); font-size: 13px; border: 1.5px solid var(--rule); cursor: pointer;
 }
 .btn-sp-reset:hover { border-color: var(--ink-lt); color: var(--navy); }
+
+/* ── DIAGRAM HIT + HIGHLIGHT ── */
+.sp-input.sp-highlighted { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(154,110,16,.15); background: var(--white); }
+
+/* ── PRINT OFFSET ── */
+.print-offset-wrap { margin-top:12px; padding:10px 14px; background:var(--paper); border:1px solid var(--rule); border-radius:var(--r); }
+.print-offset-title { font-size:9px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-fnt); margin-bottom:8px; }
+.poc-row { display:flex; align-items:center; gap:6px; margin-bottom:5px; }
+.poc-row:last-child { margin-bottom:0; }
+.poc-lbl { width:76px; color:var(--ink-lt); font-size:11px; }
+.poc-btn { width:24px; height:24px; border-radius:var(--r); border:1.5px solid var(--rule); background:var(--white); color:var(--navy); font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; padding:0; transition:border-color .14s; }
+.poc-btn:hover { border-color:var(--navy); }
+.poc-val { min-width:30px; text-align:center; font-weight:600; color:var(--ink); font-size:12px; }
+.poc-unit { color:var(--ink-fnt); font-size:11px; }
 </style>
 </head>
 <body>
@@ -540,6 +554,23 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
             <button class="btn-tisk-stitek" onclick="printStitky()" aria-label="Tisknout štítky do knihy">Tisknout</button>
             <button class="btn-zmen-format" onclick="zmenFormat()" aria-label="Změnit formát etiket">Změnit formát</button>
           </div>
+          <div class="print-offset-wrap">
+            <div class="print-offset-title">Korekce tisku</div>
+            <div class="poc-row">
+              <span class="poc-lbl">Vodorovně</span>
+              <button class="poc-btn" onclick="adjustOffset('X',-0.5)">−</button>
+              <span class="poc-val" id="poOffsetX">0</span>
+              <span class="poc-unit">mm</span>
+              <button class="poc-btn" onclick="adjustOffset('X',+0.5)">+</button>
+            </div>
+            <div class="poc-row">
+              <span class="poc-lbl">Svisle</span>
+              <button class="poc-btn" onclick="adjustOffset('Y',-0.5)">−</button>
+              <span class="poc-val" id="poOffsetY">0</span>
+              <span class="poc-unit">mm</span>
+              <button class="poc-btn" onclick="adjustOffset('Y',+0.5)">+</button>
+            </div>
+          </div>
         </div>
 
         <!-- Údaje z OP -->
@@ -636,57 +667,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   </div>
   <div class="settings-body">
     <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--rule);">
-      <svg viewBox="0 0 260 140" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;">
-        <!-- A4 sheet background -->
-        <rect x="38" y="14" width="185" height="108" rx="2" fill="#f2f0eb" stroke="#d0ccc4" stroke-width="0.8"/>
-        <!-- Label rectangle -->
-        <rect x="70" y="36" width="138" height="50" fill="#fff" stroke="#0b1929" stroke-width="1.5" opacity="0.85"/>
-        <!-- Column dividers -->
-        <line x1="97" y1="36" x2="97" y2="86" stroke="#0b1929" stroke-width="0.8" opacity="0.5"/>
-        <line x1="149" y1="36" x2="149" y2="86" stroke="#0b1929" stroke-width="0.8" opacity="0.5"/>
-        <line x1="185" y1="36" x2="185" y2="86" stroke="#0b1929" stroke-width="0.8" opacity="0.5"/>
-        <!-- H1 horizontal divider in W2 column -->
-        <line x1="97" y1="71" x2="149" y2="71" stroke="#0b1929" stroke-width="0.8" opacity="0.5"/>
-        <!-- PX dotted (horizontal text-padding indicator) -->
-        <line x1="76" y1="36" x2="76" y2="86" stroke="#0b1929" stroke-width="0.8" stroke-dasharray="2.5,2" opacity="0.4"/>
-        <!-- PY dotted (vertical text-padding indicator) -->
-        <line x1="70" y1="43" x2="97" y2="43" stroke="#0b1929" stroke-width="0.8" stroke-dasharray="2.5,2" opacity="0.4"/>
-        <!-- X dimension arrow -->
-        <polygon points="38,61 43,58 43,64" fill="#0b1929" opacity="0.6"/>
-        <line x1="43" y1="61" x2="65" y2="61" stroke="#0b1929" stroke-width="1" opacity="0.6"/>
-        <polygon points="70,61 65,58 65,64" fill="#0b1929" opacity="0.6"/>
-        <line x1="38" y1="55" x2="38" y2="67" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
-        <line x1="70" y1="55" x2="70" y2="67" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
-        <text x="54" y="54" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">X</text>
-        <!-- Y dimension arrow -->
-        <polygon points="25,14 22,19 28,19" fill="#0b1929" opacity="0.6"/>
-        <line x1="25" y1="19" x2="25" y2="31" stroke="#0b1929" stroke-width="1" opacity="0.6"/>
-        <polygon points="25,36 22,31 28,31" fill="#0b1929" opacity="0.6"/>
-        <line x1="19" y1="14" x2="31" y2="14" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
-        <line x1="19" y1="36" x2="31" y2="36" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
-        <text x="12" y="28" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">Y</text>
-        <!-- H dimension arrow -->
-        <polygon points="218,36 215,41 221,41" fill="#0b1929" opacity="0.6"/>
-        <line x1="218" y1="41" x2="218" y2="81" stroke="#0b1929" stroke-width="1" opacity="0.6"/>
-        <polygon points="218,86 215,81 221,81" fill="#0b1929" opacity="0.6"/>
-        <line x1="208" y1="36" x2="224" y2="36" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
-        <line x1="208" y1="86" x2="224" y2="86" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
-        <text x="232" y="63" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">H</text>
-        <!-- H1 label inside W2 top section -->
-        <text x="99" y="57" font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="#9a6e10">H1</text>
-        <!-- W column labels -->
-        <line x1="83"  y1="86" x2="83"  y2="93" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
-        <line x1="123" y1="86" x2="123" y2="93" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
-        <line x1="167" y1="86" x2="167" y2="93" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
-        <line x1="196" y1="86" x2="196" y2="93" stroke="#0b1929" stroke-width="0.7" opacity="0.35"/>
-        <text x="83"  y="103" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">W1</text>
-        <text x="123" y="103" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">W2</text>
-        <text x="167" y="103" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">W3</text>
-        <text x="196" y="103" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#9a6e10">W4</text>
-        <!-- PX and PY labels -->
-        <text x="78" y="84" font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="#9a6e10">PX</text>
-        <text x="72" y="42" font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="#9a6e10">PY</text>
-      </svg>
+      <svg id="spDiagram" viewBox="0 0 260 140" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;"></svg>
     </div>
     <div class="sp-section">
       <div class="sp-section-title">Rozměry štítku</div>
@@ -757,6 +738,7 @@ let uploadedImages = [];
 let ocrDone = false;
 let gdprShown = false;
 let deferredInstallPrompt = null;
+let diagramActive = null;
 
 // ── PWA install prompt ─────────────────────────────────────────────
 window.addEventListener('beforeinstallprompt', e => {
@@ -785,6 +767,7 @@ function init() {
   prefillDates();
   document.getElementById('fileInput').addEventListener('change', e => handleFiles(e.target.files));
   updatePreview();
+  initPrintOffset();
 }
 
 // ── Advokát ───────────────────────────────────────────────────────
@@ -1201,6 +1184,9 @@ function updateStitek() { renderStitek(getSettings()); }
 // ── PRINT ─────────────────────────────────────────────────────────
 function printStitky() {
   const s = getSettings();
+  const off = getPrintOffset();
+  const printX = (s.X || 0) + (off.X || 0);
+  const printY = (s.Y || 0) + (off.Y || 0);
   const v = id => document.getElementById(id)?.value.trim() || '';
   const datumOver = v('fDatumOver'), jmeno = v('fJmeno');
   const datumNar = v('fDatumNar'), mistoNar = v('fMistoNar');
@@ -1224,7 +1210,7 @@ function printStitky() {
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page{size:A4 portrait;margin:0}
-body{margin:0;padding:${s.Y}mm 0 0 ${s.X}mm;font-family:'DM Sans',system-ui,sans-serif;font-size:6.5pt;line-height:1.3;color:#1a2233;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;padding:${printY}mm 0 0 ${printX}mm;font-family:'DM Sans',system-ui,sans-serif;font-size:6.5pt;line-height:1.3;color:#1a2233;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .st{display:grid;grid-template-columns:${s.W1}mm ${s.W2}mm ${s.W3}mm ${s.W4}mm;width:${totalW}mm;height:${s.H}mm;box-sizing:border-box;page-break-inside:avoid;break-inside:avoid}
 .c1,.c3,.c4{padding:${s.PY}mm ${s.PX}mm;overflow:hidden;box-sizing:border-box}
 .c1,.c2,.c3{border-right:0.3mm solid ${dc}}
@@ -1254,9 +1240,11 @@ function openSettings() {
   updateSettingsSum();
   document.getElementById('settingsOverlay').classList.add('open');
   document.getElementById('settingsPanel').classList.add('open');
+  renderDiagram(s);
 }
 
 function closeSettings() {
+  diagramActive = null;
   document.getElementById('settingsOverlay').classList.remove('open');
   document.getElementById('settingsPanel').classList.remove('open');
 }
@@ -1296,6 +1284,130 @@ function onSettingsInput() {
   });
   s.border = document.getElementById('sp_border')?.checked ?? s.border;
   renderStitek(s);
+  renderDiagram(s);
+}
+
+// ── DIAGRAM ───────────────────────────────────────────────────────
+function getDiagramS() {
+  const fmtKey = localStorage.getItem('legalid_format') || 'standard';
+  const s = { ...(FORMAT_DEFAULTS[fmtKey] || FORMAT_DEFAULTS.standard) };
+  ['H','H1','X','Y','PX','PY','W1','W2','W3','W4'].forEach(f => {
+    const el = document.getElementById('sp_' + f);
+    if (el && el.value !== '') s[f] = parseFloat(el.value) || 0;
+  });
+  s.border = document.getElementById('sp_border')?.checked ?? s.border;
+  return s;
+}
+
+function renderDiagram(s) {
+  const svg = document.getElementById('spDiagram');
+  if (!svg) return;
+  const SHX=38, SHY=14, SHW=185, SHH=108, k=SHW/210;
+  const lx=SHX+(s.X||0)*k, ly=SHY+(s.Y||0)*k;
+  const lw=((s.W1||0)+(s.W2||0)+(s.W3||0)+(s.W4||0))*k, lh=(s.H||0)*k;
+  const rb=lx+lw, lb=ly+lh;
+  const cx1=lx+(s.W1||0)*k, cx2=cx1+(s.W2||0)*k, cx3=cx2+(s.W3||0)*k;
+  const h1y=ly+(s.H1||0)*k, pxx=lx+(s.PX||0)*k, pyy=ly+(s.PY||0)*k;
+  const G='#9a6e10', N='#0b1929', FF="font-family='system-ui,sans-serif'";
+
+  const hl = (f,rx,ry,rw,rh) => {
+    const a = diagramActive===f;
+    return `<rect x="${rx.toFixed(1)}" y="${ry.toFixed(1)}" width="${Math.max(rw,6).toFixed(1)}" height="${Math.max(rh,6).toFixed(1)}" fill="${a?'rgba(154,110,16,.13)':'transparent'}" stroke="${a?G:'none'}" stroke-width="${a?1.5:0}" rx="1" style="cursor:pointer" onclick="diagramClick('${f}')"/>`;
+  };
+
+  const arH = (x1,x2,y,lbl) => {
+    const d=x2-x1, mx=(x1+x2)/2;
+    if (d<5) return `<text x="${mx.toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="middle" ${FF} font-size="11" font-weight="700" fill="${G}">${lbl}</text>`;
+    return `<polygon points="${x1},${y} ${x1+4},${(y-3)} ${x1+4},${(y+3)}" fill="${N}" opacity=".6"/>
+      <line x1="${(x1+4).toFixed(1)}" y1="${y}" x2="${(x2-4).toFixed(1)}" y2="${y}" stroke="${N}" stroke-width="1" opacity=".6"/>
+      <polygon points="${x2},${y} ${(x2-4)},${(y-3)} ${(x2-4)},${(y+3)}" fill="${N}" opacity=".6"/>
+      <line x1="${x1}" y1="${(y-5)}" x2="${x1}" y2="${(y+5)}" stroke="${N}" stroke-width=".7" opacity=".35"/>
+      <line x1="${x2}" y1="${(y-5)}" x2="${x2}" y2="${(y+5)}" stroke="${N}" stroke-width=".7" opacity=".35"/>
+      <text x="${mx.toFixed(1)}" y="${(y-6).toFixed(1)}" text-anchor="middle" ${FF} font-size="11" font-weight="700" fill="${G}">${lbl}</text>`;
+  };
+
+  const arV = (x,y1,y2,lbl,lx_) => {
+    const d=y2-y1, my=(y1+y2)/2, tx=(lx_??x+10);
+    if (d<5) return `<text x="${tx.toFixed(1)}" y="${(my+4).toFixed(1)}" text-anchor="middle" ${FF} font-size="11" font-weight="700" fill="${G}">${lbl}</text>`;
+    return `<polygon points="${x},${y1} ${(x-3)},${(y1+4)} ${(x+3)},${(y1+4)}" fill="${N}" opacity=".6"/>
+      <line x1="${x}" y1="${(y1+4).toFixed(1)}" x2="${x}" y2="${(y2-4).toFixed(1)}" stroke="${N}" stroke-width="1" opacity=".6"/>
+      <polygon points="${x},${y2} ${(x-3)},${(y2-4)} ${(x+3)},${(y2-4)}" fill="${N}" opacity=".6"/>
+      <line x1="${(x-5)}" y1="${y1}" x2="${(x+5)}" y2="${y1}" stroke="${N}" stroke-width=".7" opacity=".35"/>
+      <line x1="${(x-5)}" y1="${y2}" x2="${(x+5)}" y2="${y2}" stroke="${N}" stroke-width=".7" opacity=".35"/>
+      <text x="${tx.toFixed(1)}" y="${(my+4).toFixed(1)}" text-anchor="middle" ${FF} font-size="11" font-weight="700" fill="${G}">${lbl}</text>`;
+  };
+
+  const wlbl = (cx,lbl) =>
+    `<line x1="${cx.toFixed(1)}" y1="${lb.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${(lb+6).toFixed(1)}" stroke="${N}" stroke-width=".7" opacity=".35"/>
+    <text x="${cx.toFixed(1)}" y="${(lb+16).toFixed(1)}" text-anchor="middle" ${FF} font-size="11" font-weight="700" fill="${G}">${lbl}</text>`;
+
+  svg.innerHTML = `
+    <rect x="${SHX}" y="${SHY}" width="${SHW}" height="${SHH}" rx="2" fill="#f2f0eb" stroke="#d0ccc4" stroke-width=".8"/>
+    <rect x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" width="${lw.toFixed(1)}" height="${lh.toFixed(1)}" fill="#fff" stroke="${N}" stroke-width="1.5" opacity=".85"/>
+    <line x1="${cx1.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${cx1.toFixed(1)}" y2="${lb.toFixed(1)}" stroke="${N}" stroke-width=".8" opacity=".5"/>
+    <line x1="${cx2.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${cx2.toFixed(1)}" y2="${lb.toFixed(1)}" stroke="${N}" stroke-width=".8" opacity=".5"/>
+    <line x1="${cx3.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${cx3.toFixed(1)}" y2="${lb.toFixed(1)}" stroke="${N}" stroke-width=".8" opacity=".5"/>
+    <line x1="${cx1.toFixed(1)}" y1="${h1y.toFixed(1)}" x2="${cx2.toFixed(1)}" y2="${h1y.toFixed(1)}" stroke="${N}" stroke-width=".8" opacity=".5"/>
+    <line x1="${pxx.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${pxx.toFixed(1)}" y2="${lb.toFixed(1)}" stroke="${N}" stroke-width=".8" stroke-dasharray="2.5,2" opacity=".4"/>
+    <line x1="${lx.toFixed(1)}" y1="${pyy.toFixed(1)}" x2="${cx1.toFixed(1)}" y2="${pyy.toFixed(1)}" stroke="${N}" stroke-width=".8" stroke-dasharray="2.5,2" opacity=".4"/>
+    ${(s.X||0)>0.5 ? arH(SHX,lx,ly+lh/2,'X') : `<text x="${(SHX+3)}" y="${(ly+lh/2+4).toFixed(1)}" ${FF} font-size="10" font-weight="700" fill="${G}">X</text>`}
+    ${(s.Y||0)>0.5 ? arV(SHX-13,SHY,ly,'Y',SHX-5) : `<text x="${SHX-6}" y="${(SHY+10)}" text-anchor="end" ${FF} font-size="10" font-weight="700" fill="${G}">Y</text>`}
+    <line x1="${rb.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${(rb+12).toFixed(1)}" y2="${ly.toFixed(1)}" stroke="${N}" stroke-width=".7" opacity=".35"/>
+    <line x1="${rb.toFixed(1)}" y1="${lb.toFixed(1)}" x2="${(rb+12).toFixed(1)}" y2="${lb.toFixed(1)}" stroke="${N}" stroke-width=".7" opacity=".35"/>
+    ${arV(rb+8,ly,lb,'H',rb+17)}
+    <text x="${(cx1+2).toFixed(1)}" y="${((ly+h1y)/2+4).toFixed(1)}" ${FF} font-size="10" font-weight="700" fill="${G}">H1</text>
+    ${wlbl((lx+cx1)/2,'W1')}${wlbl((cx1+cx2)/2,'W2')}${wlbl((cx2+cx3)/2,'W3')}${wlbl((cx3+rb)/2,'W4')}
+    <text x="${(pxx+2).toFixed(1)}" y="${(lb-3).toFixed(1)}" ${FF} font-size="10" font-weight="700" fill="${G}">PX</text>
+    <text x="${(lx+2).toFixed(1)}" y="${(pyy-2).toFixed(1)}" ${FF} font-size="10" font-weight="700" fill="${G}">PY</text>
+    ${hl('W1',lx,ly,(s.W1||0)*k,lh)}
+    ${hl('W2',cx1,ly,(s.W2||0)*k,lh)}
+    ${hl('W3',cx2,ly,(s.W3||0)*k,lh)}
+    ${hl('W4',cx3,ly,(s.W4||0)*k,lh)}
+    ${hl('H1',cx1,ly,(s.W2||0)*k,(s.H1||0)*k)}
+    ${hl('H',rb,ly,18,lh)}
+    ${(s.X||0)>0.5 ? hl('X',SHX,ly,(s.X||0)*k,lh) : ''}
+    ${(s.Y||0)>0.5 ? hl('Y',lx-5,SHY,20,(s.Y||0)*k) : ''}
+    ${hl('PX',pxx-5,ly,12,lh)}
+    ${hl('PY',lx,pyy-5,cx1-lx,12)}`;
+}
+
+function diagramClick(field) {
+  const prev = diagramActive;
+  diagramActive = field;
+  renderDiagram(getDiagramS());
+  if (prev) {
+    const pe = document.getElementById('sp_' + prev);
+    if (pe) pe.classList.remove('sp-highlighted');
+  }
+  const el = document.getElementById('sp_' + field);
+  if (el) {
+    el.classList.add('sp-highlighted');
+    el.focus();
+    el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    setTimeout(() => { if (el) el.classList.remove('sp-highlighted'); }, 2000);
+  }
+}
+
+// ── PRINT OFFSET ──────────────────────────────────────────────────
+function getPrintOffset() {
+  try { return JSON.parse(localStorage.getItem('legalid_print_offset') || '{"X":0,"Y":0}'); }
+  catch { return {X:0, Y:0}; }
+}
+
+function initPrintOffset() {
+  const off = getPrintOffset();
+  const ex = document.getElementById('poOffsetX');
+  const ey = document.getElementById('poOffsetY');
+  if (ex) ex.textContent = off.X ?? 0;
+  if (ey) ey.textContent = off.Y ?? 0;
+}
+
+function adjustOffset(axis, delta) {
+  const off = getPrintOffset();
+  off[axis] = Math.round(Math.max(-10, Math.min(10, (off[axis]||0) + delta)) * 10) / 10;
+  localStorage.setItem('legalid_print_offset', JSON.stringify(off));
+  const el = document.getElementById('poOffset' + axis);
+  if (el) el.textContent = off[axis];
 }
 
 // ── Toast ─────────────────────────────────────────────────────────

@@ -410,9 +410,15 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 <header class="app-header">
   <div class="app-header-i">
     <div class="app-logo-mark">
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <path d="M4 14V7l5-4 5 4v7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="6.5" y="9" width="5" height="5" rx="1" fill="#fff" opacity=".85"/>
+      <svg width="20" height="20" viewBox="0 0 64 64" fill="none">
+        <rect x="3" y="8" width="42" height="27" rx="5" fill="rgba(255,255,255,.18)" stroke="#fff" stroke-width="2.8"/>
+        <circle cx="15" cy="19" r="5" fill="rgba(255,255,255,.4)"/>
+        <rect x="26" y="12" width="14" height="3" rx="1.5" fill="rgba(255,255,255,.75)"/>
+        <rect x="26" y="18" width="10" height="2.5" rx="1.25" fill="rgba(255,255,255,.45)"/>
+        <rect x="8" y="28" width="32" height="2.5" rx="1.25" fill="rgba(255,255,255,.3)"/>
+        <circle cx="46" cy="46" r="15" fill="#fff" opacity=".95"/>
+        <circle cx="46" cy="46" r="12" fill="#9a6e10"/>
+        <path d="M40 46 L44 50 L54 38" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
     <div>
@@ -506,7 +512,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
                 <span class="format-card-name">195 × 37 mm</span>
                 <span class="format-card-desc">Pro etikety s okraji</span>
               </button>
-              <button class="format-card" data-format="custom" onclick="selectFormat('custom')" aria-label="Vlastní rozměry">
+              <button class="format-card" data-format="custom" onclick="selectCustomFormat()" aria-label="Vlastní rozměry">
                 <span class="format-card-name">Vlastní rozměry</span>
                 <span class="format-card-desc">Nastavím si sám →</span>
               </button>
@@ -519,7 +525,6 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
         <div class="stitek-preview-section" id="stitkPreview">
           <div class="stitek-preview-lbl">Náhled štítku</div>
-          <button class="btn-settings-gear" onclick="openSettings()" aria-label="Nastavení etiket">⚙</button>
           <div class="stitek-scale-outer" id="stitkScaleOuter">
             <div class="stitek" id="stitek">
               <div class="st-col" id="stCol1"></div>
@@ -1039,6 +1044,15 @@ function openPrintFlow() {
     document.getElementById('formatPanel').classList.toggle('open');
     document.querySelectorAll('.format-card').forEach(c => c.classList.remove('selected'));
   }
+}
+
+function selectCustomFormat() {
+  localStorage.setItem('legalid_format', 'custom');
+  document.querySelectorAll('.format-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.format === 'custom');
+  });
+  closeFormatPanel();
+  openSettings();
 }
 
 function selectFormat(key) {

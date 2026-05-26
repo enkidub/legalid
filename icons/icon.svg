@@ -1,15 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="118" fill="#ffffff" stroke="#ddd9d0" stroke-width="4"/>
-  <rect x="51" y="113" width="410" height="256" rx="36" fill="#f9f8f5" stroke="#0b1929" stroke-width="6"/>
-  <rect x="82" y="149" width="108" height="108" rx="18" fill="#0b1929" opacity="0.10"/>
-  <circle cx="136" cy="185" r="26" fill="#0b1929" opacity="0.28"/>
-  <path d="M82 257 Q136 231 190 257" fill="#0b1929" opacity="0.15"/>
-  <rect x="220" y="156" width="194" height="20" rx="10" fill="#0b1929" opacity="0.55"/>
-  <rect x="220" y="192" width="143" height="16" rx="8" fill="#0b1929" opacity="0.28"/>
-  <rect x="82" y="292" width="348" height="16" rx="8" fill="#0b1929" opacity="0.15"/>
-  <rect x="82" y="320" width="266" height="16" rx="8" fill="#0b1929" opacity="0.15"/>
-  <circle cx="399" cy="348" r="72" fill="#ffffff" stroke="#ddd9d0" stroke-width="3"/>
-  <circle cx="399" cy="348" r="60" fill="#9a6e10"/>
-  <path d="M368 348 L390 370 L432 314" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="256" y="492" text-anchor="middle" fill="#0b1929" font-size="48" font-family="Georgia,serif" font-weight="700" letter-spacing="2">Legal<tspan fill="#9a6e10">ID</tspan></text>
+  <!-- Plné navy pozadí, žádný bílý okraj -->
+  <rect width="512" height="512" rx="118" fill="#0b1929"/>
+  <!-- Průkaz -->
+  <rect x="60" y="130" width="392" height="240" rx="32"
+        fill="none" stroke="#ffffff" stroke-width="14"
+        opacity="0.85"/>
+  <!-- Foto placeholder -->
+  <rect x="90" y="160" width="100" height="100" rx="16"
+        fill="#ffffff" opacity="0.15"/>
+  <circle cx="140" cy="195" r="24"
+          fill="#ffffff" opacity="0.35"/>
+  <path d="M90 260 Q140 235 190 260"
+        fill="#ffffff" opacity="0.2"/>
+  <!-- Text linky -->
+  <rect x="210" y="165" width="210" height="18" rx="9"
+        fill="#ffffff" opacity="0.6"/>
+  <rect x="210" y="197" width="155" height="14" rx="7"
+        fill="#ffffff" opacity="0.35"/>
+  <rect x="90" y="288" width="332" height="14" rx="7"
+        fill="#ffffff" opacity="0.2"/>
+  <rect x="90" y="314" width="250" height="14" rx="7"
+        fill="#ffffff" opacity="0.2"/>
+  <!-- Gold check badge -->
+  <circle cx="390" cy="340" r="72" fill="#0b1929"/>
+  <circle cx="390" cy="340" r="60" fill="#9a6e10"/>
+  <path d="M358 340 L382 364 L424 308"
+        fill="none" stroke="#ffffff" stroke-width="14"
+        stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

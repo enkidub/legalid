@@ -464,16 +464,6 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 /* ── DIAGRAM HIT + HIGHLIGHT ── */
 .sp-input.sp-highlighted { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(154,110,16,.15); background: var(--white); }
 
-/* ── PRINT OFFSET ── */
-.print-offset-wrap { margin-top:12px; padding:10px 14px; background:var(--paper); border:1px solid var(--rule); border-radius:var(--r); }
-.print-offset-title { font-size:9px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-fnt); margin-bottom:8px; }
-.poc-row { display:flex; align-items:center; gap:6px; margin-bottom:5px; }
-.poc-row:last-child { margin-bottom:0; }
-.poc-lbl { width:76px; color:var(--ink-lt); font-size:11px; }
-.poc-btn { width:24px; height:24px; border-radius:var(--r); border:1.5px solid var(--rule); background:var(--white); color:var(--navy); font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; padding:0; transition:border-color .14s; }
-.poc-btn:hover { border-color:var(--navy); }
-.poc-val { min-width:30px; text-align:center; font-weight:600; color:var(--ink); font-size:12px; }
-.poc-unit { color:var(--ink-fnt); font-size:11px; }
 </style>
 </head>
 <body>
@@ -624,23 +614,6 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
           <div class="stitek-preview-actions">
             <button class="btn-tisk-stitek" onclick="printStitky()" aria-label="Tisknout štítky do knihy">Tisknout</button>
             <button class="btn-zmen-format" onclick="zmenFormat()" aria-label="Změnit formát etiket">Změnit formát</button>
-          </div>
-          <div class="print-offset-wrap">
-            <div class="print-offset-title">Korekce tisku</div>
-            <div class="poc-row">
-              <span class="poc-lbl">Vodorovně</span>
-              <button class="poc-btn" onclick="adjustOffset('X',-0.5)">−</button>
-              <span class="poc-val" id="poOffsetX">0</span>
-              <span class="poc-unit">mm</span>
-              <button class="poc-btn" onclick="adjustOffset('X',+0.5)">+</button>
-            </div>
-            <div class="poc-row">
-              <span class="poc-lbl">Svisle</span>
-              <button class="poc-btn" onclick="adjustOffset('Y',-0.5)">−</button>
-              <span class="poc-val" id="poOffsetY">0</span>
-              <span class="poc-unit">mm</span>
-              <button class="poc-btn" onclick="adjustOffset('Y',+0.5)">+</button>
-            </div>
           </div>
         </div>
 
@@ -858,7 +831,6 @@ function init() {
   document.getElementById('fileInput').addEventListener('change', e => handleFiles(e.target.files));
   document.addEventListener('click', () => closeSplitMenu());
   updatePreview();
-  initPrintOffset();
 }
 
 // ── Advokát ───────────────────────────────────────────────────────
@@ -1297,9 +1269,6 @@ function updateStitek() { renderStitek(getSettings()); }
 // ── PRINT ─────────────────────────────────────────────────────────
 function printStitky() {
   const s = getSettings();
-  const off = getPrintOffset();
-  const printX = (s.X || 0) + (off.X || 0);
-  const printY = (s.Y || 0) + (off.Y || 0);
   const v = id => document.getElementById(id)?.value.trim() || '';
   const datumOver = v('fDatumOver'), jmeno = v('fJmeno');
   const datumNar = v('fDatumNar'), mistoNar = v('fMistoNar');
@@ -1323,7 +1292,7 @@ function printStitky() {
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page{size:A4 portrait;margin:0}
-body{margin:0;padding:${printY}mm 0 0 ${printX}mm;font-family:'DM Sans',system-ui,sans-serif;font-size:6.5pt;line-height:1.3;color:#1a2233;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;padding:${s.Y||0}mm 0 0 ${s.X||0}mm;font-family:'DM Sans',system-ui,sans-serif;font-size:6.5pt;line-height:1.3;color:#1a2233;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .st{display:grid;grid-template-columns:${s.W1}mm ${s.W2}mm ${s.W3}mm ${s.W4}mm;width:${totalW}mm;height:${s.H}mm;box-sizing:border-box;page-break-inside:avoid;break-inside:avoid}
 .c1,.c3,.c4{padding:${s.PY}mm ${s.PX}mm;overflow:hidden;box-sizing:border-box}
 .c1,.c2,.c3{border-right:0.3mm solid ${dc}}
@@ -1510,27 +1479,6 @@ function diagramClick(field) {
   }
 }
 
-// ── PRINT OFFSET ──────────────────────────────────────────────────
-function getPrintOffset() {
-  try { return JSON.parse(localStorage.getItem('legalid_print_offset') || '{"X":0,"Y":0}'); }
-  catch { return {X:0, Y:0}; }
-}
-
-function initPrintOffset() {
-  const off = getPrintOffset();
-  const ex = document.getElementById('poOffsetX');
-  const ey = document.getElementById('poOffsetY');
-  if (ex) ex.textContent = off.X ?? 0;
-  if (ey) ey.textContent = off.Y ?? 0;
-}
-
-function adjustOffset(axis, delta) {
-  const off = getPrintOffset();
-  off[axis] = Math.round(Math.max(-10, Math.min(10, (off[axis]||0) + delta)) * 10) / 10;
-  localStorage.setItem('legalid_print_offset', JSON.stringify(off));
-  const el = document.getElementById('poOffset' + axis);
-  if (el) el.textContent = off[axis];
-}
 
 // ── Toast ─────────────────────────────────────────────────────────
 function showToast(msg) {

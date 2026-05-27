@@ -988,6 +988,9 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   white-space: nowrap;
 }
 .btn-pm-docx:hover { border-color: var(--ink-lt); color: var(--navy); }
+.pm-docx-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.pm-pdf-link { font-size: 11px; color: var(--ink-lt); text-decoration: none; white-space: nowrap; line-height: 1; }
+.pm-pdf-link:hover { color: var(--ink); text-decoration: underline; }
 /* Settings panel — right column content */
 .pm-sticky-top {
   position: sticky; top: 0; z-index: 10; flex-shrink: 0;
@@ -1508,7 +1511,10 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       </div>
     </div>
     <div class="pm-bar-right">
-      <button class="btn-pm-docx" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)))">📄 Stáhnout .docx</button>
+      <div class="pm-docx-wrap">
+        <button class="btn-pm-docx" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)))">📄 Stáhnout .docx</button>
+        <a class="pm-pdf-link" href="#" onclick="printDolozka();return false;">Problémy s otevřením? Stáhnout jako PDF →</a>
+      </div>
       <button class="btn-pm-print" onclick="printDolozka()">🖨 Tisknout</button>
     </div>
   </div>

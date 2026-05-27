@@ -841,13 +841,14 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .pv-combo-wrap { display: flex !important; }
 .pv-combo-left { flex: 0 0 55%; min-width: 0; overflow: hidden; }
 .pv-combo-right { flex: 0 0 45%; min-width: 0; overflow: hidden; padding: 0 4px; }
-.pv-combo-sheet { display: block; width: 794px; height: 1123px; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.18); overflow: hidden; }
-.pv-combo-row { display: flex; width: 794px; height: 280.75px; overflow: hidden; box-sizing: border-box; position: relative; }
+.pv-combo-sheet { display: block; width: 794px; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.18); }
+.pv-combo-row { display: flex; width: 794px; box-sizing: border-box; position: relative; }
 .pv-combo-sheet .pv-combo-row + .pv-combo-row { border-top: 0.5px dashed #ccc; }
-.pv-combo-row-left { flex: 0 0 55%; min-width: 0; overflow: hidden; padding: 30px 23px 30px 30px; font-family: 'Times New Roman', Times, serif; font-size: 8px; line-height: 1.4; color: #111; }
-.pv-combo-row-right { flex: 0 0 45%; min-width: 0; overflow: hidden; border-left: 0.5px solid #ddd; padding: 30px 30px 30px 23px; font-family: 'Times New Roman', Times, serif; font-size: 8px; line-height: 1.4; color: #111; }
+.pv-combo-row-left { flex: 0 0 55%; min-width: 0; padding: 30px 23px 30px 30px; font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; line-height: 1.35; color: #111; }
+.pv-combo-row-right { flex: 0 0 45%; min-width: 0; border-left: 0.5px solid #ddd; padding: 30px 30px 30px 23px; font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; line-height: 1.35; color: #111; }
 .pv-combo-cut-icon { position: absolute; top: 3px; left: 5px; font-size: 10px; color: #aaa; z-index: 1; }
-.pv-combo-row-title { font-weight: bold; text-transform: uppercase; font-size: 7.5px; margin-bottom: 3px; letter-spacing: 0.2px; }
+.pv-combo-gap { height: 0.8em; }
+.pv-combo-row-title { font-weight: bold; text-transform: uppercase; font-size: 7.5pt; margin-bottom: 3px; letter-spacing: 0.2px; }
 .pv-combo-row-sig { margin-top: 10px; }
 .pv-combo-row-sig-name { margin-top: 14px; text-align: right; }
 /* Bottom bar */
@@ -2695,47 +2696,44 @@ function buildDolozkaPreviewContent() {
   const a4 = document.getElementById('printPreviewA4');
   if (!grid) return;
   if (s.combo) {
-    const pages = Math.ceil(copies / 4);
     const sigLine = s.sig_mode === 'none' ? '' :
       `<div class="pv-combo-row-sig-name">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}</div>`;
-    let html = '';
-    for (let p = 0; p < pages; p++) {
-      if (p > 0) html += `<div style="height:8px;width:794px;background:#dde0e4;"></div>`;
-      html += `<div class="pv-combo-sheet">`;
-      for (let r = 0; r < 4; r++) {
-        const idx = p * 4 + r;
-        if (idx < copies) {
-          const cutIcon = (r > 0 && s.cut_line) ? `<div class="pv-combo-cut-icon">✂</div>` : '';
-          html +=
-            `<div class="pv-combo-row">` +
-            cutIcon +
-            `<div class="pv-combo-row-left">` +
-            `<div class="pv-combo-row-title">Prohlášení o pravosti podpisu</div>` +
-            `<div>${knjia} · ${phd(d.aJmeno,'advokát')}, ev.č. ${phd(d.aEvCislo,'č.ev.')}</div>` +
-            `<div>Prohlašuji, že ${phd(d.jmeno,'JMÉNO')}, nar. ${phd(d.datumNar,'datum')}, OP č. ${phd(d.cisloOp,'OP')}, listinu v ${phd(d.pocet,'POČET')} vyhotov. přede mnou vlastnoručně podepsal/a.</div>` +
-            `<div class="pv-combo-row-sig">V Praze dne ${phd(d.datumOver,'datum')}` + sigLine + `</div>` +
-            `</div>` +
-            `<div class="pv-combo-row-right">` +
-            `<div>${phd(d.jmeno,'JMÉNO')}, nar. ${phd(d.datumNar,'datum')}</div>` +
-            `<div>OP: ${phd(d.cisloOp,'OP')}</div>` +
-            `<div>${phd(d.pocet,'počet')}× ${phd(d.listina,'LISTINA')}</div>` +
-            `</div>` +
-            `</div>`;
-        }
-      }
-      html += `</div>`;
+    let html = `<div class="pv-combo-sheet">`;
+    for (let i = 0; i < copies; i++) {
+      const cutIcon = (i > 0 && s.cut_line) ? `<div class="pv-combo-cut-icon">✂</div>` : '';
+      html +=
+        `<div class="pv-combo-row">` +
+        cutIcon +
+        `<div class="pv-combo-row-left">` +
+        `<div class="pv-combo-row-title">Prohlášení o pravosti podpisu</div>` +
+        `<div>${knjia} · ${phd(d.aJmeno,'advokát')}, ev.č. ${phd(d.aEvCislo,'č.ev.')}</div>` +
+        `<div>Prohlašuji, že ${phd(d.jmeno,'JMÉNO')}, nar. ${phd(d.datumNar,'datum')}, OP č. ${phd(d.cisloOp,'OP')}, listinu v ${phd(d.pocet,'POČET')} vyhotov. přede mnou vlastnoručně podepsal/a.</div>` +
+        `<div class="pv-combo-row-sig">V Praze dne ${phd(d.datumOver,'datum')}` + sigLine + `</div>` +
+        `</div>` +
+        `<div class="pv-combo-row-right">` +
+        `<div>V Praze, ${phd(d.aSidlo,'sídlo')}</div>` +
+        `<div>dne ${phd(d.datumOver,'datum')}</div>` +
+        `<div class="pv-combo-gap"></div>` +
+        `<div>${phd(d.jmeno,'JMÉNO')}, nar. ${phd(d.datumNar,'datum')},</div>` +
+        `<div>místo narození ${phd(d.mistoNar,'místo')},</div>` +
+        `<div>bytem ${phd(d.adresa,'adresa')}</div>` +
+        `<div class="pv-combo-gap"></div>` +
+        `<div>OP: ${phd(d.cisloOp,'OP')}</div>` +
+        `<div class="pv-combo-gap"></div>` +
+        `<div>${phd(d.pocet,'počet')}×</div>` +
+        `<div>${phd(d.listina,'LISTINA')}</div>` +
+        `</div>` +
+        `</div>`;
     }
-    const comboGap = pages > 1 ? (pages - 1) * 8 : 0;
-    const totalH = pages * 1123 + comboGap;
+    html += `</div>`;
     grid.style.display = 'block';
-    grid.style.height = totalH + 'px';
-    if (a4) {
-      a4.style.height = totalH + 'px';
-      a4.style.background = '#dde0e4';
-      a4.style.boxShadow = 'none';
-    }
+    grid.style.height = '';
+    if (a4) { a4.style.height = ''; a4.style.background = ''; a4.style.boxShadow = ''; }
     grid.innerHTML = html;
+    const gridH = grid.offsetHeight || 1123;
+    if (a4) a4.style.height = gridH + 'px';
     scalePrintPreview();
+    return;
   } else {
     const pages = Math.ceil(copies / 8);
     if (pages === 1) {
@@ -2798,57 +2796,52 @@ function printDolozka() {
   const s = getPmSettingsFromUI();
 
   if (s.combo) {
-    const comboPages = Math.ceil(copies / 4);
-    let pagesHtml = '';
-    for (let p = 0; p < comboPages; p++) {
-      let rows = '';
-      for (let r = 0; r < 4; r++) {
-        const idx = p * 4 + r;
-        if (idx < copies) {
-          const sigLine = s.sig_mode === 'none' ? '' : `<div class="sig-name">${d.aJmeno}, ${d.aRole}</div>`;
-          const cutIcon = (r > 0 && s.cut_line) ? `<div class="cut-icon">✂</div>` : '';
-          rows +=
-            `<div class="row">` +
-            cutIcon +
-            `<div class="pleft">` +
-            `<div class="title">Prohlášení o pravosti podpisu</div>` +
-            `<div class="p">Číslo knihy: ${knjia}</div>` +
-            `<div class="p">${d.aJmeno}, ${d.aRole}, ev. č. ${d.aEvCislo}, se sídlem ${d.aSidlo};</div>` +
-            `<div class="p">Prohlašuji, že ${d.jmeno}, nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}, jehož/jejíž totožnost prokázána OP č. ${d.cisloOp}, tuto listinu v ${d.pocet} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
-            `<div class="sig">V Praze dne ${d.datumOver}</div>` +
-            sigLine +
-            `</div>` +
-            `<div class="pright">` +
-            `<div class="p">V Praze, ${d.aSidlo} dne ${d.datumOver}</div>` +
-            `<div class="gap"></div>` +
-            `<div class="p">${d.jmeno} nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}</div>` +
-            `<div class="gap"></div>` +
-            `<div class="p">OP: ${d.cisloOp}</div>` +
-            `<div class="p">${d.pocet}x ${d.listina}</div>` +
-            `</div>` +
-            `</div>`;
-        }
-      }
-      pagesHtml += `<div class="page${p < comboPages - 1 ? ' page-break' : ''}">${rows}</div>`;
+    let rowsHtml = '';
+    for (let i = 0; i < copies; i++) {
+      const sigLine = s.sig_mode === 'none' ? '' : `<div class="sig-name">${d.aJmeno}, ${d.aRole}</div>`;
+      const cutIcon = (i > 0 && s.cut_line) ? `<div class="cut-icon">✂</div>` : '';
+      rowsHtml +=
+        `<div class="row">` +
+        cutIcon +
+        `<div class="pleft">` +
+        `<div class="title">Prohlášení o pravosti podpisu</div>` +
+        `<div class="p">Číslo knihy: ${knjia}</div>` +
+        `<div class="p">${d.aJmeno}, ${d.aRole}, ev. č. ${d.aEvCislo}, se sídlem ${d.aSidlo};</div>` +
+        `<div class="p">Prohlašuji, že ${d.jmeno}, nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}, jehož/jejíž totožnost prokázána OP č. ${d.cisloOp}, tuto listinu v ${d.pocet} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
+        `<div class="sig">V Praze dne ${d.datumOver}</div>` +
+        sigLine +
+        `</div>` +
+        `<div class="pright">` +
+        `<div class="p">V Praze, ${d.aSidlo}</div>` +
+        `<div class="p">dne ${d.datumOver}</div>` +
+        `<div class="gap"></div>` +
+        `<div class="p">${d.jmeno}, nar. ${d.datumNar},</div>` +
+        `<div class="p">místo narození ${d.mistoNar},</div>` +
+        `<div class="p">bytem ${d.adresa}</div>` +
+        `<div class="gap"></div>` +
+        `<div class="p">OP: ${d.cisloOp}</div>` +
+        `<div class="gap"></div>` +
+        `<div class="p">${d.pocet}x</div>` +
+        `<div class="p">${d.listina}</div>` +
+        `</div>` +
+        `</div>`;
     }
     const comboHtml = `<!DOCTYPE html><html lang="cs"><head><meta charset="UTF-8"><style>
 @page{size:A4 portrait;margin:0}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Times New Roman',Times,serif;line-height:1.4;color:#111}
-.page{width:210mm;height:297mm;overflow:hidden}
-.page-break{page-break-after:always}
-.row{display:flex;width:210mm;height:74.25mm;overflow:hidden;box-sizing:border-box;position:relative}
-.page .row+.row{border-top:0.5pt dashed #ccc}
-.pleft{flex:0 0 55%;min-width:0;overflow:hidden;padding:8mm 6mm 8mm 8mm}
-.pright{flex:0 0 45%;min-width:0;overflow:hidden;border-left:0.5pt solid #ddd;padding:8mm 8mm 8mm 6mm}
-.title{font-weight:bold;text-transform:uppercase;letter-spacing:.2px;font-size:7.5pt;margin-bottom:2pt}
-.p{font-size:7.5pt;margin-bottom:1.5pt}
-.sig{margin-top:5pt;font-size:7.5pt}
-.sig-name{margin-top:8pt;text-align:right;font-size:7.5pt}
-.gap{height:3pt}
+body{font-family:'Times New Roman',Times,serif;font-size:10pt;line-height:1.35;color:#111;width:210mm}
+.row{display:flex;width:210mm;box-sizing:border-box;position:relative;page-break-inside:avoid}
+.row+.row{border-top:0.5pt dashed #ccc}
+.pleft{flex:0 0 55%;min-width:0;padding:8mm 6mm 8mm 8mm}
+.pright{flex:0 0 45%;min-width:0;border-left:0.5pt solid #ddd;padding:8mm 8mm 8mm 6mm}
+.title{font-weight:bold;text-transform:uppercase;letter-spacing:.2px;margin-bottom:3pt}
+.p{margin-bottom:1.5pt}
+.sig{margin-top:6pt}
+.sig-name{margin-top:10pt;text-align:right}
+.gap{height:0.7em}
 .cut-icon{position:absolute;top:2pt;left:4pt;font-size:9pt;color:#aaa}
 </style></head><body>
-${pagesHtml}
+${rowsHtml}
 <script>window.addEventListener('load',()=>window.print())<\/script>
 </body></html>`;
     const wc = window.open('', '_blank');

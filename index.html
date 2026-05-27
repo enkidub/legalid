@@ -575,6 +575,118 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   transition: background .15s, color .15s;
 }
 .btn-cfg:hover { background: var(--paper-w); color: var(--navy); }
+.btn-hamburger {
+  flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--ink-lt); font-size: 22px; line-height: 1;
+  transition: background .15s;
+}
+.btn-hamburger:hover { background: var(--paper-w); }
+
+/* ── NAV PANEL ── */
+.nav-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 210;
+}
+.nav-overlay.open { display: block; }
+.nav-panel {
+  position: fixed; top: 0; right: 0; height: 100vh; width: 280px;
+  background: var(--white); box-shadow: var(--sh-lg); z-index: 211;
+  display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform .25s ease;
+}
+.nav-panel.open { transform: translateX(0); }
+.nav-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--rule); flex-shrink: 0;
+}
+.nav-head-logo { display: flex; align-items: center; gap: 8px; }
+.nav-head-logo img { width: 26px; height: 26px; display: block; }
+.nav-head-title { font-family: var(--serif); font-size: 18px; font-weight: 700; color: var(--navy); }
+.btn-nav-close {
+  background: none; border: none; cursor: pointer; color: var(--ink-lt);
+  font-size: 20px; line-height: 1; padding: 4px 8px; border-radius: var(--r);
+  transition: color .14s, background .14s;
+}
+.btn-nav-close:hover { color: var(--navy); background: var(--paper-w); }
+.nav-menu { flex: 1; overflow-y: auto; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; height: 64px; cursor: pointer;
+  border: none; border-bottom: 1px solid var(--rule);
+  width: 100%; text-align: left; background: transparent;
+  font-family: var(--sans); transition: background .14s;
+}
+.nav-item:hover { background: var(--paper-w); }
+.nav-item-icon { font-size: 20px; flex-shrink: 0; width: 28px; text-align: center; }
+.nav-item-text { display: flex; flex-direction: column; gap: 2px; }
+.nav-item-label { font-size: 14px; color: var(--ink); font-weight: 500; }
+.nav-item-sub { font-size: 11px; color: var(--ink-lt); }
+.nav-item-pro { background: var(--gold-p); }
+.nav-item-pro:hover { background: #f9f1da; }
+.nav-footer {
+  padding: 14px 16px; border-top: 1px solid var(--rule);
+  font-size: 11px; color: var(--ink-fnt); text-align: center; flex-shrink: 0;
+}
+
+/* ── ABOUT MODAL ── */
+.about-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 220;
+  align-items: center; justify-content: center;
+}
+.about-overlay.open { display: flex; }
+.about-modal {
+  background: var(--white); border-radius: var(--rl); box-shadow: var(--sh-lg);
+  width: min(380px, 90vw); padding: 28px 24px 24px; position: relative;
+}
+.about-modal-title { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 12px; }
+.about-modal-body { font-size: 13px; color: var(--ink-mid); line-height: 1.7; margin-bottom: 20px; }
+.btn-about-close {
+  position: absolute; top: 12px; right: 14px;
+  background: none; border: none; cursor: pointer; color: var(--ink-lt);
+  font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: var(--r);
+  transition: color .14s, background .14s;
+}
+.btn-about-close:hover { background: var(--paper-w); color: var(--navy); }
+.about-modal-ok {
+  display: block; width: 100%; padding: 10px; border: none; border-radius: var(--r);
+  background: var(--navy); color: #fff; font-family: var(--sans); font-size: 14px; cursor: pointer;
+  transition: background .14s;
+}
+.about-modal-ok:hover { background: var(--navy-h); }
+
+/* ── REGISTRATION MODAL ── */
+.reg-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 220;
+  align-items: center; justify-content: center;
+}
+.reg-overlay.open { display: flex; }
+.reg-modal {
+  background: var(--white); border-radius: var(--rl); box-shadow: var(--sh-lg);
+  width: min(380px, 90vw); padding: 28px 24px 24px; position: relative;
+}
+.reg-modal-title { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+.reg-modal-body { font-size: 13px; color: var(--ink-mid); line-height: 1.7; margin-bottom: 16px; }
+.btn-reg-close {
+  position: absolute; top: 12px; right: 14px;
+  background: none; border: none; cursor: pointer; color: var(--ink-lt);
+  font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: var(--r);
+  transition: color .14s, background .14s;
+}
+.btn-reg-close:hover { background: var(--paper-w); color: var(--navy); }
+.reg-email-input {
+  width: 100%; padding: 10px 12px; margin-bottom: 10px;
+  border: 1.5px solid var(--rule); border-radius: var(--r); outline: none;
+  font-family: var(--sans); font-size: 14px; color: var(--ink);
+  transition: border-color .14s;
+}
+.reg-email-input:focus { border-color: var(--gold); }
+.btn-reg-submit {
+  display: block; width: 100%; padding: 10px; border: none; border-radius: var(--r);
+  background: var(--gold); color: #fff; font-family: var(--sans); font-size: 14px;
+  font-weight: 500; cursor: pointer; transition: background .14s;
+}
+.btn-reg-submit:hover { background: var(--gold-h); }
 
 /* ── CFG PANEL ── */
 .cfg-overlay {
@@ -844,8 +956,80 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       <div class="app-tagline">Prohlášení advokáta o pravosti podpisu</div>
     </div>
     <button class="btn-cfg" onclick="openCfgPanel()" aria-label="Nastavení">⚙</button>
+    <button class="btn-hamburger" onclick="openHamburger()" aria-label="Nabídka">☰</button>
   </div>
 </header>
+
+<!-- Hamburger nav panel -->
+<div class="nav-overlay" id="navOverlay" onclick="closeHamburger()"></div>
+<nav class="nav-panel" id="navPanel" role="dialog" aria-label="Nabídka">
+  <div class="nav-head">
+    <div class="nav-head-logo">
+      <img src="/icons/icon.svg" alt="">
+      <span class="nav-head-title">Doložka</span>
+    </div>
+    <button class="btn-nav-close" onclick="closeHamburger()" aria-label="Zavřít">×</button>
+  </div>
+  <div class="nav-menu">
+    <button class="nav-item" onclick="closeHamburger();openCfgPanel()">
+      <span class="nav-item-icon">⚙</span>
+      <div class="nav-item-text">
+        <span class="nav-item-label">Nastavení</span>
+        <span class="nav-item-sub">Profil advokáta a rozměry tisku</span>
+      </div>
+    </button>
+    <button class="nav-item" onclick="closeHamburger();openAboutModal()">
+      <span class="nav-item-icon">ℹ️</span>
+      <div class="nav-item-text">
+        <span class="nav-item-label">O aplikaci</span>
+        <span class="nav-item-sub">legalid.cz · Verze 1.0</span>
+      </div>
+    </button>
+    <button class="nav-item" onclick="closeHamburger();window.open('mailto:info@legalid.cz?subject=N%C3%A1pov%C4%9Bda%20-%20Dolo%C5%BEka','_blank')">
+      <span class="nav-item-icon">❓</span>
+      <div class="nav-item-text">
+        <span class="nav-item-label">Nápověda</span>
+        <span class="nav-item-sub">Jak používat aplikaci</span>
+      </div>
+    </button>
+    <button class="nav-item" onclick="closeHamburger();openRegistrationModal()">
+      <span class="nav-item-icon">🔑</span>
+      <div class="nav-item-text">
+        <span class="nav-item-label">Registrace</span>
+        <span class="nav-item-sub" style="color:var(--gold)">30 dní zdarma, pak 9 €/měs</span>
+      </div>
+    </button>
+    <button class="nav-item nav-item-pro" onclick="closeHamburger();openRegistrationModal()">
+      <span class="nav-item-icon">⭐</span>
+      <div class="nav-item-text">
+        <span class="nav-item-label" style="color:var(--gold)">Upgradovat na Pro</span>
+        <span class="nav-item-sub" style="color:var(--gold)">Neomezené doložky · Prioritní podpora</span>
+      </div>
+    </button>
+  </div>
+  <div class="nav-footer">© 2026 legalid.cz · Všechna práva vyhrazena</div>
+</nav>
+
+<!-- About modal -->
+<div class="about-overlay" id="aboutOverlay" onclick="if(event.target===this)closeAboutModal()">
+  <div class="about-modal">
+    <button class="btn-about-close" onclick="closeAboutModal()" aria-label="Zavřít">×</button>
+    <div class="about-modal-title">O aplikaci</div>
+    <div class="about-modal-body">Doložka je nástroj pro advokáty, který automaticky vyplní prohlášení o pravosti podpisu z fotografie dokladu.<br><br>Vyvinuto v České republice · 2026</div>
+    <button class="about-modal-ok" onclick="closeAboutModal()">Zavřít</button>
+  </div>
+</div>
+
+<!-- Registration modal -->
+<div class="reg-overlay" id="regOverlay" onclick="if(event.target===this)closeRegistrationModal()">
+  <div class="reg-modal">
+    <button class="btn-reg-close" onclick="closeRegistrationModal()" aria-label="Zavřít">×</button>
+    <div class="reg-modal-title">Registrace</div>
+    <div class="reg-modal-body">Registrace bude brzy dostupná.<br>Zanechte email a budeme vás informovat.</div>
+    <input class="reg-email-input" id="regEmail" type="email" placeholder="váš@email.cz">
+    <button class="btn-reg-submit" onclick="submitRegEmail()">Odeslat</button>
+  </div>
+</div>
 
 <main class="page">
   <div class="wrap">
@@ -2062,6 +2246,33 @@ function resetDolozkaSettings() {
 }
 
 // ── CFG PANEL ─────────────────────────────────────────────────────
+function openHamburger() {
+  document.getElementById('navOverlay').classList.add('open');
+  document.getElementById('navPanel').classList.add('open');
+}
+function closeHamburger() {
+  document.getElementById('navOverlay').classList.remove('open');
+  document.getElementById('navPanel').classList.remove('open');
+}
+function openAboutModal() {
+  document.getElementById('aboutOverlay').classList.add('open');
+}
+function closeAboutModal() {
+  document.getElementById('aboutOverlay').classList.remove('open');
+}
+function openRegistrationModal() {
+  document.getElementById('regOverlay').classList.add('open');
+}
+function closeRegistrationModal() {
+  document.getElementById('regOverlay').classList.remove('open');
+}
+function submitRegEmail() {
+  const email = (document.getElementById('regEmail')?.value || '').trim();
+  if (!email || !email.includes('@')) { showToast('Zadejte platnou emailovou adresu.'); return; }
+  showToast('Děkujeme! Budeme vás informovat.');
+  closeRegistrationModal();
+}
+
 function openCfgPanel(section) {
   syncCfgFromAdvokat();
   syncDolozkaInputs();

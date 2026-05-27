@@ -842,12 +842,14 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .pv-combo-left { flex: 0 0 55%; min-width: 0; overflow: hidden; }
 .pv-combo-right { flex: 0 0 45%; min-width: 0; overflow: hidden; padding: 0 4px; }
 .pv-combo-sheet { display: block; width: 794px; height: 1123px; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.18); overflow: hidden; }
-.pv-combo-row { display: flex; width: 794px; height: 140px; overflow: hidden; border-bottom: 0.5px solid #eee; box-sizing: border-box; }
-.pv-combo-row-left { flex: 0 0 55%; min-width: 0; overflow: hidden; padding: 5px 4px 3px 10px; font-family: 'Times New Roman', Times, serif; font-size: 6.5px; line-height: 1.3; color: #111; }
-.pv-combo-row-right { flex: 0 0 45%; min-width: 0; overflow: hidden; border-left: 0.5px solid #ddd; padding: 5px 6px 3px 5px; font-family: 'Times New Roman', Times, serif; font-size: 6.5px; line-height: 1.3; color: #111; }
-.pv-combo-row-title { font-weight: bold; text-transform: uppercase; font-size: 6px; margin-bottom: 2px; letter-spacing: 0.2px; }
-.pv-combo-row-sig { margin-top: 5px; }
-.pv-combo-row-sig-name { margin-top: 8px; text-align: right; }
+.pv-combo-row { display: flex; width: 794px; height: 280.75px; overflow: hidden; box-sizing: border-box; position: relative; }
+.pv-combo-sheet .pv-combo-row + .pv-combo-row { border-top: 0.5px dashed #ccc; }
+.pv-combo-row-left { flex: 0 0 55%; min-width: 0; overflow: hidden; padding: 30px 23px 30px 30px; font-family: 'Times New Roman', Times, serif; font-size: 8px; line-height: 1.4; color: #111; }
+.pv-combo-row-right { flex: 0 0 45%; min-width: 0; overflow: hidden; border-left: 0.5px solid #ddd; padding: 30px 30px 30px 23px; font-family: 'Times New Roman', Times, serif; font-size: 8px; line-height: 1.4; color: #111; }
+.pv-combo-cut-icon { position: absolute; top: 3px; left: 5px; font-size: 10px; color: #aaa; z-index: 1; }
+.pv-combo-row-title { font-weight: bold; text-transform: uppercase; font-size: 7.5px; margin-bottom: 3px; letter-spacing: 0.2px; }
+.pv-combo-row-sig { margin-top: 10px; }
+.pv-combo-row-sig-name { margin-top: 14px; text-align: right; }
 /* Bottom bar */
 .pm-bottom-bar {
   height: 64px; flex-shrink: 0; border-top: 1px solid var(--rule);
@@ -2653,18 +2655,20 @@ function buildDolozkaPreviewContent() {
   const a4 = document.getElementById('printPreviewA4');
   if (!grid) return;
   if (s.combo) {
-    const pages = Math.ceil(copies / 8);
+    const pages = Math.ceil(copies / 4);
     const sigLine = s.sig_mode === 'none' ? '' :
       `<div class="pv-combo-row-sig-name">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}</div>`;
     let html = '';
     for (let p = 0; p < pages; p++) {
       if (p > 0) html += `<div style="height:8px;width:794px;background:#dde0e4;"></div>`;
       html += `<div class="pv-combo-sheet">`;
-      for (let r = 0; r < 8; r++) {
-        const idx = p * 8 + r;
+      for (let r = 0; r < 4; r++) {
+        const idx = p * 4 + r;
         if (idx < copies) {
+          const cutIcon = (r > 0 && s.cut_line) ? `<div class="pv-combo-cut-icon">✂</div>` : '';
           html +=
             `<div class="pv-combo-row">` +
+            cutIcon +
             `<div class="pv-combo-row-left">` +
             `<div class="pv-combo-row-title">Prohlášení o pravosti podpisu</div>` +
             `<div>${knjia} · ${phd(d.aJmeno,'advokát')}, ev.č. ${phd(d.aEvCislo,'č.ev.')}</div>` +
@@ -2754,16 +2758,18 @@ function printDolozka() {
   const s = getPmSettingsFromUI();
 
   if (s.combo) {
-    const comboPages = Math.ceil(copies / 8);
+    const comboPages = Math.ceil(copies / 4);
     let pagesHtml = '';
     for (let p = 0; p < comboPages; p++) {
       let rows = '';
-      for (let r = 0; r < 8; r++) {
-        const idx = p * 8 + r;
+      for (let r = 0; r < 4; r++) {
+        const idx = p * 4 + r;
         if (idx < copies) {
           const sigLine = s.sig_mode === 'none' ? '' : `<div class="sig-name">${d.aJmeno}, ${d.aRole}</div>`;
+          const cutIcon = (r > 0 && s.cut_line) ? `<div class="cut-icon">✂</div>` : '';
           rows +=
             `<div class="row">` +
+            cutIcon +
             `<div class="pleft">` +
             `<div class="title">Prohlášení o pravosti podpisu</div>` +
             `<div class="p">Číslo knihy: ${knjia}</div>` +
@@ -2791,14 +2797,16 @@ function printDolozka() {
 body{font-family:'Times New Roman',Times,serif;line-height:1.4;color:#111}
 .page{width:210mm;height:297mm;overflow:hidden}
 .page-break{page-break-after:always}
-.row{display:flex;width:210mm;height:37.125mm;overflow:hidden;border-bottom:0.25pt solid #eee;box-sizing:border-box}
-.pleft{flex:0 0 55%;min-width:0;overflow:hidden;padding:1.5mm 2mm 1mm 4mm}
-.pright{flex:0 0 45%;min-width:0;overflow:hidden;border-left:0.5pt solid #ddd;padding:1.5mm 3mm 1mm 2.5mm}
-.title{text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:.2px;font-size:5.5pt;margin-bottom:1pt}
-.p{font-size:5.5pt;margin-bottom:0.8pt}
-.sig{margin-top:3pt;font-size:5.5pt}
-.sig-name{margin-top:5pt;text-align:right;font-size:5.5pt}
-.gap{height:2.5pt}
+.row{display:flex;width:210mm;height:74.25mm;overflow:hidden;box-sizing:border-box;position:relative}
+.page .row+.row{border-top:0.5pt dashed #ccc}
+.pleft{flex:0 0 55%;min-width:0;overflow:hidden;padding:8mm 6mm 8mm 8mm}
+.pright{flex:0 0 45%;min-width:0;overflow:hidden;border-left:0.5pt solid #ddd;padding:8mm 8mm 8mm 6mm}
+.title{font-weight:bold;text-transform:uppercase;letter-spacing:.2px;font-size:7.5pt;margin-bottom:2pt}
+.p{font-size:7.5pt;margin-bottom:1.5pt}
+.sig{margin-top:5pt;font-size:7.5pt}
+.sig-name{margin-top:8pt;text-align:right;font-size:7.5pt}
+.gap{height:3pt}
+.cut-icon{position:absolute;top:2pt;left:4pt;font-size:9pt;color:#aaa}
 </style></head><body>
 ${pagesHtml}
 <script>window.addEventListener('load',()=>window.print())<\/script>

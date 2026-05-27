@@ -843,7 +843,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .pv-combo-row { display: flex; width: 100%; box-sizing: border-box; position: relative; }
 .pv-combo-row-left { min-width: 0; font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; line-height: 1.35; color: #111; }
 .pv-combo-row-right { min-width: 0; font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; line-height: 1.35; color: #111; }
-.pv-combo-sep { position: relative; border-top: 0.5px dashed #ccc; }
+.pv-combo-sep { position: relative; }
 .pv-combo-sep-icon { position: absolute; top: -7px; left: 5px; font-size: 10px; color: #aaa; background: #fff; line-height: 1; }
 .pv-combo-gap { height: 0.8em; }
 .pv-combo-row-title { font-weight: bold; text-transform: uppercase; font-size: 7.5pt; margin-bottom: 3px; letter-spacing: 0.2px; }
@@ -2855,7 +2855,7 @@ function buildDolozkaPreviewContent() {
     for (let i = 0; i < copies; i++) {
       if (i > 0) {
         const cutIcon = s.cut_line ? `<span class="pv-combo-sep-icon">✂</span>` : '';
-        html += `<div class="pv-combo-sep" style="height:${sepH}px;">${cutIcon}</div>`;
+        html += `<div class="pv-combo-sep" style="height:${sepH}px;${s.cut_line ? 'border-top:0.5px dashed #ccc;' : ''}">${cutIcon}</div>`;
       }
       html +=
         `<div class="pv-combo-row">` +
@@ -2865,7 +2865,7 @@ function buildDolozkaPreviewContent() {
         `<div>Prohlašuji, že ${phd(d.jmeno,'JMÉNO')}, nar. ${phd(d.datumNar,'datum')}, OP č. ${phd(d.cisloOp,'OP')}, listinu v ${phd(d.pocet,'POČET')} vyhotov. přede mnou vlastnoručně podepsal/a.</div>` +
         `<div class="pv-combo-row-sig">V Praze dne ${phd(d.datumOver,'datum')}` + sigLine + `</div>` +
         `</div>` +
-        `<div class="pv-combo-row-right" style="flex:0 0 ${ks.P}%;padding:${pV}px 0 ${pV}px ${pH}px;border-left:0.5px solid #ddd;">` +
+        `<div class="pv-combo-row-right" style="flex:0 0 ${ks.P}%;padding:${pV}px 0 ${pV}px ${pH}px;${s.bot_border ? 'border:0.5px solid #ddd;' : s.cell_border ? 'border-left:0.5px solid #ddd;' : ''}">` +
         `<div>V Praze, ${phd(d.aSidlo,'sídlo')}</div>` +
         `<div>dne ${phd(d.datumOver,'datum')}</div>` +
         `<div class="pv-combo-gap"></div>` +
@@ -2990,11 +2990,11 @@ function printDolozka() {
 body{font-family:'Times New Roman',Times,serif;font-size:10pt;line-height:1.35;color:#111;width:210mm}
 .outer{padding:${ks.Y}mm ${ks.XR}mm 0 ${ks.X}mm}
 .row{display:flex;width:100%;position:relative;page-break-inside:avoid}
-.pleft{min-width:0;border-right:0.5pt solid #ddd}
-.pright{min-width:0}
+.pleft{min-width:0;${s.cell_border ? 'border-right:0.5pt solid #ddd;' : ''}}
+.pright{min-width:0;${s.bot_border ? 'border:0.5pt solid #ddd;' : ''}}
 .title{font-weight:bold;text-transform:uppercase;letter-spacing:.2px;margin-bottom:3pt}
 .p{margin-bottom:1.5pt}.sig{margin-top:6pt}.sig-name{margin-top:10pt;text-align:right}
-.gap{height:0.7em}.sep{position:relative;border-top:0.5pt dashed #ccc}
+.gap{height:0.7em}.sep{position:relative;${s.cut_line ? 'border-top:0.5pt dashed #ccc;' : ''}}
 .sep-icon{position:absolute;top:-7pt;left:4pt;font-size:9pt;color:#aaa;background:#fff;line-height:1}
 </style></head><body><div class="outer">${rowsHtml}</div>
 <script>window.addEventListener('load',()=>window.print())<\/script>

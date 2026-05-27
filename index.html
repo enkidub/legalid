@@ -729,7 +729,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .pv-combo-wrap { display: flex !important; }
 .pv-combo-left { flex: 0 0 55%; min-width: 0; overflow: hidden; }
 .pv-combo-right { flex: 0 0 45%; min-width: 0; overflow: hidden; padding: 0 4px; }
-.pv-combo-sheet { display: flex; width: 794px; height: 1123px; font-family: 'Times New Roman', Times, serif; color: #111; line-height: 1.5; }
+.pv-combo-sheet { display: flex; width: 794px; height: 1123px; font-family: 'Times New Roman', Times, serif; color: #111; line-height: 1.5; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.18); }
 .pv-combo-sheet-left { flex: 0 0 55%; min-width: 0; overflow: hidden; padding: 70px 25px 50px 60px; }
 .pv-combo-sheet-right { flex: 0 0 45%; min-width: 0; overflow: hidden; border-left: 0.5px solid #ddd; padding: 70px 40px 50px 35px; }
 .pv-combo-sheet-title { text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 0.4px; font-size: 15px; margin-bottom: 14px; }
@@ -2447,6 +2447,7 @@ function buildDolozkaPreviewContent() {
       `<div class="pv-combo-sheet-sig-name">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}</div>`;
     let html = '';
     for (let i = 0; i < copies; i++) {
+      if (i > 0) html += `<div style="height:8px;width:794px;background:#dde0e4;"></div>`;
       html +=
         `<div class="pv-combo-sheet">` +
         `<div class="pv-combo-sheet-left">` +
@@ -2467,15 +2468,25 @@ function buildDolozkaPreviewContent() {
         `</div>` +
         `</div>`;
     }
+    const comboGap = copies > 1 ? (copies - 1) * 8 : 0;
+    const totalH = copies * 1123 + comboGap;
     grid.style.display = 'block';
-    grid.style.height = (copies * 1123) + 'px';
-    if (a4) a4.style.height = (copies * 1123) + 'px';
+    grid.style.height = totalH + 'px';
+    if (a4) {
+      a4.style.height = totalH + 'px';
+      a4.style.background = '#dde0e4';
+      a4.style.boxShadow = 'none';
+    }
     grid.innerHTML = html;
     scalePrintPreview();
   } else {
     grid.style.display = '';
     grid.style.height = '';
-    if (a4) a4.style.height = '';
+    if (a4) {
+      a4.style.height = '';
+      a4.style.background = '';
+      a4.style.boxShadow = '';
+    }
     let html = '';
     for (let i = 0; i < 8; i++) {
       html += i < copies
@@ -2494,11 +2505,16 @@ function scalePrintPreview() {
   if (!outer || !a4) return;
   const scroll = document.getElementById('pmPreviewScroll');
   const availW = scroll ? scroll.clientWidth - 40 : 560;
-  const scale = Math.min(0.95, availW / 794);
+  const availH = scroll && scroll.clientHeight > 50 ? scroll.clientHeight - 32 : 600;
   const a4H = parseFloat(a4.style.height) || 1123;
+  const isCombo = a4H > 1200;
+  const scaleW = availW / 794;
+  const scaleH = isCombo ? availH / a4H : Infinity;
+  const scale = Math.min(0.95, scaleW, scaleH);
   a4.style.transform = `scale(${scale})`;
   outer.style.width = Math.ceil(794 * scale) + 'px';
   outer.style.height = Math.ceil(a4H * scale) + 'px';
+  if (scroll) scroll.style.justifyContent = isCombo ? 'center' : '';
 }
 
 function printDolozka() {

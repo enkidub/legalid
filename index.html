@@ -752,8 +752,15 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .print-modal.open { display: flex; }
 @media (max-width: 800px) {
   .print-modal {
-    width: 100vw; height: 100vh; top: 0; left: 0;
+    width: 100vw; top: 0; left: 0;
     transform: none; border-radius: 0;
+    height: -webkit-fill-available;
+    height: 100dvh;
+  }
+}
+@supports not (height: 100dvh) {
+  @media (max-width: 800px) {
+    .print-modal { height: 100vh; }
   }
 }
 /* Header */
@@ -792,6 +799,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 @media (max-width: 800px) {
   .pm-preview-col { flex: 1; }
   .pm-preview-col.pm-col-hidden { display: none; }
+  .pm-preview-scroll { padding: 12px 16px; }
 }
 .pm-preview-scroll {
   flex: 1; overflow-y: auto; overflow-x: hidden;
@@ -2931,13 +2939,21 @@ function scalePrintPreview() {
   const a4 = document.getElementById('printPreviewA4');
   if (!outer || !a4) return;
   const scroll = document.getElementById('pmPreviewScroll');
-  const availW = scroll ? scroll.clientWidth - 40 : 560;
-  const availH = scroll && scroll.clientHeight > 50 ? scroll.clientHeight - 32 : 600;
   const a4H = parseFloat(a4.style.height) || 1123;
   const isCombo = a4H > 1200;
-  const scaleW = availW / 794;
-  const scaleH = isCombo ? availH / a4H : Infinity;
-  const scale = Math.min(0.95, scaleW, scaleH);
+  let scale;
+  if (window.innerWidth <= 800) {
+    const scaleW = (window.innerWidth - 32) / 794;
+    const scrollH = scroll && scroll.clientHeight > 50 ? scroll.clientHeight : Math.max(window.innerHeight - 120, 200);
+    const scaleH = (scrollH - 16) / a4H;
+    scale = Math.min(scaleW, scaleH);
+  } else {
+    const availW = scroll ? scroll.clientWidth - 40 : 560;
+    const availH = scroll && scroll.clientHeight > 50 ? scroll.clientHeight - 32 : 600;
+    const scaleW = availW / 794;
+    const scaleH = isCombo ? availH / a4H : Infinity;
+    scale = Math.min(0.95, scaleW, scaleH);
+  }
   a4.style.transform = `scale(${scale})`;
   outer.style.width = Math.ceil(794 * scale) + 'px';
   outer.style.height = Math.ceil(a4H * scale) + 'px';

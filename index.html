@@ -664,8 +664,9 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   display: grid; grid-template-columns: 397px 397px; grid-template-rows: repeat(4, 1fr);
   width: 794px; height: 1123px;
 }
-.pv-cell { overflow: hidden; border: 0.5px solid #ccc; box-sizing: border-box; }
+.pv-cell { overflow: hidden; box-sizing: border-box; }
 .pv-cell-empty { background: #f5f5f5; }
+.pv-grid.pv-show-lines .pv-cell { border: 0.5px solid #ccc; }
 .pv-cell-inner {
   padding: 6px 8px; font-family: 'Times New Roman', Times, serif;
   font-size: 7.5pt; line-height: 1.35; color: #111; height: 100%; overflow: hidden;
@@ -674,10 +675,16 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .pv-p { margin-bottom: 3px; }
 .pv-sig { margin-top: 8px; }
 .pv-sig-name { margin-top: 16px; text-align: right; }
-.pv-sep { border-top: 1px dashed #aaa; margin: 5px 0; position: relative; }
+.pv-sep { margin: 5px 0; }
+.pv-grid.pv-show-lines .pv-sep { border-top: 1px dashed #aaa; }
 .pv-bot table { width: 100%; border-collapse: collapse; font-size: 7pt; }
 .pv-bot td { border: 0.5px solid #888; padding: 2px 4px; vertical-align: top; line-height: 1.3; }
 .pv-bot td:first-child { width: 48%; }
+.pm-lines-wrap {
+  display: flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: 12px; color: var(--ink-lt); white-space: nowrap; user-select: none;
+}
+.pm-lines-wrap input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--gold); }
 .pm-copies-wrap { display: flex; align-items: center; gap: 8px; }
 .pm-copies-label { font-size: 12px; color: var(--ink-lt); white-space: nowrap; }
 .pm-copies-input {
@@ -992,6 +999,10 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       <label class="pm-copies-label" for="pmCopies">Kopií:</label>
       <input class="pm-copies-input" id="pmCopies" type="number" min="1" max="8" value="4" oninput="buildDolozkaPreviewContent()" onchange="buildDolozkaPreviewContent()">
     </div>
+    <label class="pm-lines-wrap">
+      <input type="checkbox" id="pmLines" onchange="updatePvLines()">
+      Čáry
+    </label>
     <button class="btn-pm-docx" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)))">📄 Stáhnout .docx</button>
     <button class="btn-pm-print" onclick="printDolozka()">🖨 Tisknout</button>
   </div>
@@ -2022,6 +2033,11 @@ function buildStitekCellHTML(d, knjia) {
     `</div>`;
 }
 
+function updatePvLines() {
+  const grid = document.getElementById('pvGrid');
+  if (grid) grid.classList.toggle('pv-show-lines', !!document.getElementById('pmLines')?.checked);
+}
+
 function buildDolozkaPreviewContent() {
   const d = getDolozkaData();
   const knjia = `${phd(d.aCisloKnihy,'č.knihy')}/${phd(d.cisloRadku,'č.řádku')}/${phd(d.rok,'rok')}`;
@@ -2037,6 +2053,7 @@ function buildDolozkaPreviewContent() {
     }
   }
   grid.innerHTML = html;
+  updatePvLines();
 }
 
 function scalePrintPreview() {
@@ -2055,6 +2072,7 @@ function printDolozka() {
   const d = getDolozkaData();
   const knjia = `${d.aCisloKnihy}/${d.cisloRadku}/${d.rok}`;
   const copies = getCopies();
+  const showLines = document.getElementById('pmLines')?.checked;
   let cells = '';
   for (let i = 0; i < 8; i++) {
     if (i < copies) {
@@ -2078,13 +2096,13 @@ function printDolozka() {
 @page{size:A4 portrait;margin:0}
 *{box-sizing:border-box;margin:0;padding:0}
 body{display:grid;grid-template-columns:105mm 105mm;grid-template-rows:74mm 74mm 74mm 74mm;width:210mm;height:297mm;font-family:'Times New Roman',Times,serif;font-size:7pt;line-height:1.35;color:#111}
-.cell{overflow:hidden;border:0.3pt solid #ccc;padding:5mm 6mm;}
+.cell{overflow:hidden;padding:5mm 6mm;${showLines ? 'border:0.3pt solid #ccc;' : ''}}
 .cell-empty{background:#f5f5f5}
 .title{text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3pt;font-size:6.5pt}
 .p{margin-bottom:2.5pt}
 .sig{margin-top:6pt}
 .sig-name{margin-top:12pt;text-align:right}
-.sep{border-top:0.5pt dashed #aaa;margin:4pt 0}
+.sep{margin:4pt 0;${showLines ? 'border-top:0.5pt dashed #aaa;' : ''}}
 table{width:100%;border-collapse:collapse;font-size:6.5pt}
 td{border:0.3pt solid #888;padding:1.5pt 3pt;vertical-align:top;line-height:1.3}
 td:first-child{width:48%}

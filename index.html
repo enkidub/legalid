@@ -613,10 +613,12 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   transition: color .14s;
 }
 .btn-panel-back:hover { color: var(--navy); }
+.nav-panel:not(.open) { pointer-events: none; }
 .nav-panel.sliding-left {
   transform: translateX(-30%) !important;
   pointer-events: none;
 }
+.nav-panel.sliding-left > * { visibility: hidden; }
 .cfg-panel.from-menu,
 .lp-panel.from-menu { z-index: 215; }
 

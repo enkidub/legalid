@@ -725,10 +725,10 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .pv-bot td { border: 0.5px solid #888; padding: 2px 4px; vertical-align: top; line-height: 1.3; }
 .pv-bot td:first-child { width: 48%; }
 .pv-bot.pv-no-border td { border: none; }
-.pv-combo-page { display: flex; width: 794px; height: 1123px; }
-.pv-combo-page + .pv-combo-page { border-top: 3px solid #bbb; }
-.pv-combo-page-left { flex: 0 0 55%; min-width: 0; overflow: hidden; font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; line-height: 1.35; color: #111; }
-.pv-combo-page-right { flex: 0 0 45%; min-width: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: center; font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; line-height: 1.35; color: #111; }
+.pv-a4 { display: grid; grid-template-columns: 397px 397px; grid-template-rows: repeat(4, 1fr); width: 794px; height: 1123px; }
+.pv-combo-wrap { display: flex !important; }
+.pv-combo-left { flex: 0 0 55%; min-width: 0; overflow: hidden; }
+.pv-combo-right { flex: 0 0 45%; min-width: 0; overflow: hidden; padding: 0 4px; }
 /* Bottom bar */
 .pm-bottom-bar {
   height: 64px; flex-shrink: 0; border-top: 1px solid var(--rule);
@@ -2432,28 +2432,13 @@ function buildDolozkaPreviewContent() {
   const a4 = document.getElementById('printPreviewA4');
   if (!grid) return;
   if (s.combo) {
-    const sigLine = s.sig_mode === 'none' ? '' :
-      `<div class="pv-sig-name">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}</div>`;
     let html = '';
     for (let i = 0; i < copies; i++) {
-      html += `<div class="pv-combo-page">` +
-        `<div class="pv-combo-page-left" style="padding:${s.Y1}mm ${s.X2}mm ${s.Y2}mm ${s.X1}mm;">` +
-        `<div style="max-height:${s.H}mm;overflow:hidden;padding:${s.PY}mm ${s.PX}mm 0;">` +
-        `<div class="pv-title">Prohlášení o pravosti podpisu</div>` +
-        `<div class="pv-p">Číslo knihy: ${knjia}</div>` +
-        `<div class="pv-p">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}, ev. č. ${phd(d.aEvCislo,'č.ev.')}, se sídlem ${phd(d.aSidlo,'sídlo')};</div>` +
-        `<div class="pv-p">Prohlašuji, že ${phd(d.jmeno,'JMÉNO')}, nar. ${phd(d.datumNar,'DATUM NAR.')}, místo nar. ${phd(d.mistoNar,'MÍSTO')}, bytem ${phd(d.adresa,'ADRESA')}, jehož/jejíž totožnost prokázána OP č. ${phd(d.cisloOp,'ČÍSLO OP')}, tuto listinu v ${phd(d.pocet,'POČET')} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
-        `<div class="pv-sig">V Praze dne ${phd(d.datumOver,'DATUM')}</div>` +
-        sigLine +
-        `</div>` +
-        `</div>` +
-        `<div class="pv-combo-page-right" style="padding:${s.Y1}mm ${s.X2}mm ${s.Y2}mm 5mm;">` +
-        `<div class="pv-p">V Praze, ${phd(d.aSidlo,'sídlo')} dne ${phd(d.datumOver,'datum')}</div>` +
-        `<div class="pv-p">${phd(d.jmeno,'JMÉNO')} nar. ${phd(d.datumNar,'DATUM')}, místo nar. ${phd(d.mistoNar,'MÍSTO')}, bytem ${phd(d.adresa,'ADRESA')}</div>` +
-        `<div class="pv-p">OP: ${phd(d.cisloOp,'ČÍSLO OP')}</div>` +
-        `<div class="pv-p">${phd(d.pocet,'počet')}x ${phd(d.listina,'LISTINA')}</div>` +
-        `</div>` +
-        `</div>`;
+      html += `<div class="pv-a4">`;
+      for (let j = 0; j < 8; j++) {
+        html += `<div class="pv-cell">${buildStitekCellHTML(d, knjia, s)}</div>`;
+      }
+      html += `</div>`;
     }
     grid.style.display = 'block';
     grid.style.height = (copies * 1123) + 'px';
@@ -2496,37 +2481,43 @@ function printDolozka() {
   const s = getPmSettingsFromUI();
 
   if (s.combo) {
+    const cellBorderC = s.cell_border ? 'border:0.3pt solid #888;' : '';
     let pages = '';
     for (let i = 0; i < copies; i++) {
-      const sigLine = s.sig_mode === 'none' ? '' : `<div class="sig-name">${d.aJmeno}, ${d.aRole}</div>`;
-      pages +=
-        `<div class="page${i < copies - 1 ? ' page-break' : ''}">` +
-        `<div class="combo-left">` +
-        `<div class="top">` +
-        `<div class="title">Prohlášení o pravosti podpisu</div>` +
-        `<div class="p">Číslo knihy: ${knjia}</div>` +
-        `<div class="p">${d.aJmeno}, ${d.aRole}, ev. č. ${d.aEvCislo}, se sídlem ${d.aSidlo};</div>` +
-        `<div class="p">Prohlašuji, že ${d.jmeno}, nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}, jehož/jejíž totožnost prokázána OP č. ${d.cisloOp}, tuto listinu v ${d.pocet} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
-        `<div class="sig">V Praze dne ${d.datumOver}</div>` +
-        sigLine +
-        `</div>` +
-        `</div>` +
-        `<div class="combo-right">` +
-        `<div class="p">V Praze, ${d.aSidlo} dne ${d.datumOver}</div>` +
-        `<div class="p">${d.jmeno} nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}</div>` +
-        `<div class="p">OP: ${d.cisloOp}</div>` +
-        `<div class="p">${d.pocet}x ${d.listina}</div>` +
-        `</div>` +
-        `</div>`;
+      let cells = '';
+      for (let j = 0; j < 8; j++) {
+        const sigLine = s.sig_mode === 'none' ? '' : `<div class="sig-name">${d.aJmeno}, ${d.aRole}</div>`;
+        cells +=
+          `<div class="cell" style="${cellBorderC}">` +
+          `<div class="cleft">` +
+          `<div class="top">` +
+          `<div class="title">Prohlášení o pravosti podpisu</div>` +
+          `<div class="p">Číslo knihy: ${knjia}</div>` +
+          `<div class="p">${d.aJmeno}, ${d.aRole}, ev. č. ${d.aEvCislo}, se sídlem ${d.aSidlo};</div>` +
+          `<div class="p">Prohlašuji, že ${d.jmeno}, nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}, jehož/jejíž totožnost prokázána OP č. ${d.cisloOp}, tuto listinu v ${d.pocet} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
+          `<div class="sig">V Praze dne ${d.datumOver}</div>` +
+          sigLine +
+          `</div>` +
+          `</div>` +
+          `<div class="cright">` +
+          `<div class="p">V Praze, ${d.aSidlo} dne ${d.datumOver}</div>` +
+          `<div class="p">${d.jmeno} nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}</div>` +
+          `<div class="p">OP: ${d.cisloOp}</div>` +
+          `<div class="p">${d.pocet}x ${d.listina}</div>` +
+          `</div>` +
+          `</div>`;
+      }
+      pages += `<div class="page${i < copies - 1 ? ' page-break' : ''}">${cells}</div>`;
     }
     const comboHtml = `<!DOCTYPE html><html lang="cs"><head><meta charset="UTF-8"><style>
 @page{size:A4 portrait;margin:0}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Times New Roman',Times,serif;font-size:7pt;line-height:1.35;color:#111}
-.page{display:flex;width:210mm;height:297mm;overflow:hidden}
+.page{display:grid;grid-template-columns:105mm 105mm;grid-template-rows:74mm 74mm 74mm 74mm;width:210mm;height:297mm;overflow:hidden}
 .page-break{page-break-after:always}
-.combo-left{flex:0 0 55%;min-width:0;overflow:hidden;padding:${s.Y1}mm ${s.X2}mm ${s.Y2}mm ${s.X1}mm}
-.combo-right{flex:0 0 45%;min-width:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:${s.Y1}mm ${s.X2}mm ${s.Y2}mm 5mm}
+.cell{display:flex;overflow:hidden;padding:${s.Y1}mm ${s.X2}mm ${s.Y2}mm ${s.X1}mm}
+.cleft{flex:0 0 55%;min-width:0;overflow:hidden}
+.cright{flex:0 0 45%;min-width:0;overflow:hidden;padding:0 0 0 ${s.PX}mm}
 .top{max-height:${s.H}mm;overflow:hidden;padding:${s.PY}mm ${s.PX}mm 0}
 .title{text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3pt;font-size:6.5pt}
 .p{margin-bottom:2.5pt}

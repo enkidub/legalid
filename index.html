@@ -840,11 +840,11 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .pv-combo-left { flex: 0 0 50%; min-width: 0; overflow: hidden; }
 .pv-combo-right { flex: 0 0 50%; min-width: 0; overflow: hidden; padding: 0 4px; }
 .pv-combo-sheet { display: block; width: 794px; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.18); }
-.pv-combo-row { display: flex; width: 794px; box-sizing: border-box; position: relative; }
-.pv-combo-sheet .pv-combo-row + .pv-combo-row { border-top: 0.5px dashed #ccc; }
-.pv-combo-row-left { flex: 0 0 50%; min-width: 0; padding: 30px 23px 30px 30px; font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; line-height: 1.35; color: #111; }
-.pv-combo-row-right { flex: 0 0 50%; min-width: 0; border-left: 0.5px solid #ddd; padding: 30px 30px 30px 23px; font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; line-height: 1.35; color: #111; }
-.pv-combo-cut-icon { position: absolute; top: 3px; left: 5px; font-size: 10px; color: #aaa; z-index: 1; }
+.pv-combo-row { display: flex; width: 100%; box-sizing: border-box; position: relative; }
+.pv-combo-row-left { min-width: 0; font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; line-height: 1.35; color: #111; }
+.pv-combo-row-right { min-width: 0; font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; line-height: 1.35; color: #111; }
+.pv-combo-sep { position: relative; border-top: 0.5px dashed #ccc; }
+.pv-combo-sep-icon { position: absolute; top: -7px; left: 5px; font-size: 10px; color: #aaa; background: #fff; line-height: 1; }
 .pv-combo-gap { height: 0.8em; }
 .pv-combo-row-title { font-weight: bold; text-transform: uppercase; font-size: 7.5pt; margin-bottom: 3px; letter-spacing: 0.2px; }
 .pv-combo-row-sig { margin-top: 10px; }
@@ -1309,22 +1309,44 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
       <!-- Sticky top: diagram + inputs side by side + reset link -->
       <div class="pm-sticky-top">
-        <div class="pm-sticky-inner">
-          <svg id="pmDiagram" viewBox="0 0 280 195" xmlns="http://www.w3.org/2000/svg" style="display:block;height:180px;width:100%;flex:1;min-width:0;"></svg>
-          <div class="pm-sticky-inputs">
-            <div class="pm-dim-grid">
-              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X1">X1</label><input class="pm-dim-input" id="pm_X1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
-              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X2">X2</label><input class="pm-dim-input" id="pm_X2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
-              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y1">Y1</label><input class="pm-dim-input" id="pm_Y1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
-              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y2">Y2</label><input class="pm-dim-input" id="pm_Y2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
-              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PX">PX</label><input class="pm-dim-input" id="pm_PX" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
-              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PY">PY</label><input class="pm-dim-input" id="pm_PY" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
-              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_W">W</label><input class="pm-dim-input" id="pm_W" type="number" min="10" max="105" step="0.5" oninput="onPmSettingsInput()"></div>
-              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_H">H</label><input class="pm-dim-input" id="pm_H" type="number" min="5" max="70" step="0.5" oninput="onPmSettingsInput()"></div>
+        <!-- Standard panel -->
+        <div id="pmPanelStd">
+          <div class="pm-sticky-inner">
+            <svg id="pmDiagram" viewBox="0 0 280 195" xmlns="http://www.w3.org/2000/svg" style="display:block;height:180px;width:100%;flex:1;min-width:0;"></svg>
+            <div class="pm-sticky-inputs">
+              <div class="pm-dim-grid">
+                <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X1">X1</label><input class="pm-dim-input" id="pm_X1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X2">X2</label><input class="pm-dim-input" id="pm_X2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y1">Y1</label><input class="pm-dim-input" id="pm_Y1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y2">Y2</label><input class="pm-dim-input" id="pm_Y2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PX">PX</label><input class="pm-dim-input" id="pm_PX" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PY">PY</label><input class="pm-dim-input" id="pm_PY" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="pm_W">W</label><input class="pm-dim-input" id="pm_W" type="number" min="10" max="105" step="0.5" oninput="onPmSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="pm_H">H</label><input class="pm-dim-input" id="pm_H" type="number" min="5" max="70" step="0.5" oninput="onPmSettingsInput()"></div>
+              </div>
             </div>
           </div>
         </div>
-        <button class="pm-reset-link" onclick="resetPmSettings()">obnovit výchozí hodnoty</button>
+        <!-- Combo panel -->
+        <div id="pmPanelCombo" style="display:none">
+          <div class="pm-sticky-inner">
+            <svg id="pmKomboDiagram" viewBox="0 0 280 185" xmlns="http://www.w3.org/2000/svg" style="display:block;height:180px;width:100%;flex:1;min-width:0;"></svg>
+            <div class="pm-sticky-inputs">
+              <div class="pm-dim-grid">
+                <div class="pm-dim-field"><label class="pm-dim-label" for="km_Y">Y</label><input class="pm-dim-input" id="km_Y" type="number" min="0" max="40" step="0.5" oninput="onKomboSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="km_X">X</label><input class="pm-dim-input" id="km_X" type="number" min="0" max="40" step="0.5" oninput="onKomboSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="km_XR">XR</label><input class="pm-dim-input" id="km_XR" type="number" min="0" max="40" step="0.5" oninput="onKomboSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="km_PX">PX</label><input class="pm-dim-input" id="km_PX" type="number" min="0" max="20" step="0.5" oninput="onKomboSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="km_PY">PY</label><input class="pm-dim-input" id="km_PY" type="number" min="0" max="20" step="0.5" oninput="onKomboSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="km_MEZ">MEZ</label><input class="pm-dim-input" id="km_MEZ" type="number" min="0" max="30" step="0.5" oninput="onKomboSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="km_L">L%</label><input class="pm-dim-input" id="km_L" type="number" min="10" max="90" step="1" oninput="onKomboSettingsInput()"></div>
+                <div class="pm-dim-field"><label class="pm-dim-label" for="km_P">P%</label><input class="pm-dim-input" id="km_P" type="number" min="10" max="90" step="1" oninput="onKomboSettingsInput()"></div>
+              </div>
+              <div id="kmWidthWarn" style="display:none;color:#c0392b;font-size:10px;margin-top:4px;">L + P musí být 100</div>
+            </div>
+          </div>
+        </div>
+        <button class="pm-reset-link" onclick="activeResetPmSettings()">obnovit výchozí hodnoty</button>
       </div>
 
       <!-- Scrollable body -->
@@ -1541,6 +1563,7 @@ const FORMAT_DEFAULTS = {
 
 const DOLOZKA_DEFAULTS = { horni_cast_mm: 200, dolni_cast_mm: 55, okraj_mm: 15, px_mm: 5, py_mm: 5 };
 const PM_DEFAULTS = { X1: 20, X2: 14, Y1: 8, Y2: 0, W: 78, H: 47, PX: 2, PY: 2, sig_mode: 'sign', cell_border: false, bot_border: false, cut_line: false, combo: false };
+const COMBO_PM_DEFAULTS = { Y: 10, X: 8, XR: 8, PX: 6, PY: 6, MEZ: 4, L: 50, P: 50 };
 
 function getDolozkaSettings() {
   try {
@@ -1563,6 +1586,7 @@ function getSettings() {
 
 let advokat = { jmeno: '', role: '', ev_cislo: '', cislo_knihy: '', sidlo: '' };
 let pmDiagramActive = null;
+let comboDiagramActive = null;
 let uploadedImages = [];
 let ocrDone = false;
 let gdprShown = false;
@@ -2549,6 +2573,8 @@ function loadPmSettings() {
   const bb = document.getElementById('pm_bot_border'); if (bb) bb.checked = !!s.bot_border;
   const cl = document.getElementById('pm_cut_line'); if (cl) cl.checked = !!s.cut_line;
   const co = document.getElementById('pm_combo'); if (co) co.checked = !!s.combo;
+  updatePmPanelVisibility();
+  loadKombovanySettings();
   renderPmDiagram();
   updatePmAdvancedBadge();
 }
@@ -2580,6 +2606,7 @@ function onPmSettingsInput() {
     const existing = JSON.parse(localStorage.getItem('legalid_dolozka_rozmery') || '{}');
     localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify({ ...existing, ...s }));
   } catch { localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify(s)); }
+  updatePmPanelVisibility();
   renderPmDiagram();
   buildDolozkaPreviewContent();
   updatePmAdvancedBadge();
@@ -2594,6 +2621,128 @@ function resetPmSettings() {
   loadPmSettings();
   buildDolozkaPreviewContent();
   showToast('Nastavení tisku obnoveno');
+}
+
+function updatePmPanelVisibility() {
+  const isCombo = !!document.getElementById('pm_combo')?.checked;
+  const std = document.getElementById('pmPanelStd');
+  const combo = document.getElementById('pmPanelCombo');
+  if (std) std.style.display = isCombo ? 'none' : '';
+  if (combo) combo.style.display = isCombo ? '' : 'none';
+  if (isCombo) renderKomboDiagram();
+}
+
+function getKombovanySettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('legalid_kombinovany_rozmery') || 'null');
+    return s ? { ...COMBO_PM_DEFAULTS, ...s } : { ...COMBO_PM_DEFAULTS };
+  } catch { return { ...COMBO_PM_DEFAULTS }; }
+}
+
+function getKombovanySettingsFromUI() {
+  const n = id => { const v = parseFloat(document.getElementById(id)?.value); return isNaN(v) ? 0 : v; };
+  return {
+    Y: n('km_Y'), X: n('km_X'), XR: n('km_XR'),
+    PX: n('km_PX'), PY: n('km_PY'), MEZ: n('km_MEZ'),
+    L: n('km_L'), P: n('km_P'),
+  };
+}
+
+function loadKombovanySettings() {
+  const ks = getKombovanySettings();
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v; };
+  set('km_Y', ks.Y); set('km_X', ks.X); set('km_XR', ks.XR);
+  set('km_PX', ks.PX); set('km_PY', ks.PY); set('km_MEZ', ks.MEZ);
+  set('km_L', ks.L); set('km_P', ks.P);
+  validateKomboWidths();
+  renderKomboDiagram();
+}
+
+function validateKomboWidths() {
+  const ks = getKombovanySettingsFromUI();
+  const warn = document.getElementById('kmWidthWarn');
+  if (warn) warn.style.display = (ks.L + ks.P !== 100) ? '' : 'none';
+}
+
+function onKomboSettingsInput() {
+  const ks = getKombovanySettingsFromUI();
+  try {
+    const existing = JSON.parse(localStorage.getItem('legalid_kombinovany_rozmery') || '{}');
+    localStorage.setItem('legalid_kombinovany_rozmery', JSON.stringify({ ...existing, ...ks }));
+  } catch { localStorage.setItem('legalid_kombinovany_rozmery', JSON.stringify(ks)); }
+  validateKomboWidths();
+  renderKomboDiagram();
+  buildDolozkaPreviewContent();
+}
+
+function resetKomboSettings() {
+  try {
+    localStorage.removeItem('legalid_kombinovany_rozmery');
+  } catch {}
+  loadKombovanySettings();
+  buildDolozkaPreviewContent();
+  showToast('Nastavení kombinovaného formátu obnoveno');
+}
+
+function activeResetPmSettings() {
+  const isCombo = !!document.getElementById('pm_combo')?.checked;
+  if (isCombo) resetKomboSettings();
+  else resetPmSettings();
+}
+
+function renderKomboDiagram() {
+  const svg = document.getElementById('pmKomboDiagram');
+  if (!svg) return;
+  const ks = getKombovanySettingsFromUI();
+  const k = 1.5;
+  const ax = 28, ay = 14, aw = 168, ah = 148;
+  const cL = ax + ks.X * k, cR = ax + aw - ks.XR * k, cW = cR - cL;
+  const rowTop = ay + ks.Y * k, rowH = 42, rowBot = rowTop + rowH;
+  const mezBot = rowBot + ks.MEZ * k;
+  const divX = cL + cW * (ks.L / 100);
+  const B = '#378ADD', ff = "font-family='system-ui,sans-serif'";
+  const ac = f => comboDiagramActive === f ? '#9a6e10' : B;
+  let o = '';
+  o += `<rect x="${ax}" y="${ay}" width="${aw}" height="${ah}" fill="#f0f2f5" stroke="#b0b8c4" stroke-width="1" rx="2"/>`;
+  if (cL > ax && cR > cL && rowTop > ay) {
+    o += `<rect x="${cL.toFixed(1)}" y="${rowTop.toFixed(1)}" width="${cW.toFixed(1)}" height="${rowH}" fill="rgba(55,138,221,.07)" stroke="none"/>`;
+    const tw = divX - ks.PX * k - cL, th = rowH - 2 * ks.PY * k, ty = rowTop + ks.PY * k;
+    if (tw > 2 && th > 2) o += `<rect x="${cL.toFixed(1)}" y="${ty.toFixed(1)}" width="${Math.max(tw,2).toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(55,138,221,.12)" stroke="none" rx="1"/>`;
+    const rw = cR - (divX + ks.PX * k);
+    if (rw > 2 && th > 2) o += `<rect x="${(divX + ks.PX * k).toFixed(1)}" y="${ty.toFixed(1)}" width="${Math.max(rw,2).toFixed(1)}" height="${th.toFixed(1)}" fill="rgba(55,138,221,.12)" stroke="none" rx="1"/>`;
+    o += `<line x1="${divX.toFixed(1)}" y1="${rowTop.toFixed(1)}" x2="${divX.toFixed(1)}" y2="${rowBot.toFixed(1)}" stroke="${B}" stroke-width="0.8"/>`;
+    if (ks.MEZ > 0 && mezBot > rowBot) {
+      o += `<rect x="${cL.toFixed(1)}" y="${rowBot.toFixed(1)}" width="${cW.toFixed(1)}" height="${(mezBot - rowBot).toFixed(1)}" fill="rgba(0,0,0,.03)" stroke="none"/>`;
+      o += `<line x1="${cL.toFixed(1)}" y1="${rowBot.toFixed(1)}" x2="${cR.toFixed(1)}" y2="${rowBot.toFixed(1)}" stroke="#aaa" stroke-width="0.8" stroke-dasharray="4,2"/>`;
+    }
+  }
+  if (ks.Y > 0) {
+    const mx = ax - 10, my = (ay + rowTop) / 2;
+    o += `<line x1="${mx}" y1="${ay}" x2="${mx}" y2="${rowTop.toFixed(1)}" stroke="${ac('Y')}" stroke-width="1"/><line x1="${mx-3}" y1="${ay}" x2="${mx+3}" y2="${ay}" stroke="${ac('Y')}" stroke-width="1"/><line x1="${mx-3}" y1="${rowTop.toFixed(1)}" x2="${mx+3}" y2="${rowTop.toFixed(1)}" stroke="${ac('Y')}" stroke-width="1"/>`;
+    o += `<text x="${mx-13}" y="${my.toFixed(1)}" ${ff} font-size="8" fill="${ac('Y')}" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 ${mx-13} ${my.toFixed(1)})">Y</text>`;
+  }
+  if (ks.X > 0) {
+    const my = ay - 9, mx = (ax + cL) / 2;
+    o += `<line x1="${ax}" y1="${my}" x2="${cL.toFixed(1)}" y2="${my}" stroke="${ac('X')}" stroke-width="1"/><line x1="${ax}" y1="${my-3}" x2="${ax}" y2="${my+3}" stroke="${ac('X')}" stroke-width="1"/><line x1="${cL.toFixed(1)}" y1="${my-3}" x2="${cL.toFixed(1)}" y2="${my+3}" stroke="${ac('X')}" stroke-width="1"/>`;
+    o += `<text x="${mx.toFixed(1)}" y="${my-5}" ${ff} font-size="8" fill="${ac('X')}" text-anchor="middle">X</text>`;
+  }
+  if (ks.XR > 0) {
+    const my = ay - 9, mx = (cR + ax + aw) / 2;
+    o += `<line x1="${cR.toFixed(1)}" y1="${my}" x2="${ax+aw}" y2="${my}" stroke="${ac('XR')}" stroke-width="1"/><line x1="${cR.toFixed(1)}" y1="${my-3}" x2="${cR.toFixed(1)}" y2="${my+3}" stroke="${ac('XR')}" stroke-width="1"/><line x1="${ax+aw}" y1="${my-3}" x2="${ax+aw}" y2="${my+3}" stroke="${ac('XR')}" stroke-width="1"/>`;
+    o += `<text x="${mx.toFixed(1)}" y="${my-5}" ${ff} font-size="8" fill="${ac('XR')}" text-anchor="middle">XR</text>`;
+  }
+  if (ks.MEZ > 0 && mezBot > rowBot + 2) {
+    const mx = ax + aw + 10, my = (rowBot + mezBot) / 2;
+    o += `<line x1="${mx}" y1="${rowBot.toFixed(1)}" x2="${mx}" y2="${mezBot.toFixed(1)}" stroke="${ac('MEZ')}" stroke-width="1"/><line x1="${mx-3}" y1="${rowBot.toFixed(1)}" x2="${mx+3}" y2="${rowBot.toFixed(1)}" stroke="${ac('MEZ')}" stroke-width="1"/><line x1="${mx-3}" y1="${mezBot.toFixed(1)}" x2="${mx+3}" y2="${mezBot.toFixed(1)}" stroke="${ac('MEZ')}" stroke-width="1"/>`;
+    o += `<text x="${mx+13}" y="${my.toFixed(1)}" ${ff} font-size="8" fill="${ac('MEZ')}" text-anchor="middle" dominant-baseline="middle" transform="rotate(90 ${mx+13} ${my.toFixed(1)})">MEZ</text>`;
+  }
+  const rowMid = (rowTop + rowBot) / 2;
+  const lMid = (cL + divX) / 2, pMid = (divX + cR) / 2;
+  if (cW > 20) {
+    o += `<text x="${lMid.toFixed(1)}" y="${rowMid.toFixed(1)}" ${ff} font-size="7.5" fill="${B}" text-anchor="middle" dominant-baseline="middle" opacity=".7">L ${ks.L}%</text>`;
+    o += `<text x="${pMid.toFixed(1)}" y="${rowMid.toFixed(1)}" ${ff} font-size="7.5" fill="${B}" text-anchor="middle" dominant-baseline="middle" opacity=".7">P ${ks.P}%</text>`;
+  }
+  svg.innerHTML = o;
 }
 
 function switchPmTab(tab) {
@@ -2611,6 +2760,7 @@ function switchPmTab(tab) {
     settingsCol?.classList.add('pm-col-show');
     tabPreview?.classList.remove('active');
     tabSettings?.classList.add('active');
+    updatePmPanelVisibility();
     renderPmDiagram();
   }
 }
@@ -2694,21 +2844,28 @@ function buildDolozkaPreviewContent() {
   const a4 = document.getElementById('printPreviewA4');
   if (!grid) return;
   if (s.combo) {
+    const ks = getKombovanySettingsFromUI();
+    const mm2px = mm => (mm * 794 / 210);
+    const pT = mm2px(ks.Y).toFixed(1), pL = mm2px(ks.X).toFixed(1), pR = mm2px(ks.XR).toFixed(1);
+    const pV = mm2px(ks.PY).toFixed(1), pH = mm2px(ks.PX).toFixed(1);
+    const sepH = mm2px(ks.MEZ).toFixed(1);
     const sigLine = s.sig_mode === 'none' ? '' :
       `<div class="pv-combo-row-sig-name">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}</div>`;
-    let html = `<div class="pv-combo-sheet">`;
+    let html = `<div class="pv-combo-sheet" style="padding:${pT}px ${pR}px 0 ${pL}px;">`;
     for (let i = 0; i < copies; i++) {
-      const cutIcon = (i > 0 && s.cut_line) ? `<div class="pv-combo-cut-icon">✂</div>` : '';
+      if (i > 0) {
+        const cutIcon = s.cut_line ? `<span class="pv-combo-sep-icon">✂</span>` : '';
+        html += `<div class="pv-combo-sep" style="height:${sepH}px;">${cutIcon}</div>`;
+      }
       html +=
         `<div class="pv-combo-row">` +
-        cutIcon +
-        `<div class="pv-combo-row-left">` +
+        `<div class="pv-combo-row-left" style="flex:0 0 ${ks.L}%;padding:${pV}px ${pH}px ${pV}px 0;">` +
         `<div class="pv-combo-row-title">Prohlášení o pravosti podpisu</div>` +
         `<div>${knjia} · ${phd(d.aJmeno,'advokát')}, ev.č. ${phd(d.aEvCislo,'č.ev.')}</div>` +
         `<div>Prohlašuji, že ${phd(d.jmeno,'JMÉNO')}, nar. ${phd(d.datumNar,'datum')}, OP č. ${phd(d.cisloOp,'OP')}, listinu v ${phd(d.pocet,'POČET')} vyhotov. přede mnou vlastnoručně podepsal/a.</div>` +
         `<div class="pv-combo-row-sig">V Praze dne ${phd(d.datumOver,'datum')}` + sigLine + `</div>` +
         `</div>` +
-        `<div class="pv-combo-row-right">` +
+        `<div class="pv-combo-row-right" style="flex:0 0 ${ks.P}%;padding:${pV}px 0 ${pV}px ${pH}px;border-left:0.5px solid #ddd;">` +
         `<div>V Praze, ${phd(d.aSidlo,'sídlo')}</div>` +
         `<div>dne ${phd(d.datumOver,'datum')}</div>` +
         `<div class="pv-combo-gap"></div>` +
@@ -2794,14 +2951,17 @@ function printDolozka() {
   const s = getPmSettingsFromUI();
 
   if (s.combo) {
+    const ks = getKombovanySettings();
     let rowsHtml = '';
     for (let i = 0; i < copies; i++) {
+      if (i > 0) {
+        const cutIcon = s.cut_line ? `<span class="sep-icon">✂</span>` : '';
+        rowsHtml += `<div class="sep" style="height:${ks.MEZ}mm;">${cutIcon}</div>`;
+      }
       const sigLine = s.sig_mode === 'none' ? '' : `<div class="sig-name">${d.aJmeno}, ${d.aRole}</div>`;
-      const cutIcon = (i > 0 && s.cut_line) ? `<div class="cut-icon">✂</div>` : '';
       rowsHtml +=
         `<div class="row">` +
-        cutIcon +
-        `<div class="pleft">` +
+        `<div class="pleft" style="flex:0 0 ${ks.L}%;padding:${ks.PY}mm ${ks.PX}mm ${ks.PY}mm 0;">` +
         `<div class="title">Prohlášení o pravosti podpisu</div>` +
         `<div class="p">Číslo knihy: ${knjia}</div>` +
         `<div class="p">${d.aJmeno}, ${d.aRole}, ev. č. ${d.aEvCislo}, se sídlem ${d.aSidlo};</div>` +
@@ -2809,7 +2969,7 @@ function printDolozka() {
         `<div class="sig">V Praze dne ${d.datumOver}</div>` +
         sigLine +
         `</div>` +
-        `<div class="pright">` +
+        `<div class="pright" style="flex:0 0 ${ks.P}%;padding:${ks.PY}mm 0 ${ks.PY}mm ${ks.PX}mm;">` +
         `<div class="p">V Praze, ${d.aSidlo}</div>` +
         `<div class="p">dne ${d.datumOver}</div>` +
         `<div class="gap"></div>` +
@@ -2828,18 +2988,15 @@ function printDolozka() {
 @page{size:A4 portrait;margin:0}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Times New Roman',Times,serif;font-size:10pt;line-height:1.35;color:#111;width:210mm}
-.row{display:flex;width:210mm;box-sizing:border-box;position:relative;page-break-inside:avoid}
-.row+.row{border-top:0.5pt dashed #ccc}
-.pleft{flex:0 0 50%;min-width:0;padding:8mm 6mm 8mm 8mm}
-.pright{flex:0 0 50%;min-width:0;border-left:0.5pt solid #ddd;padding:8mm 8mm 8mm 6mm}
+.outer{padding:${ks.Y}mm ${ks.XR}mm 0 ${ks.X}mm}
+.row{display:flex;width:100%;position:relative;page-break-inside:avoid}
+.pleft{min-width:0;border-right:0.5pt solid #ddd}
+.pright{min-width:0}
 .title{font-weight:bold;text-transform:uppercase;letter-spacing:.2px;margin-bottom:3pt}
-.p{margin-bottom:1.5pt}
-.sig{margin-top:6pt}
-.sig-name{margin-top:10pt;text-align:right}
-.gap{height:0.7em}
-.cut-icon{position:absolute;top:2pt;left:4pt;font-size:9pt;color:#aaa}
-</style></head><body>
-${rowsHtml}
+.p{margin-bottom:1.5pt}.sig{margin-top:6pt}.sig-name{margin-top:10pt;text-align:right}
+.gap{height:0.7em}.sep{position:relative;border-top:0.5pt dashed #ccc}
+.sep-icon{position:absolute;top:-7pt;left:4pt;font-size:9pt;color:#aaa;background:#fff;line-height:1}
+</style></head><body><div class="outer">${rowsHtml}</div>
 <script>window.addEventListener('load',()=>window.print())<\/script>
 </body></html>`;
     const wc = window.open('', '_blank');

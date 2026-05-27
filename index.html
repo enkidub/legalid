@@ -7,8 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Doložka">
-<title>Doložka – Generátor doložky o pravosti podpisu</title>
+<meta name="apple-mobile-web-app-title" content="Advokátní Doložka">
+<title>Advokátní Doložka – Generátor doložky o pravosti podpisu</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
@@ -803,7 +803,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 <body>
 
 <div id="installBanner">
-  <span>Nainstalujte aplikaci Doložka do Vašeho mobilního zařízení.</span>
+  <span>Nainstalujte aplikaci Advokátní Doložka do Vašeho mobilního zařízení.</span>
   <div style="display:flex;gap:8px;align-items:center">
     <button id="installBtn">Instalovat</button>
     <button class="ib-close" onclick="document.getElementById('installBanner').classList.remove('visible')">×</button>
@@ -813,10 +813,10 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 <header class="app-header">
   <div class="app-header-i">
     <div class="app-logo-mark">
-      <img src="/icons/icon.svg" alt="Doložka">
+      <img src="/icons/icon.svg" alt="Advokátní Doložka">
     </div>
     <div>
-      <div class="app-wordmark">Doložka</div>
+      <div class="app-wordmark">Advokátní Doložka</div>
       <div class="app-tagline">Generátor doložky o pravosti podpisu</div>
     </div>
     <button class="btn-cfg" onclick="openCfgPanel()" aria-label="Nastavení">⚙</button>
@@ -901,7 +901,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
             <button class="split-btn-arrow" onclick="toggleSplitMenu(event)" aria-label="Více možností" aria-haspopup="true">▾</button>
             <div class="split-dropdown" id="splitDropdown" role="menu">
               <button class="split-drop-item" role="menuitem" onclick="openDolozkaPreview();closeSplitMenu()">
-                🖨 Doložka (A4)
+                🖨 Advokátní Doložka (A4)
               </button>
               <button class="split-drop-item" role="menuitem" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)));closeSplitMenu()">
                 📄 Stáhnout .docx

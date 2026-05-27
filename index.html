@@ -687,6 +687,107 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .btn-reg-submit:hover { background: var(--gold-h); }
 
+/* ── LEGALID PANELS (Kniha / Klienti) ── */
+.lp-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 200;
+}
+.lp-overlay.open { display: block; }
+.lp-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 480px;
+  background: var(--white); box-shadow: var(--sh-lg); z-index: 201;
+  display: flex; flex-direction: column; position: relative;
+  transform: translateX(100%); transition: transform .25s ease;
+}
+.lp-panel.open { transform: translateX(0); }
+@media (max-width: 600px) {
+  .lp-panel {
+    top: auto; left: 0; right: 0; width: 100%; max-height: 90vh;
+    border-radius: 16px 16px 0 0; transform: translateY(100%);
+  }
+  .lp-panel.open { transform: translateY(0); }
+}
+.lp-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--rule); flex-shrink: 0;
+}
+.lp-head-title { font-size: 14px; font-weight: 600; color: var(--navy); }
+.lp-head-right { display: flex; align-items: center; gap: 8px; }
+.btn-lp-close {
+  background: none; border: none; cursor: pointer; color: var(--ink-lt);
+  font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: var(--r);
+  transition: color .14s, background .14s;
+}
+.btn-lp-close:hover { color: var(--navy); background: var(--paper-w); }
+.btn-lp-add {
+  padding: 6px 12px; border: none; border-radius: var(--r);
+  background: var(--navy); color: #fff; font-family: var(--sans); font-size: 12px;
+  font-weight: 500; cursor: pointer; transition: background .14s; white-space: nowrap;
+}
+.btn-lp-add:hover { background: var(--navy-h); }
+.lp-body {
+  flex: 1; overflow-y: auto; padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.lp-notice {
+  background: var(--gold-p); border: 1px solid var(--gold);
+  border-radius: var(--r); padding: 10px 12px; font-size: 11px;
+  color: var(--ink-mid); line-height: 1.6; flex-shrink: 0;
+}
+.lp-notice a { color: var(--gold); text-decoration: none; font-weight: 500; }
+.lp-notice a:hover { text-decoration: underline; }
+.lp-search {
+  width: 100%; padding: 8px 12px; border: 1.5px solid var(--rule);
+  border-radius: var(--r); outline: none; font-family: var(--sans);
+  font-size: 13px; color: var(--ink); flex-shrink: 0; background: var(--white);
+  transition: border-color .14s;
+}
+.lp-search:focus { border-color: var(--navy); }
+.lp-list { display: flex; flex-direction: column; gap: 6px; }
+.lp-empty { text-align: center; padding: 40px 16px 20px; color: var(--ink-lt); }
+.lp-empty-title { font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+.lp-empty-sub { font-size: 11px; line-height: 1.6; }
+.lp-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r);
+  border: 1px solid var(--rule); background: var(--white);
+  transition: background .12s;
+}
+.lp-item:hover { background: var(--paper-w); }
+.lp-item-info { flex: 1; min-width: 0; }
+.lp-item-row1 { font-size: 11px; color: var(--ink-lt); margin-bottom: 2px; }
+.lp-item-row2 { font-size: 13px; font-weight: 600; color: var(--ink); }
+.lp-item-row3 { font-size: 11px; color: var(--ink-lt); margin-top: 2px; }
+.lp-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.btn-lp-action {
+  background: none; border: 1px solid var(--rule); border-radius: var(--r);
+  color: var(--ink-lt); font-size: 15px; cursor: pointer;
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.btn-lp-action:hover { background: var(--paper-w); color: var(--ink); }
+.btn-lp-action.danger:hover { background: #fff0f0; color: #c0392b; border-color: #f5c6c6; }
+.lp-dup-bar {
+  display: none; position: absolute; bottom: 0; left: 0; right: 0;
+  background: var(--white); border-top: 2px solid var(--gold);
+  padding: 14px 20px; box-shadow: 0 -4px 20px rgba(11,25,41,.12);
+  flex-direction: column; gap: 10px; z-index: 5;
+}
+.lp-dup-bar.open { display: flex; }
+.lp-dup-msg { font-size: 13px; color: var(--ink); font-weight: 500; }
+.lp-dup-btns { display: flex; gap: 8px; }
+.btn-lp-dup-ok {
+  padding: 7px 16px; border: none; border-radius: var(--r);
+  background: var(--navy); color: #fff; font-family: var(--sans);
+  font-size: 13px; cursor: pointer; transition: background .14s;
+}
+.btn-lp-dup-ok:hover { background: var(--navy-h); }
+.btn-lp-dup-cancel {
+  padding: 7px 16px; border: 1px solid var(--rule); border-radius: var(--r);
+  background: transparent; color: var(--ink-mid); font-family: var(--sans);
+  font-size: 13px; cursor: pointer; transition: background .14s;
+}
+.btn-lp-dup-cancel:hover { background: var(--paper-w); }
+
 /* ── CFG PANEL ── */
 .cfg-overlay {
   display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 200;
@@ -985,6 +1086,20 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       <div class="nav-item-text">
         <span class="nav-item-label">Nastavení</span>
         <span class="nav-item-sub">Profil advokáta a rozměry tisku</span>
+      </div>
+    </button>
+    <button class="nav-item" onclick="closeHamburger();openKnihaPanel()">
+      <span class="nav-item-icon">📋</span>
+      <div class="nav-item-text">
+        <span class="nav-item-label">Kniha prohlášení</span>
+        <span class="nav-item-sub">Evidence ověřených podpisů</span>
+      </div>
+    </button>
+    <button class="nav-item" onclick="closeHamburger();openKlientiPanel()">
+      <span class="nav-item-icon">👥</span>
+      <div class="nav-item-text">
+        <span class="nav-item-label">Klienti</span>
+        <span class="nav-item-sub">Uložené údaje klientů</span>
       </div>
     </button>
     <button class="nav-item" onclick="closeHamburger();openAboutModal()">
@@ -1555,6 +1670,52 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- Kniha prohlášení panel -->
+<div class="lp-overlay" id="knihaOverlay" onclick="closeKnihaPanel()"></div>
+<div class="lp-panel" id="knihaPanel" role="dialog" aria-label="Kniha prohlášení">
+  <div class="lp-head">
+    <span class="lp-head-title">Kniha prohlášení</span>
+    <div class="lp-head-right">
+      <button class="btn-lp-add" onclick="knihaAddCurrent()">+ Přidat aktuální</button>
+      <button class="btn-lp-close" onclick="closeKnihaPanel()" aria-label="Zavřít">×</button>
+    </div>
+  </div>
+  <div class="lp-body">
+    <div class="lp-notice">
+      Data jsou uložena pouze v tomto prohlížeči. Pro zálohování a přístup z více zařízení se zaregistrujte.
+      <a href="#" onclick="closeKnihaPanel();openRegistrationModal();return false;"> Registrovat se →</a>
+    </div>
+    <div class="lp-list" id="knihaList"></div>
+  </div>
+</div>
+
+<!-- Klienti panel -->
+<div class="lp-overlay" id="klientiOverlay" onclick="closeKlientiPanel()"></div>
+<div class="lp-panel" id="klientiPanel" role="dialog" aria-label="Klienti">
+  <div class="lp-head">
+    <span class="lp-head-title">Klienti</span>
+    <div class="lp-head-right">
+      <button class="btn-lp-add" onclick="klientiAddCurrent()">+ Uložit aktuálního</button>
+      <button class="btn-lp-close" onclick="closeKlientiPanel()" aria-label="Zavřít">×</button>
+    </div>
+  </div>
+  <div class="lp-body">
+    <div class="lp-notice">
+      Data jsou uložena pouze v tomto prohlížeči. Pro zálohování a přístup z více zařízení se zaregistrujte.
+      <a href="#" onclick="closeKlientiPanel();openRegistrationModal();return false;"> Registrovat se →</a>
+    </div>
+    <input class="lp-search" id="klientiSearch" type="search" placeholder="Hledat klienta..." oninput="renderKlientiList()">
+    <div class="lp-list" id="klientiList"></div>
+  </div>
+  <div class="lp-dup-bar" id="klientiDupBar">
+    <div class="lp-dup-msg">Klient již uložen — aktualizovat?</div>
+    <div class="lp-dup-btns">
+      <button class="btn-lp-dup-ok" onclick="klientiUpdateDuplicate()">Aktualizovat</button>
+      <button class="btn-lp-dup-cancel" onclick="klientiDismissDup()">Zrušit</button>
+    </div>
   </div>
 </div>
 
@@ -3299,6 +3460,201 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ── HTML ESCAPE ───────────────────────────────────────────────────
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── KNIHA PROHLÁŠENÍ ──────────────────────────────────────────────
+function openKnihaPanel() {
+  renderKnihaList();
+  document.getElementById('knihaOverlay').classList.add('open');
+  document.getElementById('knihaPanel').classList.add('open');
+}
+
+function closeKnihaPanel() {
+  document.getElementById('knihaOverlay').classList.remove('open');
+  document.getElementById('knihaPanel').classList.remove('open');
+}
+
+function getKniha() {
+  try { return JSON.parse(localStorage.getItem('legalid_kniha') || '[]'); }
+  catch { return []; }
+}
+
+function saveKniha(data) {
+  localStorage.setItem('legalid_kniha', JSON.stringify(data));
+}
+
+function knihaAddCurrent() {
+  const v = id => document.getElementById(id)?.value.trim() || '';
+  if (!v('fJmeno') && !v('fDatumOver')) {
+    showToast('Nejprve vyplňte údaje doložky');
+    return;
+  }
+  const record = {
+    id: Date.now(),
+    datum: v('fDatumOver'), cisloRadku: v('fCisloRadku'), rok: v('fRok'),
+    jmeno: v('fJmeno'), datumNar: v('fDatumNar'), mistoNar: v('fMistoNar'),
+    adresa: v('fAdresa'), cisloOp: v('fCisloOp'),
+    listina: v('fListina'), pocet: v('fPocetVyh'),
+    advokat: { ...advokat },
+  };
+  const kniha = getKniha();
+  kniha.unshift(record);
+  saveKniha(kniha);
+  renderKnihaList();
+  showToast('Záznam přidán do knihy');
+}
+
+function knihaDelete(id) {
+  saveKniha(getKniha().filter(r => r.id !== id));
+  renderKnihaList();
+}
+
+function knihaLoad(id) {
+  const r = getKniha().find(r => r.id === id);
+  if (!r) return;
+  const set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
+  set('fDatumOver', r.datum); set('fCisloRadku', r.cisloRadku); set('fRok', r.rok);
+  set('fJmeno', r.jmeno); set('fDatumNar', r.datumNar); set('fMistoNar', r.mistoNar);
+  set('fAdresa', r.adresa); set('fCisloOp', r.cisloOp);
+  set('fListina', r.listina); set('fPocetVyh', r.pocet);
+  updatePreview();
+  closeKnihaPanel();
+  showToast('Záznam načten do formuláře');
+}
+
+function renderKnihaList() {
+  const list = document.getElementById('knihaList');
+  if (!list) return;
+  const data = getKniha();
+  if (!data.length) {
+    list.innerHTML = `<div class="lp-empty">
+      <div class="lp-empty-title">Zatím žádné záznamy.</div>
+      <div class="lp-empty-sub">Klikněte '+ Přidat aktuální'<br>po vyplnění doložky.</div>
+    </div>`;
+    return;
+  }
+  list.innerHTML = data.map(r => `<div class="lp-item">
+    <div class="lp-item-info">
+      <div class="lp-item-row1">${esc(r.datum || '—')} · č. řádku ${esc(r.cisloRadku || '—')}</div>
+      <div class="lp-item-row2">${esc(r.jmeno || '—')}</div>
+      <div class="lp-item-row3">${esc(r.listina || '—')}</div>
+    </div>
+    <div class="lp-item-actions">
+      <button class="btn-lp-action" title="Načíst do formuláře" onclick="knihaLoad(${r.id})">↩</button>
+      <button class="btn-lp-action danger" title="Smazat" onclick="knihaDelete(${r.id})">×</button>
+    </div>
+  </div>`).join('');
+}
+
+// ── KLIENTI ───────────────────────────────────────────────────────
+let _klientiDupId = null;
+let _klientiDupData = null;
+
+function openKlientiPanel() {
+  renderKlientiList();
+  document.getElementById('klientiOverlay').classList.add('open');
+  document.getElementById('klientiPanel').classList.add('open');
+}
+
+function closeKlientiPanel() {
+  klientiDismissDup();
+  document.getElementById('klientiOverlay').classList.remove('open');
+  document.getElementById('klientiPanel').classList.remove('open');
+}
+
+function getKlienti() {
+  try { return JSON.parse(localStorage.getItem('legalid_klienti') || '[]'); }
+  catch { return []; }
+}
+
+function saveKlienti(data) {
+  localStorage.setItem('legalid_klienti', JSON.stringify(data));
+}
+
+function klientiAddCurrent() {
+  const v = id => document.getElementById(id)?.value.trim() || '';
+  const jmeno = v('fJmeno');
+  if (!jmeno) { showToast('Nejprve vyplňte jméno klienta'); return; }
+  const cisloOp = v('fCisloOp');
+  const newData = {
+    jmeno, datumNar: v('fDatumNar'), mistoNar: v('fMistoNar'),
+    adresa: v('fAdresa'), cisloOp, posledniOvereni: v('fDatumOver'),
+  };
+  const klienti = getKlienti();
+  const dupIdx = cisloOp ? klienti.findIndex(k => k.cisloOp === cisloOp) : -1;
+  if (dupIdx >= 0) {
+    _klientiDupData = newData;
+    _klientiDupId = klienti[dupIdx].id;
+    document.getElementById('klientiDupBar').classList.add('open');
+    return;
+  }
+  klienti.push({ id: Date.now(), ...newData });
+  saveKlienti(klienti);
+  renderKlientiList();
+  showToast('Klient uložen');
+}
+
+function klientiUpdateDuplicate() {
+  if (!_klientiDupData || !_klientiDupId) return;
+  const klienti = getKlienti();
+  const idx = klienti.findIndex(k => k.id === _klientiDupId);
+  if (idx >= 0) { klienti[idx] = { ...klienti[idx], ..._klientiDupData }; saveKlienti(klienti); renderKlientiList(); }
+  klientiDismissDup();
+  showToast('Klient aktualizován');
+}
+
+function klientiDismissDup() {
+  _klientiDupData = null; _klientiDupId = null;
+  document.getElementById('klientiDupBar')?.classList.remove('open');
+}
+
+function klientiDelete(id) {
+  saveKlienti(getKlienti().filter(k => k.id !== id));
+  renderKlientiList();
+}
+
+function klientiLoad(id) {
+  const k = getKlienti().find(k => k.id === id);
+  if (!k) return;
+  const set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
+  set('fJmeno', k.jmeno); set('fDatumNar', k.datumNar); set('fMistoNar', k.mistoNar);
+  set('fAdresa', k.adresa); set('fCisloOp', k.cisloOp);
+  updatePreview();
+  closeKlientiPanel();
+  showToast('Údaje klienta načteny');
+}
+
+function renderKlientiList() {
+  const list = document.getElementById('klientiList');
+  if (!list) return;
+  const query = (document.getElementById('klientiSearch')?.value || '').toLowerCase().trim();
+  let data = getKlienti();
+  if (query) data = data.filter(k => (k.jmeno||'').toLowerCase().includes(query) || (k.cisloOp||'').toLowerCase().includes(query));
+  data.sort((a, b) => {
+    const ln = s => { const p=(s||'').trim().split(/\s+/); return (p[p.length-1]||'').toLowerCase(); };
+    return ln(a.jmeno).localeCompare(ln(b.jmeno), 'cs');
+  });
+  if (!data.length) {
+    list.innerHTML = `<div class="lp-empty"><div class="lp-empty-title">${query ? 'Žádný výsledek.' : 'Zatím žádní uložení klienti.'}</div></div>`;
+    return;
+  }
+  list.innerHTML = data.map(k => `<div class="lp-item">
+    <div class="lp-item-info">
+      <div class="lp-item-row2">${esc(k.jmeno || '—')}</div>
+      <div class="lp-item-row1">nar. ${esc(k.datumNar || '—')}, ${esc(k.mistoNar || '—')}</div>
+      <div class="lp-item-row3">OP: ${esc(k.cisloOp || '—')}</div>
+    </div>
+    <div class="lp-item-actions">
+      <button class="btn-lp-action" title="Načíst do formuláře" onclick="klientiLoad(${k.id})">↩</button>
+      <button class="btn-lp-action danger" title="Smazat" onclick="klientiDelete(${k.id})">×</button>
+    </div>
+  </div>`).join('');
 }
 
 init();

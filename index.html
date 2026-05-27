@@ -694,100 +694,108 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .lp-overlay.open { display: block; }
 .lp-panel {
-  position: fixed; top: 0; right: 0; bottom: 0; width: 480px;
+  position: fixed; top: 0; right: 0; bottom: 0; width: 320px;
   background: var(--white); box-shadow: var(--sh-lg); z-index: 201;
-  display: flex; flex-direction: column; position: relative;
+  display: flex; flex-direction: column;
   transform: translateX(100%); transition: transform .25s ease;
 }
 .lp-panel.open { transform: translateX(0); }
 @media (max-width: 600px) {
   .lp-panel {
-    top: auto; left: 0; right: 0; width: 100%; max-height: 90vh;
+    top: auto; left: 0; right: 0; width: 100%; max-height: 92vh;
     border-radius: 16px 16px 0 0; transform: translateY(100%);
   }
   .lp-panel.open { transform: translateY(0); }
 }
 .lp-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px; border-bottom: 1px solid var(--rule); flex-shrink: 0;
+  padding: 14px 16px; border-bottom: 1px solid var(--rule); flex-shrink: 0;
 }
+.lp-head-left { display: flex; align-items: center; gap: 8px; }
 .lp-head-title { font-size: 14px; font-weight: 600; color: var(--navy); }
-.lp-head-right { display: flex; align-items: center; gap: 8px; }
+.lp-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  background: var(--rule); color: var(--ink-mid); border-radius: 9px;
+  font-size: 10px; font-weight: 600; vertical-align: middle; flex-shrink: 0;
+}
+.lp-head-right { display: flex; align-items: center; gap: 4px; }
 .btn-lp-close {
   background: none; border: none; cursor: pointer; color: var(--ink-lt);
   font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: var(--r);
   transition: color .14s, background .14s;
 }
 .btn-lp-close:hover { color: var(--navy); background: var(--paper-w); }
-.btn-lp-add {
-  padding: 6px 12px; border: none; border-radius: var(--r);
-  background: var(--navy); color: #fff; font-family: var(--sans); font-size: 12px;
-  font-weight: 500; cursor: pointer; transition: background .14s; white-space: nowrap;
-}
-.btn-lp-add:hover { background: var(--navy-h); }
 .lp-body {
-  flex: 1; overflow-y: auto; padding: 16px 20px;
-  display: flex; flex-direction: column; gap: 12px;
+  flex: 1; overflow-y: auto; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px;
 }
 .lp-notice {
   background: var(--gold-p); border: 1px solid var(--gold);
-  border-radius: var(--r); padding: 10px 12px; font-size: 11px;
+  border-radius: var(--r); padding: 9px 11px; font-size: 11px;
   color: var(--ink-mid); line-height: 1.6; flex-shrink: 0;
 }
 .lp-notice a { color: var(--gold); text-decoration: none; font-weight: 500; }
 .lp-notice a:hover { text-decoration: underline; }
 .lp-search {
-  width: 100%; padding: 8px 12px; border: 1.5px solid var(--rule);
+  width: 100%; padding: 8px 10px; border: 1.5px solid var(--rule);
   border-radius: var(--r); outline: none; font-family: var(--sans);
-  font-size: 13px; color: var(--ink); flex-shrink: 0; background: var(--white);
+  font-size: 12px; color: var(--ink); flex-shrink: 0; background: var(--white);
   transition: border-color .14s;
 }
 .lp-search:focus { border-color: var(--navy); }
-.lp-list { display: flex; flex-direction: column; gap: 6px; }
+.lp-list { display: flex; flex-direction: column; gap: 5px; }
 .lp-empty { text-align: center; padding: 40px 16px 20px; color: var(--ink-lt); }
 .lp-empty-title { font-size: 13px; font-weight: 500; margin-bottom: 6px; }
 .lp-empty-sub { font-size: 11px; line-height: 1.6; }
-.lp-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-radius: var(--r);
-  border: 1px solid var(--rule); background: var(--white);
-  transition: background .12s;
-}
-.lp-item:hover { background: var(--paper-w); }
-.lp-item-info { flex: 1; min-width: 0; }
-.lp-item-row1 { font-size: 11px; color: var(--ink-lt); margin-bottom: 2px; }
-.lp-item-row2 { font-size: 13px; font-weight: 600; color: var(--ink); }
-.lp-item-row3 { font-size: 11px; color: var(--ink-lt); margin-top: 2px; }
-.lp-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.lp-item { border-radius: var(--r); border: 1px solid var(--rule); overflow: hidden; }
+.lp-item-view { padding: 10px 12px; background: var(--white); transition: background .12s; }
+.lp-item:hover .lp-item-view { background: var(--paper-w); }
+.lp-item.lp-editing .lp-item-view { background: var(--white); }
+.lp-item-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.lp-item-name { font-size: 13px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.lp-item-ref { font-size: 11px; color: var(--ink-lt); white-space: nowrap; flex-shrink: 0; margin-left: 8px; }
+.lp-item-det { font-size: 11px; color: var(--ink-lt); line-height: 1.5; margin-bottom: 2px; }
+.lp-item-actions { display: flex; justify-content: flex-end; gap: 4px; margin-top: 8px; }
 .btn-lp-action {
   background: none; border: 1px solid var(--rule); border-radius: var(--r);
-  color: var(--ink-lt); font-size: 15px; cursor: pointer;
-  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  color: var(--ink-lt); font-size: 13px; cursor: pointer; font-family: var(--sans);
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
   transition: background .12s, color .12s, border-color .12s;
 }
 .btn-lp-action:hover { background: var(--paper-w); color: var(--ink); }
 .btn-lp-action.danger:hover { background: #fff0f0; color: #c0392b; border-color: #f5c6c6; }
-.lp-dup-bar {
-  display: none; position: absolute; bottom: 0; left: 0; right: 0;
-  background: var(--white); border-top: 2px solid var(--gold);
-  padding: 14px 20px; box-shadow: 0 -4px 20px rgba(11,25,41,.12);
-  flex-direction: column; gap: 10px; z-index: 5;
+.lp-item-edit, .lp-item-confirm { display: none; padding: 12px; border-top: 1px solid var(--rule); background: var(--paper-w); }
+.lp-item.lp-editing .lp-item-edit { display: block; }
+.lp-item.lp-confirming .lp-item-confirm { display: block; }
+.lp-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; margin-bottom: 10px; }
+.lp-ef { display: flex; flex-direction: column; gap: 2px; }
+.lp-ef.full { grid-column: span 2; }
+.lp-ef label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--ink-lt); }
+.lp-ef input { padding: 5px 7px; border: 1.5px solid var(--rule); border-radius: var(--r); font-family: var(--sans); font-size: 12px; color: var(--ink); background: var(--white); outline: none; width: 100%; }
+.lp-ef input:focus { border-color: var(--navy); }
+.lp-edit-btns, .lp-confirm-btns { display: flex; gap: 6px; }
+.btn-lp-save { padding: 6px 12px; border: none; border-radius: var(--r); background: var(--navy); color: #fff; font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: background .14s; }
+.btn-lp-save:hover { background: var(--navy-h); }
+.btn-lp-cancel-edit { padding: 6px 12px; border: 1px solid var(--rule); border-radius: var(--r); background: transparent; color: var(--ink-mid); font-family: var(--sans); font-size: 12px; cursor: pointer; transition: background .14s; }
+.btn-lp-cancel-edit:hover { background: var(--paper); }
+.lp-confirm-msg { font-size: 12px; color: var(--ink); margin-bottom: 10px; line-height: 1.5; }
+.btn-lp-del { padding: 6px 12px; border: none; border-radius: var(--r); background: #dc2626; color: #fff; font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: background .14s; }
+.btn-lp-del:hover { background: #b91c1c; }
+.action-toast {
+  display: none; position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: var(--navy); color: #fff; border-radius: var(--rl);
+  padding: 14px 18px; box-shadow: var(--sh-lg);
+  z-index: 9999; min-width: 260px; max-width: min(400px, calc(100vw - 32px));
+  flex-direction: column; gap: 12px;
 }
-.lp-dup-bar.open { display: flex; }
-.lp-dup-msg { font-size: 13px; color: var(--ink); font-weight: 500; }
-.lp-dup-btns { display: flex; gap: 8px; }
-.btn-lp-dup-ok {
-  padding: 7px 16px; border: none; border-radius: var(--r);
-  background: var(--navy); color: #fff; font-family: var(--sans);
-  font-size: 13px; cursor: pointer; transition: background .14s;
-}
-.btn-lp-dup-ok:hover { background: var(--navy-h); }
-.btn-lp-dup-cancel {
-  padding: 7px 16px; border: 1px solid var(--rule); border-radius: var(--r);
-  background: transparent; color: var(--ink-mid); font-family: var(--sans);
-  font-size: 13px; cursor: pointer; transition: background .14s;
-}
-.btn-lp-dup-cancel:hover { background: var(--paper-w); }
+.action-toast.show { display: flex; }
+.action-toast-msg { font-size: 13px; line-height: 1.4; }
+.action-toast-btns { display: flex; gap: 8px; }
+.btn-at-ok { padding: 7px 14px; border: none; border-radius: var(--r); background: var(--gold); color: #fff; font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: background .14s; }
+.btn-at-ok:hover { background: var(--gold-h); }
+.btn-at-cancel { padding: 7px 14px; border: 1px solid rgba(255,255,255,.3); border-radius: var(--r); background: transparent; color: #fff; font-family: var(--sans); font-size: 12px; cursor: pointer; }
+.btn-at-cancel:hover { background: rgba(255,255,255,.1); }
 
 /* ── CFG PANEL ── */
 .cfg-overlay {
@@ -1397,6 +1405,14 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
 <div class="toast" id="toast"></div>
 
+<div class="action-toast" id="actionToast">
+  <div class="action-toast-msg" id="actionToastMsg"></div>
+  <div class="action-toast-btns">
+    <button class="btn-at-ok" onclick="actionToastOk()">Aktualizovat</button>
+    <button class="btn-at-cancel" onclick="closeActionToast()">Ponechat původní</button>
+  </div>
+</div>
+
 <!-- Print preview modal -->
 <div class="print-modal-overlay" id="printModalOverlay" onclick="closePrintModal()"></div>
 <div class="print-modal" id="printModal" role="dialog" aria-label="Náhled před tiskem">
@@ -1678,17 +1694,14 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 <div class="lp-overlay" id="knihaOverlay" onclick="closeKnihaPanel()"></div>
 <div class="lp-panel" id="knihaPanel" role="dialog" aria-label="Kniha prohlášení">
   <div class="lp-head">
-    <span class="lp-head-title">Kniha prohlášení</span>
-    <div class="lp-head-right">
-      <button class="btn-lp-add" onclick="knihaAddCurrent()">+ Přidat aktuální</button>
-      <button class="btn-lp-close" onclick="closeKnihaPanel()" aria-label="Zavřít">×</button>
+    <div class="lp-head-left">
+      <span class="lp-head-title">Kniha prohlášení</span>
+      <span class="lp-badge" id="knihaBadge"></span>
     </div>
+    <button class="btn-lp-close" onclick="closeKnihaPanel()" aria-label="Zavřít">×</button>
   </div>
   <div class="lp-body">
-    <div class="lp-notice">
-      Data jsou uložena pouze v tomto prohlížeči. Pro zálohování a přístup z více zařízení se zaregistrujte.
-      <a href="#" onclick="closeKnihaPanel();openRegistrationModal();return false;"> Registrovat se →</a>
-    </div>
+    <div class="lp-notice">Data uložena v prohlížeči.</div>
     <div class="lp-list" id="knihaList"></div>
   </div>
 </div>
@@ -1697,26 +1710,16 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 <div class="lp-overlay" id="klientiOverlay" onclick="closeKlientiPanel()"></div>
 <div class="lp-panel" id="klientiPanel" role="dialog" aria-label="Klienti">
   <div class="lp-head">
-    <span class="lp-head-title">Klienti</span>
-    <div class="lp-head-right">
-      <button class="btn-lp-add" onclick="klientiAddCurrent()">+ Uložit aktuálního</button>
-      <button class="btn-lp-close" onclick="closeKlientiPanel()" aria-label="Zavřít">×</button>
+    <div class="lp-head-left">
+      <span class="lp-head-title">Klienti</span>
+      <span class="lp-badge" id="klientiBadge"></span>
     </div>
+    <button class="btn-lp-close" onclick="closeKlientiPanel()" aria-label="Zavřít">×</button>
   </div>
   <div class="lp-body">
-    <div class="lp-notice">
-      Data jsou uložena pouze v tomto prohlížeči. Pro zálohování a přístup z více zařízení se zaregistrujte.
-      <a href="#" onclick="closeKlientiPanel();openRegistrationModal();return false;"> Registrovat se →</a>
-    </div>
-    <input class="lp-search" id="klientiSearch" type="search" placeholder="Hledat klienta..." oninput="renderKlientiList()">
+    <div class="lp-notice">Data uložena v prohlížeči.</div>
+    <input class="lp-search" id="klientiSearch" type="search" placeholder="Hledat jméno, IČO…" oninput="renderKlientiList()">
     <div class="lp-list" id="klientiList"></div>
-  </div>
-  <div class="lp-dup-bar" id="klientiDupBar">
-    <div class="lp-dup-msg">Klient již uložen — aktualizovat?</div>
-    <div class="lp-dup-btns">
-      <button class="btn-lp-dup-ok" onclick="klientiUpdateDuplicate()">Aktualizovat</button>
-      <button class="btn-lp-dup-cancel" onclick="klientiDismissDup()">Zrušit</button>
-    </div>
   </div>
 </div>
 
@@ -1813,6 +1816,11 @@ function init() {
     if (document.getElementById('printModal')?.classList.contains('open')) scalePrintPreview();
   });
   updatePreview();
+  const _lrec = getKniha()[0];
+  if (_lrec?.cisloRadku) {
+    const _elR = document.getElementById('fCisloRadku');
+    if (_elR) { _elR.value = parseInt(_lrec.cisloRadku, 10) + 1; updatePreview(); }
+  }
 }
 
 // ── Advokát ───────────────────────────────────────────────────────
@@ -2322,6 +2330,7 @@ async function downloadDocx() {
     const doc = new Document({ sections });
     const blob = await docx.Packer.toBlob(doc);
     saveAs(blob, `dolozka_${dateToYMD(d.datumOver)}_${slugify(getPrijmeni(d.jmeno))}.docx`);
+    autoSaveRecord();
     if (!gdprShown) { gdprShown = true; document.getElementById('gdprNotice').classList.add('visible'); }
 
   } catch (err) {
@@ -3285,6 +3294,7 @@ body{font-family:'Times New Roman',Times,serif;font-size:10pt;line-height:1.35;c
     if (!wc) { showToast('Povolte popup v adresním řádku.'); return; }
     wc.document.write(comboHtml);
     wc.document.close();
+    autoSaveRecord();
     return;
   }
 
@@ -3342,6 +3352,7 @@ ${pagesHtml}
   if (!w) { showToast('Povolte popup v adresním řádku.'); return; }
   w.document.write(html);
   w.document.close();
+  autoSaveRecord();
 }
 
 // ── SPLIT MENU ────────────────────────────────────────────────────
@@ -3469,6 +3480,71 @@ function esc(s) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── ACTION TOAST ──────────────────────────────────────────────────
+let _actionToastOkFn = null;
+
+function showActionToast(msg, okFn) {
+  _actionToastOkFn = okFn;
+  document.getElementById('actionToastMsg').textContent = msg;
+  document.getElementById('actionToast').classList.add('show');
+}
+
+function actionToastOk() {
+  if (_actionToastOkFn) _actionToastOkFn();
+  closeActionToast();
+}
+
+function closeActionToast() {
+  _actionToastOkFn = null;
+  document.getElementById('actionToast').classList.remove('show');
+}
+
+// ── AUTO SAVE ─────────────────────────────────────────────────────
+function autoSaveRecord() {
+  const v = id => document.getElementById(id)?.value.trim() || '';
+  const jmeno = v('fJmeno');
+  if (!jmeno && !v('fDatumOver')) return;
+
+  // Save to Knjia
+  const record = {
+    id: Date.now(),
+    datum: v('fDatumOver'), cisloRadku: v('fCisloRadku'), rok: v('fRok'),
+    jmeno, datumNar: v('fDatumNar'), mistoNar: v('fMistoNar'),
+    adresa: v('fAdresa'), cisloOp: v('fCisloOp'),
+    listina: v('fListina'), pocet: v('fPocetVyh'),
+    advokat: { ...advokat },
+  };
+  const kniha = getKniha();
+  kniha.unshift(record);
+  saveKniha(kniha);
+  const kb = document.getElementById('knihaBadge');
+  if (kb) kb.textContent = kniha.length;
+
+  // Save to Klienti (skip if no name)
+  if (!jmeno) return;
+  const cisloOp = v('fCisloOp');
+  const klientData = {
+    jmeno, datumNar: v('fDatumNar'), mistoNar: v('fMistoNar'),
+    adresa: v('fAdresa'), cisloOp, posledniOvereni: v('fDatumOver'),
+  };
+  const klienti = getKlienti();
+  const dupIdx = cisloOp ? klienti.findIndex(k => k.cisloOp === cisloOp) : -1;
+  if (dupIdx >= 0) {
+    const dupId = klienti[dupIdx].id;
+    showActionToast(`Klient již evidován. Aktualizovat údaje pro ${jmeno}?`, () => {
+      const list = getKlienti();
+      const i = list.findIndex(k => k.id === dupId);
+      if (i >= 0) { list[i] = { ...list[i], ...klientData }; saveKlienti(list); renderKlientiList(); }
+      showToast('Klient aktualizován');
+    });
+  } else {
+    klienti.push({ id: Date.now() + 1, ...klientData });
+    saveKlienti(klienti);
+    const kb2 = document.getElementById('klientiBadge');
+    if (kb2) kb2.textContent = klienti.length + 1;
+  }
+}
+
 // ── KNIHA PROHLÁŠENÍ ──────────────────────────────────────────────
 function openKnihaPanel() {
   renderKnihaList();
@@ -3490,32 +3566,6 @@ function saveKniha(data) {
   localStorage.setItem('legalid_kniha', JSON.stringify(data));
 }
 
-function knihaAddCurrent() {
-  const v = id => document.getElementById(id)?.value.trim() || '';
-  if (!v('fJmeno') && !v('fDatumOver')) {
-    showToast('Nejprve vyplňte údaje doložky');
-    return;
-  }
-  const record = {
-    id: Date.now(),
-    datum: v('fDatumOver'), cisloRadku: v('fCisloRadku'), rok: v('fRok'),
-    jmeno: v('fJmeno'), datumNar: v('fDatumNar'), mistoNar: v('fMistoNar'),
-    adresa: v('fAdresa'), cisloOp: v('fCisloOp'),
-    listina: v('fListina'), pocet: v('fPocetVyh'),
-    advokat: { ...advokat },
-  };
-  const kniha = getKniha();
-  kniha.unshift(record);
-  saveKniha(kniha);
-  renderKnihaList();
-  showToast('Záznam přidán do knihy');
-}
-
-function knihaDelete(id) {
-  saveKniha(getKniha().filter(r => r.id !== id));
-  renderKnihaList();
-}
-
 function knihaLoad(id) {
   const r = getKniha().find(r => r.id === id);
   if (!r) return;
@@ -3529,34 +3579,111 @@ function knihaLoad(id) {
   showToast('Záznam načten do formuláře');
 }
 
+function knihaReprint(id) {
+  const r = getKniha().find(r => r.id === id);
+  if (!r) return;
+  const set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
+  set('fDatumOver', r.datum); set('fCisloRadku', r.cisloRadku); set('fRok', r.rok);
+  set('fJmeno', r.jmeno); set('fDatumNar', r.datumNar); set('fMistoNar', r.mistoNar);
+  set('fAdresa', r.adresa); set('fCisloOp', r.cisloOp);
+  set('fListina', r.listina); set('fPocetVyh', r.pocet);
+  updatePreview();
+  closeKnihaPanel();
+  openDolozkaPreview();
+}
+
+function knihaEditStart(id) {
+  const el = document.getElementById(`lp-knjia-${id}`);
+  if (!el) return;
+  document.querySelectorAll('.lp-item.lp-editing, .lp-item.lp-confirming').forEach(e => {
+    e.classList.remove('lp-editing', 'lp-confirming');
+  });
+  el.classList.add('lp-editing');
+}
+
+function knihaEditCancel(id) {
+  document.getElementById(`lp-knjia-${id}`)?.classList.remove('lp-editing');
+}
+
+function knihaEditSave(id) {
+  const get = suffix => document.getElementById(`lp-ke-${suffix}-${id}`)?.value.trim() || '';
+  const kniha = getKniha();
+  const idx = kniha.findIndex(r => r.id === id);
+  if (idx < 0) return;
+  kniha[idx] = { ...kniha[idx], datum: get('datum'), cisloRadku: get('cislo'), jmeno: get('jmeno'), listina: get('listina') };
+  saveKniha(kniha);
+  renderKnihaList();
+  showToast('Záznam upraven');
+}
+
+function knihaDeleteConfirm(id) {
+  const el = document.getElementById(`lp-knjia-${id}`);
+  if (!el) return;
+  document.querySelectorAll('.lp-item.lp-editing, .lp-item.lp-confirming').forEach(e => {
+    e.classList.remove('lp-editing', 'lp-confirming');
+  });
+  el.classList.add('lp-confirming');
+}
+
+function knihaDeleteDismiss(id) {
+  document.getElementById(`lp-knjia-${id}`)?.classList.remove('lp-confirming');
+}
+
+function knihaDeleteDo(id) {
+  saveKniha(getKniha().filter(r => r.id !== id));
+  renderKnihaList();
+}
+
 function renderKnihaList() {
   const list = document.getElementById('knihaList');
   if (!list) return;
   const data = getKniha();
+  const badge = document.getElementById('knihaBadge');
+  if (badge) badge.textContent = data.length || '';
   if (!data.length) {
     list.innerHTML = `<div class="lp-empty">
       <div class="lp-empty-title">Zatím žádné záznamy.</div>
-      <div class="lp-empty-sub">Klikněte '+ Přidat aktuální'<br>po vyplnění doložky.</div>
+      <div class="lp-empty-sub">Záznamy se ukládají automaticky při tisku nebo stažení.</div>
     </div>`;
     return;
   }
-  list.innerHTML = data.map(r => `<div class="lp-item">
-    <div class="lp-item-info">
-      <div class="lp-item-row1">${esc(r.datum || '—')} · č. řádku ${esc(r.cisloRadku || '—')}</div>
-      <div class="lp-item-row2">${esc(r.jmeno || '—')}</div>
-      <div class="lp-item-row3">${esc(r.listina || '—')}</div>
+  list.innerHTML = data.map(r => `<div class="lp-item" id="lp-knjia-${r.id}">
+    <div class="lp-item-view">
+      <div class="lp-item-top">
+        <span class="lp-item-name">${esc(r.jmeno || '—')}</span>
+        <span class="lp-item-ref">${esc(r.datum || '')}${r.cisloRadku ? ' · ř.'+esc(r.cisloRadku) : ''}</span>
+      </div>
+      <div class="lp-item-det">${esc(r.listina || '')}</div>
+      <div class="lp-item-actions">
+        <button class="btn-lp-action" title="Načíst do formuláře" onclick="knihaLoad(${r.id})">↩</button>
+        <button class="btn-lp-action" title="Tisknout" onclick="knihaReprint(${r.id})">&#x1F5A8;</button>
+        <button class="btn-lp-action" title="Upravit" onclick="knihaEditStart(${r.id})">&#x270E;</button>
+        <button class="btn-lp-action danger" title="Smazat" onclick="knihaDeleteConfirm(${r.id})">&#xD7;</button>
+      </div>
     </div>
-    <div class="lp-item-actions">
-      <button class="btn-lp-action" title="Načíst do formuláře" onclick="knihaLoad(${r.id})">↩</button>
-      <button class="btn-lp-action danger" title="Smazat" onclick="knihaDelete(${r.id})">×</button>
+    <div class="lp-item-edit">
+      <div class="lp-edit-grid">
+        <div class="lp-ef"><label>Datum ověření</label><input id="lp-ke-datum-${r.id}" value="${esc(r.datum||'')}"></div>
+        <div class="lp-ef"><label>Č. řádku</label><input id="lp-ke-cislo-${r.id}" value="${esc(r.cisloRadku||'')}"></div>
+        <div class="lp-ef full"><label>Jméno</label><input id="lp-ke-jmeno-${r.id}" value="${esc(r.jmeno||'')}"></div>
+        <div class="lp-ef full"><label>Listina</label><input id="lp-ke-listina-${r.id}" value="${esc(r.listina||'')}"></div>
+      </div>
+      <div class="lp-edit-btns">
+        <button class="btn-lp-save" onclick="knihaEditSave(${r.id})">Uložit</button>
+        <button class="btn-lp-cancel-edit" onclick="knihaEditCancel(${r.id})">Zrušit</button>
+      </div>
+    </div>
+    <div class="lp-item-confirm">
+      <div class="lp-confirm-msg">Smazat záznam <strong>${esc(r.jmeno || r.datum || 'tento záznam')}</strong>?</div>
+      <div class="lp-confirm-btns">
+        <button class="btn-lp-del" onclick="knihaDeleteDo(${r.id})">Smazat</button>
+        <button class="btn-lp-cancel-edit" onclick="knihaDeleteDismiss(${r.id})">Zrušit</button>
+      </div>
     </div>
   </div>`).join('');
 }
 
 // ── KLIENTI ───────────────────────────────────────────────────────
-let _klientiDupId = null;
-let _klientiDupData = null;
-
 function openKlientiPanel() {
   renderKlientiList();
   document.getElementById('klientiOverlay').classList.add('open');
@@ -3564,7 +3691,6 @@ function openKlientiPanel() {
 }
 
 function closeKlientiPanel() {
-  klientiDismissDup();
   document.getElementById('klientiOverlay').classList.remove('open');
   document.getElementById('klientiPanel').classList.remove('open');
 }
@@ -3578,48 +3704,6 @@ function saveKlienti(data) {
   localStorage.setItem('legalid_klienti', JSON.stringify(data));
 }
 
-function klientiAddCurrent() {
-  const v = id => document.getElementById(id)?.value.trim() || '';
-  const jmeno = v('fJmeno');
-  if (!jmeno) { showToast('Nejprve vyplňte jméno klienta'); return; }
-  const cisloOp = v('fCisloOp');
-  const newData = {
-    jmeno, datumNar: v('fDatumNar'), mistoNar: v('fMistoNar'),
-    adresa: v('fAdresa'), cisloOp, posledniOvereni: v('fDatumOver'),
-  };
-  const klienti = getKlienti();
-  const dupIdx = cisloOp ? klienti.findIndex(k => k.cisloOp === cisloOp) : -1;
-  if (dupIdx >= 0) {
-    _klientiDupData = newData;
-    _klientiDupId = klienti[dupIdx].id;
-    document.getElementById('klientiDupBar').classList.add('open');
-    return;
-  }
-  klienti.push({ id: Date.now(), ...newData });
-  saveKlienti(klienti);
-  renderKlientiList();
-  showToast('Klient uložen');
-}
-
-function klientiUpdateDuplicate() {
-  if (!_klientiDupData || !_klientiDupId) return;
-  const klienti = getKlienti();
-  const idx = klienti.findIndex(k => k.id === _klientiDupId);
-  if (idx >= 0) { klienti[idx] = { ...klienti[idx], ..._klientiDupData }; saveKlienti(klienti); renderKlientiList(); }
-  klientiDismissDup();
-  showToast('Klient aktualizován');
-}
-
-function klientiDismissDup() {
-  _klientiDupData = null; _klientiDupId = null;
-  document.getElementById('klientiDupBar')?.classList.remove('open');
-}
-
-function klientiDelete(id) {
-  saveKlienti(getKlienti().filter(k => k.id !== id));
-  renderKlientiList();
-}
-
 function klientiLoad(id) {
   const k = getKlienti().find(k => k.id === id);
   if (!k) return;
@@ -3631,29 +3715,100 @@ function klientiLoad(id) {
   showToast('Údaje klienta načteny');
 }
 
+function klientiEditStart(id) {
+  const el = document.getElementById(`lp-klnt-${id}`);
+  if (!el) return;
+  document.querySelectorAll('.lp-item.lp-editing, .lp-item.lp-confirming').forEach(e => {
+    e.classList.remove('lp-editing', 'lp-confirming');
+  });
+  el.classList.add('lp-editing');
+}
+
+function klientiEditCancel(id) {
+  document.getElementById(`lp-klnt-${id}`)?.classList.remove('lp-editing');
+}
+
+function klientiEditSave(id) {
+  const get = suffix => document.getElementById(`lp-ke2-${suffix}-${id}`)?.value.trim() || '';
+  const klienti = getKlienti();
+  const idx = klienti.findIndex(k => k.id === id);
+  if (idx < 0) return;
+  klienti[idx] = { ...klienti[idx], jmeno: get('jmeno'), datumNar: get('datumnar'), mistoNar: get('mistonar'), adresa: get('adresa'), cisloOp: get('cisloop') };
+  saveKlienti(klienti);
+  renderKlientiList();
+  showToast('Klient upraven');
+}
+
+function klientiDeleteConfirm(id) {
+  const el = document.getElementById(`lp-klnt-${id}`);
+  if (!el) return;
+  document.querySelectorAll('.lp-item.lp-editing, .lp-item.lp-confirming').forEach(e => {
+    e.classList.remove('lp-editing', 'lp-confirming');
+  });
+  el.classList.add('lp-confirming');
+}
+
+function klientiDeleteDismiss(id) {
+  document.getElementById(`lp-klnt-${id}`)?.classList.remove('lp-confirming');
+}
+
+function klientiDeleteDo(id) {
+  saveKlienti(getKlienti().filter(k => k.id !== id));
+  renderKlientiList();
+}
+
 function renderKlientiList() {
   const list = document.getElementById('klientiList');
   if (!list) return;
   const query = (document.getElementById('klientiSearch')?.value || '').toLowerCase().trim();
   let data = getKlienti();
-  if (query) data = data.filter(k => (k.jmeno||'').toLowerCase().includes(query) || (k.cisloOp||'').toLowerCase().includes(query));
+  if (query) data = data.filter(k =>
+    (k.jmeno||'').toLowerCase().includes(query) ||
+    (k.cisloOp||'').toLowerCase().includes(query) ||
+    (k.adresa||'').toLowerCase().includes(query)
+  );
   data.sort((a, b) => {
     const ln = s => { const p=(s||'').trim().split(/\s+/); return (p[p.length-1]||'').toLowerCase(); };
     return ln(a.jmeno).localeCompare(ln(b.jmeno), 'cs');
   });
+  const badge = document.getElementById('klientiBadge');
+  if (badge) badge.textContent = getKlienti().length || '';
   if (!data.length) {
-    list.innerHTML = `<div class="lp-empty"><div class="lp-empty-title">${query ? 'Žádný výsledek.' : 'Zatím žádní uložení klienti.'}</div></div>`;
+    list.innerHTML = `<div class="lp-empty"><div class="lp-empty-title">${esc(query ? 'Žádný výsledek.' : 'Zatím žádní uložení klienti.')}</div></div>`;
     return;
   }
-  list.innerHTML = data.map(k => `<div class="lp-item">
-    <div class="lp-item-info">
-      <div class="lp-item-row2">${esc(k.jmeno || '—')}</div>
-      <div class="lp-item-row1">nar. ${esc(k.datumNar || '—')}, ${esc(k.mistoNar || '—')}</div>
-      <div class="lp-item-row3">OP: ${esc(k.cisloOp || '—')}</div>
+  list.innerHTML = data.map(k => `<div class="lp-item" id="lp-klnt-${k.id}">
+    <div class="lp-item-view">
+      <div class="lp-item-top">
+        <span class="lp-item-name">${esc(k.jmeno || '—')}</span>
+        <span class="lp-item-ref">${k.cisloOp ? 'OP '+esc(k.cisloOp) : ''}</span>
+      </div>
+      <div class="lp-item-det">nar. ${esc(k.datumNar || '—')}${k.mistoNar ? ', '+esc(k.mistoNar) : ''}</div>
+      <div class="lp-item-actions">
+        <button class="btn-lp-action" title="Načíst do formuláře" onclick="klientiLoad(${k.id})">↩</button>
+        <button class="btn-lp-action" title="Upravit" onclick="klientiEditStart(${k.id})">&#x270E;</button>
+        <button class="btn-lp-action danger" title="Smazat" onclick="klientiDeleteConfirm(${k.id})">&#xD7;</button>
+      </div>
     </div>
-    <div class="lp-item-actions">
-      <button class="btn-lp-action" title="Načíst do formuláře" onclick="klientiLoad(${k.id})">↩</button>
-      <button class="btn-lp-action danger" title="Smazat" onclick="klientiDelete(${k.id})">×</button>
+    <div class="lp-item-edit">
+      <div class="lp-edit-grid">
+        <div class="lp-ef full"><label>Jméno</label><input id="lp-ke2-jmeno-${k.id}" value="${esc(k.jmeno||'')}"></div>
+        <div class="lp-ef"><label>Datum nar.</label><input id="lp-ke2-datumnar-${k.id}" value="${esc(k.datumNar||'')}"></div>
+        <div class="lp-ef"><label>Místo nar.</label><input id="lp-ke2-mistonar-${k.id}" value="${esc(k.mistoNar||'')}"></div>
+        <div class="lp-ef full"><label>Adresa</label><input id="lp-ke2-adresa-${k.id}" value="${esc(k.adresa||'')}"></div>
+        <div class="lp-ef full"><label>Číslo OP</label><input id="lp-ke2-cisloop-${k.id}" value="${esc(k.cisloOp||'')}"></div>
+      </div>
+      <div class="lp-edit-btns">
+        <button class="btn-lp-save" onclick="klientiEditSave(${k.id})">Uložit</button>
+        <button class="btn-lp-cancel-edit" onclick="klientiEditCancel(${k.id})">Zrušit</button>
+      </div>
+    </div>
+    <div class="lp-item-confirm">
+      <div class="lp-confirm-msg">Smazat klienta <strong>${esc(k.jmeno || 'tohoto klienta')}</strong>?</div>
+      <div class="lp-confirm-btns">
+        <button class="btn-lp-del" onclick="klientiDeleteDo(${k.id})">Smazat</button>
+        <button class="btn-lp-cancel-edit" onclick="klientiDeleteDismiss(${k.id})">Zrušit</button>
+      </div>
     </div>
   </div>`).join('');
 }

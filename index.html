@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Doložka">
-<title>Advokátní Doložka – Prohlášení advokáta o pravosti podpisu</title>
+<title>Doložka</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
@@ -604,6 +604,22 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .fp-step.done .fp-dot::after { content: '✓'; font-size: 12px; }
 .fp-step.done + .fp-line { background: var(--gold); }
 
+/* ── PANEL HIERARCHICAL NAVIGATION ── */
+.btn-panel-back {
+  background: none; border: none; cursor: pointer;
+  color: var(--ink-lt); font-size: 20px; line-height: 1;
+  padding: 4px 8px 4px 0;
+  display: flex; align-items: center; flex-shrink: 0;
+  transition: color .14s;
+}
+.btn-panel-back:hover { color: var(--navy); }
+.nav-panel.sliding-left {
+  transform: translateX(-30%) !important;
+  pointer-events: none;
+}
+.cfg-panel.from-menu,
+.lp-panel.from-menu { z-index: 215; }
+
 /* ── HEADER CFG BUTTON ── */
 .btn-cfg {
   margin-left: auto; flex-shrink: 0;
@@ -1141,21 +1157,21 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     <button class="btn-nav-close" onclick="closeHamburger()" aria-label="Zavřít">×</button>
   </div>
   <div class="nav-menu">
-    <button class="nav-item" onclick="closeHamburger();openCfgPanel()">
+    <button class="nav-item" onclick="openCfgPanel()">
       <span class="nav-item-icon">&#x2699;&#xFE0E;</span>
       <div class="nav-item-text">
         <span class="nav-item-label">Nastavení</span>
         <span class="nav-item-sub">Profil advokáta a rozměry tisku</span>
       </div>
     </button>
-    <button class="nav-item" onclick="closeHamburger();openKnihaPanel()">
+    <button class="nav-item" onclick="openKnihaPanel()">
       <span class="nav-item-icon"><i class="ti ti-notebook"></i></span>
       <div class="nav-item-text">
         <span class="nav-item-label">Kniha prohlášení</span>
         <span class="nav-item-sub">Evidence ověřených podpisů</span>
       </div>
     </button>
-    <button class="nav-item" onclick="closeHamburger();openKlientiPanel()">
+    <button class="nav-item" onclick="openKlientiPanel()">
       <span class="nav-item-icon"><i class="ti ti-users"></i></span>
       <div class="nav-item-text">
         <span class="nav-item-label">Klienti</span>
@@ -1180,7 +1196,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       <span class="nav-item-icon">★</span>
       <div class="nav-item-text">
         <span class="nav-item-label" style="color:var(--gold)">Upgradovat na Pro</span>
-        <span class="nav-item-sub" style="color:var(--gold)">30 dní zdarma · registrace zdarma</span>
+        <span class="nav-item-sub" style="color:var(--gold)">Vyzkoušet zdarma 30 dní →</span>
       </div>
     </button>
   </div>
@@ -1231,8 +1247,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
         <div class="card card-advokat">
           <div class="preview-toggle" onclick="toggleAdvokat()">
             <div class="card-title" style="margin:0;padding:0;border:none;">Advokát</div>
-            <button class="cfg-edit-link" style="margin-left:auto;margin-right:8px;" onclick="event.stopPropagation();openCfgPanel('advokat')">Upravit profil →</button>
-            <div class="preview-arrow" id="advokatArrow">
+<div class="preview-arrow" id="advokatArrow">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
             </div>
           </div>
@@ -1594,9 +1609,10 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
 </div>
 
-<div class="cfg-overlay" id="cfgOverlay" onclick="closeCfgPanel()"></div>
+<div class="cfg-overlay" id="cfgOverlay" onclick="closeCfgPanelToMenu()"></div>
 <div class="cfg-panel" id="cfgPanel" role="dialog" aria-label="Nastavení">
   <div class="cfg-head">
+    <button class="btn-panel-back" onclick="closeCfgPanelToMenu()" aria-label="Zpět do menu">←</button>
     <span class="cfg-head-title">Nastavení</span>
     <button class="btn-cfg-close" onclick="closeCfgPanel()" aria-label="Zavřít">×</button>
   </div>
@@ -1638,51 +1654,12 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       </div>
     </div>
 
-    <!-- Sekce 2: Doložka — rozměry -->
-    <div class="cfg-section" id="cfgSec2">
-      <button class="cfg-section-head" onclick="toggleCfgSection('cfgSec2')">
+    <!-- Doložka — rozměry odkaz na tiskový modal -->
+    <div class="cfg-section" style="border-bottom:1px solid var(--rule);">
+      <button class="cfg-section-head" onclick="closeCfgPanel();openDolozkaPreview()" style="justify-content:space-between;">
         <span class="cfg-section-title">Doložka — rozměry</span>
-        <span class="cfg-section-arrow">▾</span>
+        <span class="cfg-section-arrow" style="transform:none;font-size:12px;color:var(--gold);">Nastavit v náhledu tisku →</span>
       </button>
-      <div class="cfg-section-body">
-        <p class="cfg-section-desc">Rozměry pro tisk (A4) a generování .docx.</p>
-        <div class="sp-section">
-          <div class="sp-section-title">Části stránky</div>
-          <div class="sp-row">
-            <div class="sp-field">
-              <label class="sp-label" for="ds_horni">Výška doložky (mm)</label>
-              <input class="sp-input" id="ds_horni" type="number" min="50" max="270" step="1" oninput="onDolozkaSettingsInput()">
-            </div>
-            <div class="sp-field">
-              <label class="sp-label" for="ds_dolni">Výška štítku (mm)</label>
-              <input class="sp-input" id="ds_dolni" type="number" min="20" max="100" step="1" oninput="onDolozkaSettingsInput()">
-            </div>
-          </div>
-        </div>
-        <div class="sp-section">
-          <div class="sp-section-title">Okraje a odsazení</div>
-          <div class="sp-row">
-            <div class="sp-field">
-              <label class="sp-label" for="ds_okraj">Okraje stránky (mm)</label>
-              <input class="sp-input" id="ds_okraj" type="number" min="5" max="40" step="1" oninput="onDolozkaSettingsInput()">
-            </div>
-          </div>
-          <div class="sp-row" style="margin-top:10px;">
-            <div class="sp-field">
-              <label class="sp-label" for="ds_px">Odsazení horiz. (mm)</label>
-              <input class="sp-input" id="ds_px" type="number" min="0" max="20" step="0.5" oninput="onDolozkaSettingsInput()">
-            </div>
-            <div class="sp-field">
-              <label class="sp-label" for="ds_py">Odsazení vert. (mm)</label>
-              <input class="sp-input" id="ds_py" type="number" min="0" max="20" step="0.5" oninput="onDolozkaSettingsInput()">
-            </div>
-          </div>
-        </div>
-        <div class="settings-footer" style="padding:14px 0 0;border-top:1px solid var(--rule);margin-top:8px;">
-          <button class="btn-sp-reset" onclick="resetDolozkaSettings()">Obnovit výchozí</button>
-          <button class="btn-sp-save" onclick="saveDolozkaSettings()">Uložit</button>
-        </div>
-      </div>
     </div>
 
     <!-- Sekce 3: Štítky do knihy — rozměry -->
@@ -1751,6 +1728,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 <div class="lp-overlay" id="knihaOverlay" onclick="closeKnihaPanel()"></div>
 <div class="lp-panel" id="knihaPanel" role="dialog" aria-label="Kniha prohlášení">
   <div class="lp-head">
+    <button class="btn-panel-back" onclick="closeKnihaPanel()" aria-label="Zpět do menu">←</button>
     <div class="lp-head-left">
       <span class="lp-head-title">Kniha prohlášení</span>
       <span class="lp-badge" id="knihaBadge"></span>
@@ -1767,6 +1745,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 <div class="lp-overlay" id="klientiOverlay" onclick="closeKlientiPanel()"></div>
 <div class="lp-panel" id="klientiPanel" role="dialog" aria-label="Klienti">
   <div class="lp-head">
+    <button class="btn-panel-back" onclick="closeKlientiPanel()" aria-label="Zpět do menu">←</button>
     <div class="lp-head-left">
       <span class="lp-head-title">Klienti</span>
       <span class="lp-badge" id="klientiBadge"></span>
@@ -2678,6 +2657,30 @@ function submitRegEmail() {
   });
 }
 
+function _openPanelFromMenu(panel, overlay) {
+  const nav = document.getElementById('navPanel');
+  nav.classList.add('sliding-left');
+  panel.classList.add('from-menu');
+  overlay.classList.add('open');
+  panel.classList.add('open');
+}
+
+function _closePanelToMenu(panel, overlay) {
+  const nav = document.getElementById('navPanel');
+  panel.classList.remove('from-menu');
+  overlay.classList.remove('open');
+  panel.classList.remove('open');
+  nav.classList.remove('sliding-left');
+  nav.style.transition = 'none';
+  nav.style.transform = 'translateX(-30%)';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      nav.style.transition = '';
+      nav.style.transform = '';
+    });
+  });
+}
+
 function openCfgPanel(section) {
   syncCfgFromAdvokat();
   syncDolozkaInputs();
@@ -2691,20 +2694,37 @@ function openCfgPanel(section) {
   updateSettingsSum();
   renderDiagram(s);
   if (section === 'advokat') openCfgSection('cfgSec1');
-  else if (section === 'dolozka' || section === 'honzuv') openCfgSection('cfgSec2');
   else if (section === 'stitky') openCfgSection('cfgSec3');
-  document.getElementById('cfgOverlay').classList.add('open');
-  document.getElementById('cfgPanel').classList.add('open');
+  const panel = document.getElementById('cfgPanel');
+  const overlay = document.getElementById('cfgOverlay');
+  if (document.getElementById('navPanel').classList.contains('open')) {
+    _openPanelFromMenu(panel, overlay);
+  } else {
+    overlay.classList.add('open');
+    panel.classList.add('open');
+  }
 }
 
 function closeCfgPanel() {
   diagramActive = null;
+  const panel = document.getElementById('cfgPanel');
   document.getElementById('cfgOverlay').classList.remove('open');
-  document.getElementById('cfgPanel').classList.remove('open');
+  panel.classList.remove('open');
+  panel.classList.remove('from-menu');
+}
+
+function closeCfgPanelToMenu() {
+  const panel = document.getElementById('cfgPanel');
+  if (panel.classList.contains('from-menu')) {
+    _closePanelToMenu(panel, document.getElementById('cfgOverlay'));
+    diagramActive = null;
+  } else {
+    closeCfgPanel();
+  }
 }
 
 function openCfgSection(id) {
-  ['cfgSec1','cfgSec2','cfgSec3'].forEach(s => {
+  ['cfgSec1','cfgSec3'].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.classList.toggle('open', s === id);
   });
@@ -3665,13 +3685,25 @@ function autoSaveRecord() {
 // ── KNIHA PROHLÁŠENÍ ──────────────────────────────────────────────
 function openKnihaPanel() {
   renderKnihaList();
-  document.getElementById('knihaOverlay').classList.add('open');
-  document.getElementById('knihaPanel').classList.add('open');
+  const panel = document.getElementById('knihaPanel');
+  const overlay = document.getElementById('knihaOverlay');
+  if (document.getElementById('navPanel').classList.contains('open')) {
+    _openPanelFromMenu(panel, overlay);
+  } else {
+    overlay.classList.add('open');
+    panel.classList.add('open');
+  }
 }
 
 function closeKnihaPanel() {
-  document.getElementById('knihaOverlay').classList.remove('open');
-  document.getElementById('knihaPanel').classList.remove('open');
+  const panel = document.getElementById('knihaPanel');
+  const overlay = document.getElementById('knihaOverlay');
+  if (panel.classList.contains('from-menu')) {
+    _closePanelToMenu(panel, overlay);
+  } else {
+    overlay.classList.remove('open');
+    panel.classList.remove('open');
+  }
 }
 
 function getKniha() {
@@ -3803,13 +3835,25 @@ function renderKnihaList() {
 // ── KLIENTI ───────────────────────────────────────────────────────
 function openKlientiPanel() {
   renderKlientiList();
-  document.getElementById('klientiOverlay').classList.add('open');
-  document.getElementById('klientiPanel').classList.add('open');
+  const panel = document.getElementById('klientiPanel');
+  const overlay = document.getElementById('klientiOverlay');
+  if (document.getElementById('navPanel').classList.contains('open')) {
+    _openPanelFromMenu(panel, overlay);
+  } else {
+    overlay.classList.add('open');
+    panel.classList.add('open');
+  }
 }
 
 function closeKlientiPanel() {
-  document.getElementById('klientiOverlay').classList.remove('open');
-  document.getElementById('klientiPanel').classList.remove('open');
+  const panel = document.getElementById('klientiPanel');
+  const overlay = document.getElementById('klientiOverlay');
+  if (panel.classList.contains('from-menu')) {
+    _closePanelToMenu(panel, overlay);
+  } else {
+    overlay.classList.remove('open');
+    panel.classList.remove('open');
+  }
 }
 
 function getKlienti() {

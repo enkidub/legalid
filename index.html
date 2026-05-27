@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Doložka">
-<title>Doložka – Generátor doložky</title>
+<title>Doložka – Generátor doložky o pravosti podpisu</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
@@ -26,9 +26,9 @@
   --ink-mid:#3d4f6a;
   --ink-lt: #6b7d96;
   --ink-fnt:#9babbe;
-  --paper:  #f9f8f5;
-  --paper-w:#f2f0eb;
-  --rule:   #ddd9d0;
+  --paper:  #ffffff;
+  --paper-w:#f4f6f9;
+  --rule:   #e8eaed;
   --gold:   #9a6e10;
   --gold-h: #7d5808;
   --gold-p: #fdf8ec;
@@ -42,24 +42,27 @@
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 15px; -webkit-font-smoothing: antialiased; }
-body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.6; }
+body { font-family: var(--sans); background: var(--paper-w); color: var(--ink); line-height: 1.6; }
 
 /* ── HEADER ── */
 .app-header {
   background: var(--navy);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
   padding: 0 var(--pad);
   position: sticky; top: 0; z-index: 50;
 }
 .app-header-i {
-  max-width: var(--max); margin: 0 auto; height: 56px;
+  max-width: var(--max); margin: 0 auto; height: 52px;
   display: flex; align-items: center; gap: 12px;
 }
 .app-logo-mark {
-  width: 36px; height: 36px; flex-shrink: 0;
+  width: 32px; height: 32px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
+  background: var(--gold); border-radius: 6px;
 }
-.app-logo-mark img { width: 36px; height: 36px; display: block; }
-.app-wordmark { font-family: var(--serif); font-size: 21px; font-weight: 700; color: #fff; letter-spacing: -.3px; line-height: 1; }
+.app-logo-mark img { width: 20px; height: 20px; display: block; }
+.app-wordmark { font-family: var(--serif); font-size: 20px; font-weight: 700; color: #fff; letter-spacing: -.3px; line-height: 1; }
+.app-wordmark span { color: var(--gold); }
 .app-tagline { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 2px; letter-spacing: .2px; }
 
 /* ── LAYOUT ── */
@@ -95,8 +98,9 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); li
 
 /* ── CARD ── */
 .card {
-  background: var(--white); border: 1px solid var(--rule);
-  border-radius: var(--rl); padding: 20px; margin-bottom: 16px; box-shadow: var(--sh);
+  background: #ffffff; border: 1px solid var(--rule);
+  border-radius: 12px; padding: 24px; margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(11,25,41,0.06), 0 2px 8px rgba(11,25,41,0.04);
 }
 .card-title {
   font-family: var(--serif); font-size: 16px; font-weight: 600;
@@ -111,12 +115,12 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); li
 .form-group.full { grid-column: 1 / -1; }
 .form-label { font-size: 10px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-lt); margin-bottom: 5px; }
 .form-input {
-  width: 100%; padding: 9px 12px; border-radius: var(--r); border: 1.5px solid var(--rule);
+  width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #e8eaed;
   font-family: var(--sans); font-size: 13px; color: var(--ink);
-  background: var(--paper); transition: border-color .14s, box-shadow .14s; outline: none;
+  background: #ffffff; transition: border-color .14s, box-shadow .14s; outline: none;
   min-width: 0;
 }
-.form-input:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(11,25,41,.08); background: var(--white); }
+.form-input:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(11,25,41,.06); }
 .form-input.warn { border-color: #d97706; }
 .form-input.danger { border-color: #dc2626; }
 .form-input.invalid { border-color: #dc2626; }
@@ -132,12 +136,12 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .btn-upload {
   display: flex; align-items: center; justify-content: center;
   width: 100%; height: 52px; border-radius: var(--rl);
-  background: var(--navy); color: var(--white);
-  border: none;
+  background: transparent; color: var(--navy);
+  border: 2px solid var(--navy);
   font-family: var(--sans); font-size: 15px; font-weight: 600;
-  cursor: pointer; transition: background .14s;
+  cursor: pointer; transition: all .14s;
 }
-.btn-upload:hover { background: var(--navy-h); }
+.btn-upload:hover { background: var(--navy); color: #fff; }
 
 .photo-chips { display: flex; gap: 7px; flex-wrap: wrap; }
 .photo-chip {
@@ -182,7 +186,19 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .dolozka-table tr td:first-child { width: 48%; }
 
 /* ── DOWNLOAD ── */
-.sticky-download { position: sticky; top: 72px; z-index: 10; margin-bottom: 16px; }
+.sticky-download { position: sticky; top: 68px; z-index: 10; margin-bottom: 16px; }
+@media (max-width: 800px) {
+  .sticky-download {
+    position: fixed;
+    top: auto; bottom: 0; left: 0; right: 0;
+    padding: 12px 16px;
+    background: #ffffff;
+    border-top: 1px solid var(--rule);
+    box-shadow: 0 -4px 16px rgba(11,25,41,0.08);
+    z-index: 50;
+    margin-bottom: 0;
+  }
+}
 .btn-download {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 12px 28px; border-radius: var(--r); background: var(--gold); color: #fff;
@@ -221,7 +237,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 /* ── MOBILE ── */
 @media (max-width: 600px) {
   .app-tagline { display: none; }
-  .page { padding: 16px 0 60px; }
+  .page { padding: 16px 0 80px; }
   .form-grid { grid-template-columns: 1fr; }
   .form-group.full { grid-column: 1; }
   .btn-download { width: 100%; justify-content: center; }
@@ -446,7 +462,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .split-btn-main:hover { background: var(--gold-h); }
 .split-btn-arrow {
   display: flex; align-items: center; justify-content: center;
-  width: 44px; padding: 0; flex-shrink: 0;
+  min-width: 48px; padding: 0; flex-shrink: 0;
   border-radius: 0 var(--r) var(--r) 0;
   background: var(--gold); color: #fff;
   border: none; border-left: 1px solid rgba(255,255,255,.3);
@@ -497,7 +513,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       <img src="/icons/icon.svg" alt="Doložka">
     </div>
     <div>
-      <div class="app-wordmark">Doložka</div>
+      <div class="app-wordmark">Legal<span>ID</span></div>
       <div class="app-tagline">Generátor doložky o pravosti podpisu</div>
     </div>
   </div>

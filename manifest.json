@@ -1,12 +1,12 @@
 {
-  "name": "Doložka – Generátor doložky",
+  "name": "Doložka",
   "short_name": "Doložka",
   "description": "Generátor doložky o pravosti podpisu s AI rozpoznáváním OP",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#0b1929",
-  "background_color": "#f9f8f5",
+  "background_color": "#f4f6f9",
   "lang": "cs",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },

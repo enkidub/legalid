@@ -16,6 +16,7 @@
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
 <script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 <style>
@@ -1089,14 +1090,14 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       </div>
     </button>
     <button class="nav-item" onclick="closeHamburger();openKnihaPanel()">
-      <span class="nav-item-icon">📋</span>
+      <span class="nav-item-icon"><i class="ti ti-notebook"></i></span>
       <div class="nav-item-text">
         <span class="nav-item-label">Kniha prohlášení</span>
         <span class="nav-item-sub">Evidence ověřených podpisů</span>
       </div>
     </button>
     <button class="nav-item" onclick="closeHamburger();openKlientiPanel()">
-      <span class="nav-item-icon">👥</span>
+      <span class="nav-item-icon"><i class="ti ti-users"></i></span>
       <div class="nav-item-text">
         <span class="nav-item-label">Klienti</span>
         <span class="nav-item-sub">Uložené údaje klientů</span>
@@ -1116,17 +1117,11 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
         <span class="nav-item-sub">Jak používat aplikaci</span>
       </div>
     </button>
-    <button class="nav-item" onclick="closeHamburger();openRegistrationModal()">
-      <div class="nav-item-text">
-        <span class="nav-item-label">Registrace</span>
-        <span class="nav-item-sub" style="color:var(--gold)">30 dní zdarma, pak 9 €/měs</span>
-      </div>
-    </button>
     <button class="nav-item nav-item-pro" onclick="closeHamburger();openRegistrationModal()">
       <span class="nav-item-icon">★</span>
       <div class="nav-item-text">
         <span class="nav-item-label" style="color:var(--gold)">Upgradovat na Pro</span>
-        <span class="nav-item-sub" style="color:var(--gold)">Neomezené doložky · Prioritní podpora</span>
+        <span class="nav-item-sub" style="color:var(--gold)">30 dní zdarma · registrace zdarma</span>
       </div>
     </button>
   </div>

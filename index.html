@@ -254,6 +254,44 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
+/* ── POST-PRINT TOAST ── */
+.post-print-toast {
+  position: fixed; bottom: 80px; left: 50%;
+  transform: translateX(-50%) translateY(200px);
+  background: var(--navy); color: #fff;
+  padding: 12px 16px; border-radius: var(--rl);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  box-shadow: var(--sh-lg); z-index: 310;
+  min-width: 280px; max-width: min(420px, calc(100vw - 32px));
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+}
+.post-print-toast.show { transform: translateX(-50%) translateY(0); }
+.post-print-toast-msg { font-size: 13px; font-weight: 500; }
+.btn-ppt-nove {
+  background: var(--gold); color: #fff; border: none;
+  padding: 6px 14px; border-radius: var(--r);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: var(--sans); white-space: nowrap; flex-shrink: 0;
+  transition: background .14s;
+}
+.btn-ppt-nove:hover { background: var(--gold-h); }
+.btn-ppt-close {
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,.5); font-size: 18px; line-height: 1;
+  padding: 0 0 0 4px; flex-shrink: 0; transition: color .14s;
+}
+.btn-ppt-close:hover { color: #fff; }
+
+/* ── NOVÉ OVĚŘENÍ LINK ── */
+.btn-nove-overeni {
+  display: block; width: 100%; text-align: center;
+  font-size: 12px; color: var(--ink-lt);
+  background: none; border: none; cursor: pointer;
+  margin-top: 6px; padding: 4px;
+  font-family: var(--sans); transition: color .14s;
+}
+.btn-nove-overeni:hover { color: var(--navy); }
+
 /* safe area for notched phones */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   body { padding-bottom: env(safe-area-inset-bottom); }
@@ -1265,6 +1303,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
               </button>
             </div>
           </div>
+          <button class="btn-nove-overeni" onclick="noveOvereni()">Nové ověření →</button>
           <div class="format-panel" id="formatPanel">
             <div class="format-panel-title">Jaké etikety používáte?</div>
             <div class="format-cards">
@@ -1414,6 +1453,14 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 </main>
 
 <div class="toast" id="toast"></div>
+
+<div class="post-print-toast" id="postPrintToast">
+  <span class="post-print-toast-msg">Záznam uložen do knihy</span>
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+    <button class="btn-ppt-nove" onclick="noveOvereni()">Nové ověření →</button>
+    <button class="btn-ppt-close" onclick="closePostPrintToast()" aria-label="Zavřít">×</button>
+  </div>
+</div>
 
 <div class="action-toast" id="actionToast">
   <div class="action-toast-msg" id="actionToastMsg"></div>
@@ -3305,6 +3352,7 @@ body{font-family:'Times New Roman',Times,serif;font-size:10pt;line-height:1.35;c
     wc.document.write(comboHtml);
     wc.document.close();
     autoSaveRecord();
+    showPostPrintToast();
     return;
   }
 
@@ -3363,6 +3411,65 @@ ${pagesHtml}
   w.document.write(html);
   w.document.close();
   autoSaveRecord();
+  showPostPrintToast();
+}
+
+// ── NOVÉ OVĚŘENÍ ──────────────────────────────────────────────────
+function noveOvereni() {
+  // a) Vymaž fotografie
+  uploadedImages = [];
+  renderChips();
+  hideOcrSuccess();
+  document.getElementById('fileInput').value = '';
+
+  // b) Vymaž pole klienta
+  ['fJmeno','fDatumNar','fMistoNar','fAdresa','fCisloOp','fStatOb'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.classList.remove('warn','danger','invalid'); }
+  });
+
+  // c) Pole doložky — listina smaž, ostatní nastav
+  const listEl = document.getElementById('fListina');
+  if (listEl) { listEl.value = ''; listEl.classList.remove('warn','invalid'); }
+
+  const kniha = getKniha();
+  const lastRec = kniha[0];
+  const nextRadku = lastRec?.cisloRadku ? parseInt(lastRec.cisloRadku, 10) + 1 : 1;
+  const elRadku = document.getElementById('fCisloRadku');
+  if (elRadku) { elRadku.value = nextRadku; elRadku.classList.remove('warn','invalid'); }
+
+  prefillDates();
+
+  const elPocet = document.getElementById('fPocetVyh');
+  if (elPocet) { elPocet.value = 1; elPocet.classList.remove('warn','invalid'); }
+
+  // e) Sbal náhled doložky
+  document.getElementById('previewBody')?.classList.remove('open');
+  document.getElementById('previewArrow')?.classList.remove('open');
+
+  // Vymaž validační chyby
+  document.getElementById('validationErrors')?.classList.remove('visible');
+  document.querySelectorAll('.form-input.warn, .form-input.invalid')
+    .forEach(el => el.classList.remove('warn','invalid'));
+
+  updatePreview();
+
+  // f) Scrolluj nahoru
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // g) Zavři post-print toast
+  closePostPrintToast();
+
+  // h) Krátký toast
+  showToast('Připraveno pro nové ověření');
+}
+
+function showPostPrintToast() {
+  document.getElementById('postPrintToast').classList.add('show');
+}
+
+function closePostPrintToast() {
+  document.getElementById('postPrintToast').classList.remove('show');
 }
 
 // ── SPLIT MENU ────────────────────────────────────────────────────

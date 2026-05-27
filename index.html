@@ -46,8 +46,9 @@ body { font-family: var(--sans); background: var(--paper-w); color: var(--ink); 
 
 /* ── HEADER ── */
 .app-header {
-  background: var(--navy);
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  background: #ffffff;
+  border-bottom: 1px solid var(--rule);
+  box-shadow: 0 1px 4px rgba(11,25,41,0.08);
   padding: 0 var(--pad);
   position: sticky; top: 0; z-index: 50;
 }
@@ -58,12 +59,11 @@ body { font-family: var(--sans); background: var(--paper-w); color: var(--ink); 
 .app-logo-mark {
   width: 32px; height: 32px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  background: var(--gold); border-radius: 6px;
+  background: var(--paper-w); border-radius: 6px; border: 1px solid var(--rule);
 }
 .app-logo-mark img { width: 20px; height: 20px; display: block; }
-.app-wordmark { font-family: var(--serif); font-size: 20px; font-weight: 700; color: #fff; letter-spacing: -.3px; line-height: 1; }
-.app-wordmark span { color: var(--gold); }
-.app-tagline { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 2px; letter-spacing: .2px; }
+.app-wordmark { font-family: var(--serif); font-size: 22px; font-weight: 700; color: var(--navy); letter-spacing: -.3px; line-height: 1; }
+.app-tagline { font-size: 11px; color: var(--ink-lt); margin-top: 2px; letter-spacing: .2px; }
 
 /* ── LAYOUT ── */
 .wrap { max-width: var(--max); margin: 0 auto; padding: 0 var(--pad); }
@@ -574,10 +574,10 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   width: 36px; height: 36px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: transparent; border: none; cursor: pointer;
-  color: rgba(255,255,255,.6); font-size: 18px; line-height: 1;
+  color: var(--ink-lt); font-size: 18px; line-height: 1;
   transition: background .15s, color .15s;
 }
-.btn-cfg:hover { background: rgba(255,255,255,.1); color: #fff; }
+.btn-cfg:hover { background: var(--paper-w); color: var(--navy); }
 
 /* ── CFG PANEL ── */
 .cfg-overlay {
@@ -704,7 +704,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       <img src="/icons/icon.svg" alt="Doložka">
     </div>
     <div>
-      <div class="app-wordmark">Legal<span>ID</span></div>
+      <div class="app-wordmark">Doložka</div>
       <div class="app-tagline">Generátor doložky o pravosti podpisu</div>
     </div>
     <button class="btn-cfg" onclick="openCfgPanel()" aria-label="Nastavení">⚙</button>

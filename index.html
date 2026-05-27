@@ -636,23 +636,69 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   display: none; position: fixed; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   background: var(--white); border-radius: 16px; box-shadow: var(--sh-lg); z-index: 401;
-  width: min(640px, 96vw); max-height: 92vh; flex-direction: column;
+  width: 90vw; max-width: 1200px; height: 85vh;
+  flex-direction: column; overflow: hidden;
 }
 .print-modal.open { display: flex; }
-.print-modal-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px; border-bottom: 1px solid var(--rule); flex-shrink: 0;
+@media (max-width: 800px) {
+  .print-modal {
+    width: 100vw; height: 100vh; top: 0; left: 0;
+    transform: none; border-radius: 0;
+  }
 }
-.print-modal-title { font-size: 14px; font-weight: 600; color: var(--navy); }
+/* Header */
+.pm-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 20px; height: 56px; border-bottom: 1px solid var(--rule); flex-shrink: 0;
+}
+.pm-header-title { font-size: 14px; font-weight: 600; color: var(--navy); flex: 1; }
+@media (max-width: 800px) { .pm-header-title { display: none; } }
+/* Mobile tabs */
+.pm-tabs { display: none; flex: 1; justify-content: center; gap: 4px; }
+@media (max-width: 800px) { .pm-tabs { display: flex; } }
+.pm-tab {
+  padding: 7px 18px; font-size: 13px; font-weight: 500; color: var(--ink-lt);
+  background: none; border: none; cursor: pointer; position: relative;
+  font-family: var(--sans); border-radius: var(--r); transition: color .14s;
+}
+.pm-tab::after {
+  content: ''; position: absolute; bottom: -2px; left: 10px; right: 10px;
+  height: 2px; background: var(--gold); border-radius: 2px; opacity: 0; transition: opacity .14s;
+}
+.pm-tab.active { color: var(--gold-h); font-weight: 600; }
+.pm-tab.active::after { opacity: 1; }
 .btn-pm-close {
-  background: none; border: none; cursor: pointer; color: var(--ink-lt);
-  font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: var(--r);
+  flex-shrink: 0; background: none; border: none; cursor: pointer; color: var(--ink-lt);
+  font-size: 22px; line-height: 1; padding: 4px 6px; border-radius: var(--r);
 }
-.btn-pm-close:hover { color: var(--navy); background: var(--paper); }
-.print-modal-body {
-  flex: 1; min-height: 180px; overflow-x: hidden; overflow-y: auto; padding: 20px; background: #dde0e4;
-  display: flex; justify-content: center; align-items: flex-start;
+.btn-pm-close:hover { color: var(--navy); background: var(--paper-w); }
+/* Two-column body */
+.pm-body { display: flex; flex: 1; min-height: 0; }
+/* Preview column — left 60% */
+.pm-preview-col {
+  flex: 0 0 60%; min-width: 0; display: flex; flex-direction: column;
+  background: #dde0e4; overflow: hidden;
 }
+@media (max-width: 800px) {
+  .pm-preview-col { flex: 1; }
+  .pm-preview-col.pm-col-hidden { display: none; }
+}
+.pm-preview-scroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 16px 20px;
+  display: flex; justify-content: flex-start; align-items: flex-start;
+}
+/* Settings column — right 40% */
+.pm-settings-col {
+  flex: 0 0 40%; min-width: 0; display: flex; flex-direction: column;
+  background: var(--paper-w); border-left: 1px solid var(--rule); overflow: hidden;
+}
+@media (max-width: 800px) {
+  .pm-settings-col { flex: 1; border-left: none; display: none; }
+  .pm-settings-col.pm-col-show { display: flex; }
+}
+.pm-settings-scroll { flex: 1; overflow-y: auto; padding: 16px 20px; }
+/* Print preview elements */
 .print-preview-outer { overflow: hidden; flex-shrink: 0; }
 .print-preview-a4 {
   width: 794px; height: 1123px; background: #fff; box-shadow: 0 2px 16px rgba(0,0,0,.25);
@@ -678,11 +724,14 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .pv-bot table { width: 100%; border-collapse: collapse; font-size: 7pt; }
 .pv-bot td { border: 0.5px solid #888; padding: 2px 4px; vertical-align: top; line-height: 1.3; }
 .pv-bot td:first-child { width: 48%; }
-.pm-lines-wrap {
-  display: flex; align-items: center; gap: 6px; cursor: pointer;
-  font-size: 12px; color: var(--ink-lt); white-space: nowrap; user-select: none;
+/* Bottom bar */
+.pm-bottom-bar {
+  height: 64px; flex-shrink: 0; border-top: 1px solid var(--rule);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px; gap: 12px; background: var(--white);
 }
-.pm-lines-wrap input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--gold); }
+.pm-bar-left { display: flex; align-items: center; gap: 12px; }
+.pm-bar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .pm-copies-wrap { display: flex; align-items: center; gap: 8px; }
 .pm-copies-label { font-size: 12px; color: var(--ink-lt); white-space: nowrap; }
 .pm-copies-input {
@@ -690,45 +739,35 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   font-family: var(--sans); font-size: 13px; text-align: center; color: var(--ink);
   background: var(--white);
 }
-.print-modal-footer {
-  display: flex; gap: 8px; align-items: center; padding: 14px 20px;
-  border-top: 1px solid var(--rule); flex-shrink: 0; flex-wrap: wrap;
+.pm-lines-wrap {
+  display: flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: 12px; color: var(--ink-lt); white-space: nowrap; user-select: none;
 }
+.pm-lines-wrap input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--gold); }
 .btn-pm-print {
   padding: 10px 18px; border-radius: var(--r); background: var(--gold); color: #fff;
   font-family: var(--sans); font-size: 13px; font-weight: 600; border: none; cursor: pointer;
-  transition: background .14s;
+  transition: background .14s; white-space: nowrap;
 }
 .btn-pm-print:hover { background: var(--gold-h); }
 .btn-pm-docx {
   padding: 10px 16px; border-radius: var(--r); background: var(--paper); color: var(--ink);
   font-family: var(--sans); font-size: 13px; font-weight: 500;
   border: 1.5px solid var(--rule); cursor: pointer; transition: border-color .14s, color .14s;
+  white-space: nowrap;
 }
 .btn-pm-docx:hover { border-color: var(--ink-lt); color: var(--navy); }
-.btn-pm-settings {
-  margin-right: auto; padding: 10px 0; background: none; border: none;
-  font-family: var(--sans); font-size: 12px; color: var(--ink-lt);
-  cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+/* Settings panel — right column content */
+.pm-diag-wrap {
+  margin: 0 -20px 14px; border-bottom: 1px solid var(--rule); background: var(--white);
+  padding: 10px 20px;
 }
-.btn-pm-settings:hover { color: var(--navy); }
-
-/* ── PRINT MODAL SETTINGS ── */
-.pm-settings-section {
-  display: none; border-top: 2px solid var(--rule); flex-shrink: 0;
-  background: var(--paper-w); overflow-y: auto; max-height: 52vh;
-}
-.pm-settings-section.open { display: block; }
-.pm-settings-diag {
-  padding: 12px 20px; border-bottom: 1px solid var(--rule); background: var(--white);
-}
-.pm-settings-body { padding: 16px 20px; }
 .pm-sec-title {
   font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
   color: var(--ink-fnt); margin-bottom: 10px;
 }
 .pm-dim-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 6px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 6px;
 }
 .pm-dim-field { display: flex; flex-direction: column; gap: 4px; }
 .pm-dim-label {
@@ -736,15 +775,14 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   letter-spacing: .4px; color: var(--ink-lt);
 }
 .pm-dim-input {
-  width: 100%; padding: 8px 10px; border-radius: var(--r); border: 1.5px solid var(--rule);
+  width: 100%; padding: 7px 8px; border-radius: var(--r); border: 1.5px solid var(--rule);
   font-family: var(--sans); font-size: 13px; color: var(--ink);
-  background: var(--paper); outline: none; transition: border-color .14s;
+  background: var(--white); outline: none; transition: border-color .14s;
 }
-.pm-dim-input:focus { border-color: var(--navy); background: var(--white); }
-.pm-dim-input.pm-hi { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(154,110,16,.15); background: var(--white); }
-.pm-settings-note { font-size: 11px; color: var(--ink-lt); margin: 8px 0 14px; }
-.pm-sig-block { margin-bottom: 14px; }
-.pm-sig-row { display: flex; flex-direction: column; gap: 7px; }
+.pm-dim-input:focus { border-color: var(--navy); }
+.pm-dim-input.pm-hi { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(154,110,16,.15); }
+.pm-content-sep { height: 1px; background: var(--rule); margin: 14px 0; }
+.pm-sig-row { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
 .pm-sig-opt {
   display: flex; align-items: center; gap: 8px; cursor: pointer;
   font-size: 13px; color: var(--ink); user-select: none;
@@ -755,11 +793,14 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   font-size: 13px; color: var(--ink); user-select: none; margin-bottom: 4px;
 }
 .pm-border-label input[type=checkbox] { accent-color: var(--navy); cursor: pointer; }
-.pm-border-hint { font-size: 11px; color: var(--ink-lt); padding-left: 22px; }
-.pm-settings-footer {
-  display: flex; gap: 8px; align-items: center; padding: 12px 20px;
-  border-top: 1px solid var(--rule);
+.pm-border-hint { font-size: 11px; color: var(--ink-lt); padding-left: 22px; margin-bottom: 14px; }
+.btn-pm-reset {
+  width: 100%; padding: 9px 16px; border-radius: var(--r);
+  background: transparent; color: var(--ink-lt); border: 1.5px solid var(--rule);
+  font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: border-color .14s, color .14s;
 }
+.btn-pm-reset:hover { border-color: var(--ink-mid); color: var(--navy); }
 
 </style>
 </head>
@@ -1027,63 +1068,93 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 <!-- Print preview modal -->
 <div class="print-modal-overlay" id="printModalOverlay" onclick="closePrintModal()"></div>
 <div class="print-modal" id="printModal" role="dialog" aria-label="Náhled před tiskem">
-  <div class="print-modal-head">
-    <span class="print-modal-title">Náhled před tiskem</span>
+
+  <!-- Header -->
+  <div class="pm-header">
+    <span class="pm-header-title">Náhled před tiskem</span>
+    <div class="pm-tabs" id="pmTabs">
+      <button class="pm-tab active" id="pmTabPreview" onclick="switchPmTab('preview')">Náhled</button>
+      <button class="pm-tab" id="pmTabSettings" onclick="switchPmTab('settings')">Nastavení</button>
+    </div>
     <button class="btn-pm-close" onclick="closePrintModal()" aria-label="Zavřít">×</button>
   </div>
-  <div class="print-modal-body">
-    <div class="print-preview-outer" id="printPreviewOuter">
-      <div class="print-preview-a4" id="printPreviewA4">
-        <div class="pv-grid" id="pvGrid"></div>
+
+  <!-- Two-column body -->
+  <div class="pm-body">
+
+    <!-- Left column: preview -->
+    <div class="pm-preview-col" id="pmPreviewCol">
+      <div class="pm-preview-scroll" id="pmPreviewScroll">
+        <div class="print-preview-outer" id="printPreviewOuter">
+          <div class="print-preview-a4" id="printPreviewA4">
+            <div class="pv-grid" id="pvGrid"></div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="print-modal-footer">
-    <button class="btn-pm-settings" id="btnPmSettings" onclick="togglePmSettings()">⚙ Nastavení tisku</button>
-    <div class="pm-copies-wrap">
-      <label class="pm-copies-label" for="pmCopies">Kopií:</label>
-      <input class="pm-copies-input" id="pmCopies" type="number" min="1" max="8" value="4" oninput="buildDolozkaPreviewContent()" onchange="buildDolozkaPreviewContent()">
-    </div>
-    <label class="pm-lines-wrap">
-      <input type="checkbox" id="pmLines" onchange="updatePvLines()">
-      Čáry
-    </label>
-    <button class="btn-pm-docx" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)))">📄 Stáhnout .docx</button>
-    <button class="btn-pm-print" onclick="printDolozka()">🖨 Tisknout</button>
-  </div>
-  <div class="pm-settings-section" id="pmSettingsSection">
-    <div class="pm-settings-diag">
-      <svg id="pmDiagram" viewBox="0 0 280 195" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;max-height:150px;"></svg>
-    </div>
-    <div class="pm-settings-body">
-      <div class="pm-sec-title">Rozměry (mm)</div>
-      <div class="pm-dim-grid">
-        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X1">X1</label><input class="pm-dim-input" id="pm_X1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
-        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X2">X2</label><input class="pm-dim-input" id="pm_X2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
-        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PX">PX</label><input class="pm-dim-input" id="pm_PX" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
-        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y1">Y1</label><input class="pm-dim-input" id="pm_Y1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
-        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y2">Y2</label><input class="pm-dim-input" id="pm_Y2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
-        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PY">PY</label><input class="pm-dim-input" id="pm_PY" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
-        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_W">W</label><input class="pm-dim-input" id="pm_W" type="number" min="10" max="105" step="0.5" oninput="onPmSettingsInput()"></div>
-        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_H">H</label><input class="pm-dim-input" id="pm_H" type="number" min="5" max="70" step="0.5" oninput="onPmSettingsInput()"></div>
-      </div>
-      <p class="pm-settings-note">Hodnoty zadávejte v mm</p>
-      <div class="pm-sig-block">
+
+    <!-- Right column: settings -->
+    <div class="pm-settings-col" id="pmSettingsCol">
+      <div class="pm-settings-scroll">
+
+        <!-- SVG diagram -->
+        <div class="pm-diag-wrap">
+          <svg id="pmDiagram" viewBox="0 0 280 195" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;max-height:180px;"></svg>
+        </div>
+
+        <!-- Dimension inputs: 3-column grid -->
+        <div class="pm-sec-title">Rozměry (mm)</div>
+        <div class="pm-dim-grid">
+          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X1">X1</label><input class="pm-dim-input" id="pm_X1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X2">X2</label><input class="pm-dim-input" id="pm_X2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PX">PX</label><input class="pm-dim-input" id="pm_PX" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
+          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y1">Y1</label><input class="pm-dim-input" id="pm_Y1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y2">Y2</label><input class="pm-dim-input" id="pm_Y2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PY">PY</label><input class="pm-dim-input" id="pm_PY" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
+          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_W">W</label><input class="pm-dim-input" id="pm_W" type="number" min="10" max="105" step="0.5" oninput="onPmSettingsInput()"></div>
+          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_H">H</label><input class="pm-dim-input" id="pm_H" type="number" min="5" max="70" step="0.5" oninput="onPmSettingsInput()"></div>
+        </div>
+
+        <div class="pm-content-sep"></div>
+
+        <!-- Signature mode -->
         <div class="pm-sec-title">Na místě podpisu advokáta:</div>
         <div class="pm-sig-row">
           <label class="pm-sig-opt"><input type="radio" name="pm_sig" value="sign" onchange="onPmSettingsInput()"> vlastnoruční podpis advokáta</label>
           <label class="pm-sig-opt"><input type="radio" name="pm_sig" value="none" onchange="onPmSettingsInput()"> netisknout nic</label>
           <label class="pm-sig-opt"><input type="radio" name="pm_sig" value="name" onchange="onPmSettingsInput()"> jméno, příjmení a tituly</label>
         </div>
+
+        <!-- Border checkbox -->
+        <label class="pm-border-label"><input type="checkbox" id="pm_border" onchange="onPmSettingsInput()"> Tisknout rámeček</label>
+        <div class="pm-border-hint">pro etikety doporučujeme vypnout</div>
+
+        <!-- Reset button -->
+        <button class="btn-pm-reset" onclick="resetPmSettings()">Obnovit výchozí hodnoty</button>
+
       </div>
-      <label class="pm-border-label"><input type="checkbox" id="pm_border" onchange="onPmSettingsInput()"> Tisknout rámeček</label>
-      <div class="pm-border-hint">pro etikety doporučujeme vypnout</div>
     </div>
-    <div class="pm-settings-footer">
-      <button class="btn-sp-reset" onclick="cancelPmSettings()">Zrušit</button>
-      <button class="btn-sp-save" onclick="savePmSettings()">Uložit</button>
+
+  </div>
+
+  <!-- Bottom bar -->
+  <div class="pm-bottom-bar">
+    <div class="pm-bar-left">
+      <div class="pm-copies-wrap">
+        <label class="pm-copies-label" for="pmCopies">Kopií:</label>
+        <input class="pm-copies-input" id="pmCopies" type="number" min="1" max="8" value="4" oninput="buildDolozkaPreviewContent()" onchange="buildDolozkaPreviewContent()">
+      </div>
+      <label class="pm-lines-wrap">
+        <input type="checkbox" id="pmLines" onchange="updatePvLines()">
+        Čáry
+      </label>
+    </div>
+    <div class="pm-bar-right">
+      <button class="btn-pm-docx" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)))">📄 Stáhnout .docx</button>
+      <button class="btn-pm-print" onclick="printDolozka()">🖨 Tisknout</button>
     </div>
   </div>
+
 </div>
 
 <div class="cfg-overlay" id="cfgOverlay" onclick="closeCfgPanel()"></div>
@@ -1326,6 +1397,9 @@ function init() {
   }
   document.getElementById('fileInput').addEventListener('change', e => handleFiles(e.target.files));
   document.addEventListener('click', () => closeSplitMenu());
+  window.addEventListener('resize', () => {
+    if (document.getElementById('printModal')?.classList.contains('open')) scalePrintPreview();
+  });
   updatePreview();
 }
 
@@ -2095,6 +2169,11 @@ function openDolozkaPreview() {
   softValidate();
   loadPmSettings();
   buildDolozkaPreviewContent();
+  // Reset to preview tab (relevant on mobile)
+  document.getElementById('pmPreviewCol')?.classList.remove('pm-col-hidden');
+  document.getElementById('pmSettingsCol')?.classList.remove('pm-col-show');
+  document.getElementById('pmTabPreview')?.classList.add('active');
+  document.getElementById('pmTabSettings')?.classList.remove('active');
   document.getElementById('printModalOverlay').classList.add('open');
   document.getElementById('printModal').classList.add('open');
   requestAnimationFrame(scalePrintPreview);
@@ -2168,36 +2247,44 @@ function loadPmSettings() {
   renderPmDiagram();
 }
 
-function togglePmSettings() {
-  const sec = document.getElementById('pmSettingsSection');
-  const btn = document.getElementById('btnPmSettings');
-  if (!sec) return;
-  const open = sec.classList.toggle('open');
-  if (btn) btn.textContent = open ? '⚙ Skrýt nastavení' : '⚙ Nastavení tisku';
-  if (open) renderPmDiagram();
-}
-
-function savePmSettings() {
+function onPmSettingsInput() {
   const s = getPmSettingsFromUI();
   try {
     const existing = JSON.parse(localStorage.getItem('legalid_dolozka_rozmery') || '{}');
     localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify({ ...existing, ...s }));
   } catch { localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify(s)); }
-  buildDolozkaPreviewContent();
-  showToast('Nastavení tisku uloženo');
-}
-
-function cancelPmSettings() {
-  const sec = document.getElementById('pmSettingsSection');
-  const btn = document.getElementById('btnPmSettings');
-  if (sec) sec.classList.remove('open');
-  if (btn) btn.textContent = '⚙ Nastavení tisku';
-  loadPmSettings();
-}
-
-function onPmSettingsInput() {
   renderPmDiagram();
   buildDolozkaPreviewContent();
+}
+
+function resetPmSettings() {
+  try {
+    const existing = JSON.parse(localStorage.getItem('legalid_dolozka_rozmery') || '{}');
+    const { X1, X2, Y1, Y2, W, H, PX, PY, sig_mode, cell_border, ...rest } = existing;
+    localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify(rest));
+  } catch { localStorage.removeItem('legalid_dolozka_rozmery'); }
+  loadPmSettings();
+  buildDolozkaPreviewContent();
+  showToast('Nastavení tisku obnoveno');
+}
+
+function switchPmTab(tab) {
+  const previewCol = document.getElementById('pmPreviewCol');
+  const settingsCol = document.getElementById('pmSettingsCol');
+  const tabPreview = document.getElementById('pmTabPreview');
+  const tabSettings = document.getElementById('pmTabSettings');
+  if (tab === 'preview') {
+    previewCol?.classList.remove('pm-col-hidden');
+    settingsCol?.classList.remove('pm-col-show');
+    tabPreview?.classList.add('active');
+    tabSettings?.classList.remove('active');
+  } else {
+    previewCol?.classList.add('pm-col-hidden');
+    settingsCol?.classList.add('pm-col-show');
+    tabPreview?.classList.remove('active');
+    tabSettings?.classList.add('active');
+    renderPmDiagram();
+  }
 }
 
 function pmDiagramClick(field) {
@@ -2291,9 +2378,9 @@ function scalePrintPreview() {
   const outer = document.getElementById('printPreviewOuter');
   const a4 = document.getElementById('printPreviewA4');
   if (!outer || !a4) return;
-  const body = outer.parentElement;
-  const availW = body ? body.clientWidth - 40 : 560;
-  const scale = Math.min(0.92, availW / 794);
+  const scroll = document.getElementById('pmPreviewScroll');
+  const availW = scroll ? scroll.clientWidth - 40 : 560;
+  const scale = Math.min(0.95, availW / 794);
   a4.style.transform = `scale(${scale})`;
   outer.style.width = Math.ceil(794 * scale) + 'px';
   outer.style.height = Math.ceil(1123 * scale) + 'px';

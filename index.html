@@ -664,7 +664,8 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   transition: color .14s, background .14s;
 }
 .btn-nav-close:hover { color: var(--navy); background: var(--paper-w); }
-.nav-menu { flex: 1; overflow-y: auto; }
+.nav-sections { flex: 1; overflow-y: auto; }
+.nav-section-sep { border-top: 1px solid var(--rule); margin-top: -1px; }
 .nav-item {
   display: flex; align-items: center; gap: 12px;
   padding: 0 16px; height: 64px; cursor: pointer;
@@ -677,13 +678,19 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .nav-item-text { display: flex; flex-direction: column; gap: 2px; }
 .nav-item-label { font-size: 14px; color: var(--ink); font-weight: 500; }
 .nav-item-sub { font-size: 11px; color: var(--ink-lt); }
-.nav-item-pro { background: var(--gold-p); }
+.nav-item-pro { background: var(--gold-p); border-bottom: none; flex-shrink: 0; }
 .nav-item-pro:hover { background: #f9f1da; }
 .nav-item-pro .nav-item-icon { color: var(--gold); }
 .nav-footer {
-  padding: 14px 16px; border-top: 1px solid var(--rule);
-  font-size: 11px; color: var(--ink-fnt); text-align: center; flex-shrink: 0;
+  border-top: 1px solid var(--rule); padding: 12px 16px;
+  flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;
 }
+.nav-footer-link {
+  background: none; border: none; cursor: pointer; text-align: left;
+  font-size: 11px; color: var(--ink-fnt); font-family: var(--sans); padding: 0;
+  transition: color .14s;
+}
+.nav-footer-link:hover { color: var(--ink); }
 
 /* ── ABOUT MODAL ── */
 .about-overlay {
@@ -710,6 +717,42 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   transition: background .14s;
 }
 .about-modal-ok:hover { background: var(--navy-h); }
+
+/* ── PRIVACY MODAL ── */
+.privacy-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 220;
+  align-items: center; justify-content: center; padding: 16px;
+}
+.privacy-overlay.open { display: flex; }
+.privacy-modal {
+  background: var(--white); border-radius: var(--rl); box-shadow: var(--sh-lg);
+  width: min(480px, 100%); padding: 28px 32px; position: relative;
+  max-height: 90vh; overflow-y: auto;
+}
+.privacy-modal-title {
+  font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--navy);
+  margin-bottom: 20px; padding-right: 24px;
+}
+.privacy-section { margin-bottom: 16px; }
+.privacy-section-title {
+  font-family: var(--serif); font-size: 14px; font-weight: 700; color: var(--navy);
+  margin-bottom: 4px;
+}
+.privacy-section-body { font-size: 13px; color: var(--ink-mid); line-height: 1.7; }
+.privacy-email-link { color: var(--gold); }
+.btn-privacy-close {
+  position: absolute; top: 12px; right: 14px;
+  background: none; border: none; cursor: pointer; color: var(--ink-lt);
+  font-size: 20px; line-height: 1; padding: 4px 8px; border-radius: var(--r);
+  transition: color .14s, background .14s;
+}
+.btn-privacy-close:hover { background: var(--paper-w); color: var(--navy); }
+.privacy-modal-ok {
+  display: block; width: 100%; padding: 10px; border: none; border-radius: var(--r);
+  background: var(--navy); color: #fff; font-family: var(--sans); font-size: 14px; cursor: pointer;
+  transition: background .14s; margin-top: 20px;
+}
+.privacy-modal-ok:hover { background: var(--navy-h); }
 
 /* ── REGISTRATION MODAL ── */
 .reg-overlay {
@@ -1156,60 +1199,79 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     </div>
     <button class="btn-nav-close" onclick="closeHamburger()" aria-label="Zavřít">×</button>
   </div>
-  <div class="nav-menu">
-    <button class="nav-item" onclick="openCfgPanel()">
-      <span class="nav-item-icon">&#x2699;&#xFE0E;</span>
-      <div class="nav-item-text">
-        <span class="nav-item-label">Nastavení</span>
-        <span class="nav-item-sub">Profil advokáta a rozměry tisku</span>
-      </div>
-    </button>
-    <button class="nav-item" onclick="openKnihaPanel()">
-      <span class="nav-item-icon"><i class="ti ti-notebook"></i></span>
-      <div class="nav-item-text">
-        <span class="nav-item-label">Kniha prohlášení</span>
-        <span class="nav-item-sub">Evidence ověřených podpisů</span>
-      </div>
-    </button>
-    <button class="nav-item" onclick="openKlientiPanel()">
-      <span class="nav-item-icon"><i class="ti ti-users"></i></span>
-      <div class="nav-item-text">
-        <span class="nav-item-label">Klienti</span>
-        <span class="nav-item-sub">Uložené údaje klientů</span>
-      </div>
-    </button>
-    <button class="nav-item" onclick="closeHamburger();openAboutModal()">
-      <span class="nav-item-icon">ℹ</span>
-      <div class="nav-item-text">
-        <span class="nav-item-label">O aplikaci</span>
-        <span class="nav-item-sub">legalid.cz · Verze 1.0</span>
-      </div>
-    </button>
-    <button class="nav-item" onclick="closeHamburger();window.open('mailto:info@legalid.cz?subject=N%C3%A1pov%C4%9Bda%20-%20Dolo%C5%BEka','_blank')">
-      <span class="nav-item-icon">?</span>
-      <div class="nav-item-text">
-        <span class="nav-item-label">Nápověda</span>
-        <span class="nav-item-sub">Jak používat aplikaci</span>
-      </div>
-    </button>
-    <button class="nav-item nav-item-pro" onclick="closeHamburger();openRegistrationModal()">
-      <span class="nav-item-icon">★</span>
-      <div class="nav-item-text">
-        <span class="nav-item-label" style="color:var(--gold)">Upgradovat na Pro</span>
-        <span class="nav-item-sub" style="color:var(--gold)">Vyzkoušet zdarma 30 dní →</span>
-      </div>
-    </button>
+  <div class="nav-sections">
+    <div class="nav-section">
+      <button class="nav-item" onclick="openKnihaPanel()">
+        <span class="nav-item-icon"><i class="ti ti-notebook"></i></span>
+        <div class="nav-item-text">
+          <span class="nav-item-label">Kniha prohlášení</span>
+          <span class="nav-item-sub">Evidence ověřených podpisů</span>
+        </div>
+      </button>
+      <button class="nav-item" onclick="openKlientiPanel()">
+        <span class="nav-item-icon"><i class="ti ti-users"></i></span>
+        <div class="nav-item-text">
+          <span class="nav-item-label">Klienti</span>
+          <span class="nav-item-sub">Uložené údaje klientů</span>
+        </div>
+      </button>
+    </div>
+    <div class="nav-section nav-section-sep">
+      <button class="nav-item" onclick="openCfgPanel()">
+        <span class="nav-item-icon">&#x2699;&#xFE0E;</span>
+        <div class="nav-item-text">
+          <span class="nav-item-label">Nastavení</span>
+          <span class="nav-item-sub">Profil advokáta a rozměry tisku</span>
+        </div>
+      </button>
+    </div>
   </div>
-  <div class="nav-footer">© 2026 legalid.cz · Všechna práva vyhrazena</div>
+  <button class="nav-item nav-item-pro" onclick="closeHamburger();openRegistrationModal()">
+    <span class="nav-item-icon">★</span>
+    <div class="nav-item-text">
+      <span class="nav-item-label" style="color:var(--gold)">Upgradovat na Pro</span>
+      <span class="nav-item-sub" style="color:var(--gold)">Vyzkoušet zdarma 30 dní →</span>
+    </div>
+  </button>
+  <div class="nav-footer">
+    <button class="nav-footer-link" onclick="closeHamburger();window.open('mailto:info@legalid.cz?subject=N%C3%A1pov%C4%9Bda','_blank')">Nápověda</button>
+    <button class="nav-footer-link" onclick="closeHamburger();openAboutModal()">O aplikaci · Verze 1.0</button>
+    <button class="nav-footer-link" onclick="closeHamburger();openPrivacyModal()">Ochrana dat</button>
+  </div>
 </nav>
 
 <!-- About modal -->
 <div class="about-overlay" id="aboutOverlay" onclick="if(event.target===this)closeAboutModal()">
   <div class="about-modal">
     <button class="btn-about-close" onclick="closeAboutModal()" aria-label="Zavřít">×</button>
-    <div class="about-modal-title">O aplikaci</div>
-    <div class="about-modal-body">Doložka je nástroj pro advokáty, který automaticky vyplní prohlášení o pravosti podpisu z fotografie dokladu.<br><br>Vyvinuto v České republice · 2026</div>
+    <div class="about-modal-title">Doložka</div>
+    <div class="about-modal-body">Nástroj pro advokáty který automaticky vyplní prohlášení o pravosti podpisu z fotografie dokladu.<br><br>Verze 1.0 · legalid.cz · 2026</div>
     <button class="about-modal-ok" onclick="closeAboutModal()">Zavřít</button>
+  </div>
+</div>
+
+<!-- Privacy modal -->
+<div class="privacy-overlay" id="privacyOverlay" onclick="if(event.target===this)closePrivacyModal()">
+  <div class="privacy-modal">
+    <button class="btn-privacy-close" onclick="closePrivacyModal()" aria-label="Zavřít">×</button>
+    <div class="privacy-modal-title">Jak pracujeme s vašimi daty</div>
+    <div class="privacy-section">
+      <div class="privacy-section-title">Fotografie dokladu</div>
+      <div class="privacy-section-body">Fotografie dokladu je zpracována externím poskytovatelem AI služeb na základě zpracovatelské smlouvy dle čl. 28 GDPR. Data nejsou uchovávána po dobu delší než je nezbytná pro zpracování. Fotografie není ukládána na našich serverech.</div>
+    </div>
+    <div class="privacy-section">
+      <div class="privacy-section-title">Rozpoznané údaje</div>
+      <div class="privacy-section-body">Textové údaje z dokladu (jméno, datum narození, adresa, číslo OP) jsou uloženy pouze v paměti vašeho prohlížeče a jsou smazány při zavření záložky.</div>
+    </div>
+    <div class="privacy-section">
+      <div class="privacy-section-title">Kniha prohlášení a Klienti</div>
+      <div class="privacy-section-body">Záznamy uložené v Knize prohlášení a v seznamu Klientů jsou uloženy pouze lokálně ve vašem prohlížeči (localStorage). Data nejsou přenášena na žádný server bez vašeho souhlasu.</div>
+    </div>
+    <div class="privacy-section">
+      <div class="privacy-section-title">Advokátní mlčenlivost</div>
+      <div class="privacy-section-body">Jako advokát jste správcem osobních údajů svých klientů. Aplikace Doložka vystupuje jako zpracovatel dle čl. 28 GDPR. Zpracovatelská smlouva dostupná na vyžádání: <a href="mailto:info@legalid.cz" class="privacy-email-link">info@legalid.cz</a></div>
+    </div>
+    <button class="privacy-modal-ok" onclick="closePrivacyModal()">Rozumím</button>
   </div>
 </div>
 
@@ -2609,6 +2671,12 @@ function openAboutModal() {
 }
 function closeAboutModal() {
   document.getElementById('aboutOverlay').classList.remove('open');
+}
+function openPrivacyModal() {
+  document.getElementById('privacyOverlay').classList.add('open');
+}
+function closePrivacyModal() {
+  document.getElementById('privacyOverlay').classList.remove('open');
 }
 function openRegistrationModal() {
   document.getElementById('regFormView').style.display = '';

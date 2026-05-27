@@ -957,7 +957,6 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       <div class="app-wordmark">Advokátní Doložka</div>
       <div class="app-tagline">Prohlášení advokáta o pravosti podpisu</div>
     </div>
-    <button class="btn-cfg" onclick="openCfgPanel()" aria-label="Nastavení">⚙</button>
     <button class="btn-hamburger" onclick="openHamburger()" aria-label="Nabídka">☰</button>
   </div>
 </header>
@@ -1024,12 +1023,22 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
 <!-- Registration modal -->
 <div class="reg-overlay" id="regOverlay" onclick="if(event.target===this)closeRegistrationModal()">
-  <div class="reg-modal">
+  <div class="reg-modal" id="regModal">
     <button class="btn-reg-close" onclick="closeRegistrationModal()" aria-label="Zavřít">×</button>
-    <div class="reg-modal-title">Registrace</div>
-    <div class="reg-modal-body">Registrace bude brzy dostupná.<br>Zanechte email a budeme vás informovat.</div>
-    <input class="reg-email-input" id="regEmail" type="email" placeholder="váš@email.cz">
-    <button class="btn-reg-submit" onclick="submitRegEmail()">Odeslat</button>
+    <div id="regFormView">
+      <div class="reg-modal-title">Registrace</div>
+      <div class="reg-modal-body">Registrace bude brzy dostupná.<br>Zanechte email a budeme vás informovat.</div>
+      <input class="reg-email-input" id="regEmail" type="email" placeholder="váš@email.cz">
+      <div id="regEmailError" style="display:none;color:#dc2626;font-size:12px;margin-top:4px;margin-bottom:6px;"></div>
+      <button class="btn-reg-submit" id="regSubmitBtn" onclick="submitRegEmail()">Odeslat</button>
+      <div id="regSendError" style="display:none;color:#dc2626;font-size:12px;margin-top:8px;text-align:center;"></div>
+    </div>
+    <div id="regSuccessView" style="display:none;text-align:center;padding:12px 0 4px;">
+      <div style="font-size:48px;color:#16a34a;margin-bottom:12px;">✓</div>
+      <div class="reg-modal-title" style="margin-bottom:8px;">Děkujeme za zájem!</div>
+      <div class="reg-modal-body">Váš email byl zařazen do předběžného přístupu. Ozveme se vám jakmile bude registrace spuštěna.</div>
+      <button class="btn-reg-submit" onclick="closeRegistrationModal()">Zavřít</button>
+    </div>
   </div>
 </div>
 
@@ -1115,9 +1124,6 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
               </button>
               <button class="split-drop-item" role="menuitem" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)));closeSplitMenu()">
                 📄 Stáhnout .docx
-              </button>
-              <button class="split-drop-item" role="menuitem" onclick="openPrintFlow();closeSplitMenu()">
-                📋 Štítky do knihy
               </button>
             </div>
           </div>
@@ -2263,16 +2269,50 @@ function closeAboutModal() {
   document.getElementById('aboutOverlay').classList.remove('open');
 }
 function openRegistrationModal() {
+  document.getElementById('regFormView').style.display = '';
+  document.getElementById('regSuccessView').style.display = 'none';
+  const emailEl = document.getElementById('regEmail');
+  if (emailEl) emailEl.value = '';
+  const btn = document.getElementById('regSubmitBtn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Odeslat'; }
+  document.getElementById('regEmailError').style.display = 'none';
+  document.getElementById('regSendError').style.display = 'none';
   document.getElementById('regOverlay').classList.add('open');
 }
 function closeRegistrationModal() {
   document.getElementById('regOverlay').classList.remove('open');
 }
 function submitRegEmail() {
-  const email = (document.getElementById('regEmail')?.value || '').trim();
-  if (!email || !email.includes('@')) { showToast('Zadejte platnou emailovou adresu.'); return; }
-  showToast('Děkujeme! Budeme vás informovat.');
-  closeRegistrationModal();
+  const emailEl = document.getElementById('regEmail');
+  const errorEl = document.getElementById('regEmailError');
+  const sendErrEl = document.getElementById('regSendError');
+  const btn = document.getElementById('regSubmitBtn');
+  const email = (emailEl?.value || '').trim();
+  const valid = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  errorEl.style.display = valid ? 'none' : 'block';
+  errorEl.textContent = valid ? '' : 'Zadejte platný email';
+  if (!valid) return;
+  sendErrEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Odesílám…';
+  fetch('https://formspree.io/f/mzdyldjy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      zdroj: 'legalid.cz waitlist',
+      datum: new Date().toLocaleDateString('cs-CZ')
+    })
+  }).then(r => {
+    if (!r.ok) throw new Error('http ' + r.status);
+    document.getElementById('regFormView').style.display = 'none';
+    document.getElementById('regSuccessView').style.display = 'block';
+  }).catch(() => {
+    btn.disabled = false;
+    btn.textContent = 'Odeslat';
+    sendErrEl.style.display = 'block';
+    sendErrEl.textContent = 'Nepodařilo se odeslat. Zkuste prosím znovu.';
+  });
 }
 
 function openCfgPanel(section) {

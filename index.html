@@ -638,7 +638,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   display: none; position: fixed; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   background: var(--white); border-radius: 16px; box-shadow: var(--sh-lg); z-index: 401;
-  width: min(640px, 96vw); max-height: 90vh; flex-direction: column;
+  width: min(640px, 96vw); max-height: 92vh; flex-direction: column;
 }
 .print-modal.open { display: flex; }
 .print-modal-head {
@@ -652,7 +652,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .btn-pm-close:hover { color: var(--navy); background: var(--paper); }
 .print-modal-body {
-  flex: 1; overflow-x: hidden; overflow-y: auto; padding: 20px; background: #dde0e4;
+  flex: 1; min-height: 180px; overflow-x: hidden; overflow-y: auto; padding: 20px; background: #dde0e4;
   display: flex; justify-content: center; align-items: flex-start;
 }
 .print-preview-outer { overflow: hidden; flex-shrink: 0; }
@@ -714,6 +714,54 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
 }
 .btn-pm-settings:hover { color: var(--navy); }
+
+/* ── PRINT MODAL SETTINGS ── */
+.pm-settings-section {
+  display: none; border-top: 2px solid var(--rule); flex-shrink: 0;
+  background: var(--paper-w); overflow-y: auto; max-height: 52vh;
+}
+.pm-settings-section.open { display: block; }
+.pm-settings-diag {
+  padding: 12px 20px; border-bottom: 1px solid var(--rule); background: var(--white);
+}
+.pm-settings-body { padding: 16px 20px; }
+.pm-sec-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--ink-fnt); margin-bottom: 10px;
+}
+.pm-dim-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 6px;
+}
+.pm-dim-field { display: flex; flex-direction: column; gap: 4px; }
+.pm-dim-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .4px; color: var(--ink-lt);
+}
+.pm-dim-input {
+  width: 100%; padding: 8px 10px; border-radius: var(--r); border: 1.5px solid var(--rule);
+  font-family: var(--sans); font-size: 13px; color: var(--ink);
+  background: var(--paper); outline: none; transition: border-color .14s;
+}
+.pm-dim-input:focus { border-color: var(--navy); background: var(--white); }
+.pm-dim-input.pm-hi { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(154,110,16,.15); background: var(--white); }
+.pm-settings-note { font-size: 11px; color: var(--ink-lt); margin: 8px 0 14px; }
+.pm-sig-block { margin-bottom: 14px; }
+.pm-sig-row { display: flex; flex-direction: column; gap: 7px; }
+.pm-sig-opt {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  font-size: 13px; color: var(--ink); user-select: none;
+}
+.pm-sig-opt input[type=radio] { accent-color: var(--navy); cursor: pointer; }
+.pm-border-label {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  font-size: 13px; color: var(--ink); user-select: none; margin-bottom: 4px;
+}
+.pm-border-label input[type=checkbox] { accent-color: var(--navy); cursor: pointer; }
+.pm-border-hint { font-size: 11px; color: var(--ink-lt); padding-left: 22px; }
+.pm-settings-footer {
+  display: flex; gap: 8px; align-items: center; padding: 12px 20px;
+  border-top: 1px solid var(--rule);
+}
 
 </style>
 </head>
@@ -994,7 +1042,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     </div>
   </div>
   <div class="print-modal-footer">
-    <button class="btn-pm-settings" onclick="closePrintModal();openCfgPanel('dolozka')">⚙ Upravit rozměry</button>
+    <button class="btn-pm-settings" id="btnPmSettings" onclick="togglePmSettings()">⚙ Nastavení tisku</button>
     <div class="pm-copies-wrap">
       <label class="pm-copies-label" for="pmCopies">Kopií:</label>
       <input class="pm-copies-input" id="pmCopies" type="number" min="1" max="8" value="4" oninput="buildDolozkaPreviewContent()" onchange="buildDolozkaPreviewContent()">
@@ -1005,6 +1053,39 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     </label>
     <button class="btn-pm-docx" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)))">📄 Stáhnout .docx</button>
     <button class="btn-pm-print" onclick="printDolozka()">🖨 Tisknout</button>
+  </div>
+  <div class="pm-settings-section" id="pmSettingsSection">
+    <div class="pm-settings-diag">
+      <svg id="pmDiagram" viewBox="0 0 280 195" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;max-height:150px;"></svg>
+    </div>
+    <div class="pm-settings-body">
+      <div class="pm-sec-title">Rozměry (mm)</div>
+      <div class="pm-dim-grid">
+        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X1">X1</label><input class="pm-dim-input" id="pm_X1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X2">X2</label><input class="pm-dim-input" id="pm_X2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PX">PX</label><input class="pm-dim-input" id="pm_PX" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
+        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y1">Y1</label><input class="pm-dim-input" id="pm_Y1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y2">Y2</label><input class="pm-dim-input" id="pm_Y2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PY">PY</label><input class="pm-dim-input" id="pm_PY" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
+        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_W">W</label><input class="pm-dim-input" id="pm_W" type="number" min="10" max="105" step="0.5" oninput="onPmSettingsInput()"></div>
+        <div class="pm-dim-field"><label class="pm-dim-label" for="pm_H">H</label><input class="pm-dim-input" id="pm_H" type="number" min="5" max="70" step="0.5" oninput="onPmSettingsInput()"></div>
+      </div>
+      <p class="pm-settings-note">Hodnoty zadávejte v mm</p>
+      <div class="pm-sig-block">
+        <div class="pm-sec-title">Na místě podpisu advokáta:</div>
+        <div class="pm-sig-row">
+          <label class="pm-sig-opt"><input type="radio" name="pm_sig" value="sign" onchange="onPmSettingsInput()"> vlastnoruční podpis advokáta</label>
+          <label class="pm-sig-opt"><input type="radio" name="pm_sig" value="none" onchange="onPmSettingsInput()"> netisknout nic</label>
+          <label class="pm-sig-opt"><input type="radio" name="pm_sig" value="name" onchange="onPmSettingsInput()"> jméno, příjmení a tituly</label>
+        </div>
+      </div>
+      <label class="pm-border-label"><input type="checkbox" id="pm_border" onchange="onPmSettingsInput()"> Tisknout rámeček</label>
+      <div class="pm-border-hint">pro etikety doporučujeme vypnout</div>
+    </div>
+    <div class="pm-settings-footer">
+      <button class="btn-sp-reset" onclick="cancelPmSettings()">Zrušit</button>
+      <button class="btn-sp-save" onclick="savePmSettings()">Uložit</button>
+    </div>
   </div>
 </div>
 
@@ -1173,6 +1254,7 @@ const FORMAT_DEFAULTS = {
 };
 
 const DOLOZKA_DEFAULTS = { horni_cast_mm: 200, dolni_cast_mm: 55, okraj_mm: 15, px_mm: 5, py_mm: 5 };
+const PM_DEFAULTS = { X1: 20, X2: 14, Y1: 8, Y2: 0, W: 78, H: 47, PX: 2, PY: 2, sig_mode: 'sign', cell_border: false };
 
 function getDolozkaSettings() {
   try {
@@ -1194,6 +1276,7 @@ function getSettings() {
 }
 
 let advokat = { jmeno: '', role: '', ev_cislo: '', cislo_knihy: '', sidlo: '' };
+let pmDiagramActive = null;
 let uploadedImages = [];
 let ocrDone = false;
 let gdprShown = false;
@@ -1850,7 +1933,10 @@ function onDolozkaSettingsInput() {
 }
 
 function saveDolozkaSettings() {
-  localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify(readDolozkaInputs()));
+  try {
+    const existing = JSON.parse(localStorage.getItem('legalid_dolozka_rozmery') || '{}');
+    localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify({ ...existing, ...readDolozkaInputs() }));
+  } catch { localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify(readDolozkaInputs())); }
   if (document.getElementById('printModal')?.classList.contains('open')) {
     buildDolozkaPreviewContent();
     scalePrintPreview();
@@ -1859,7 +1945,11 @@ function saveDolozkaSettings() {
 }
 
 function resetDolozkaSettings() {
-  localStorage.removeItem('legalid_dolozka_rozmery');
+  try {
+    const existing = JSON.parse(localStorage.getItem('legalid_dolozka_rozmery') || '{}');
+    const { horni_cast_mm, dolni_cast_mm, okraj_mm, px_mm, py_mm, ...rest } = existing;
+    localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify(rest));
+  } catch { localStorage.removeItem('legalid_dolozka_rozmery'); }
   syncDolozkaInputs();
   if (document.getElementById('printModal')?.classList.contains('open')) {
     buildDolozkaPreviewContent();
@@ -1999,6 +2089,7 @@ function phd(val, fb) {
 }
 
 function openDolozkaPreview() {
+  loadPmSettings();
   buildDolozkaPreviewContent();
   document.getElementById('printModalOverlay').classList.add('open');
   document.getElementById('printModal').classList.add('open');
@@ -2015,16 +2106,22 @@ function getCopies() {
   return Math.min(8, Math.max(1, isNaN(v) ? 4 : v));
 }
 
-function buildStitekCellHTML(d, knjia) {
-  return `<div class="pv-cell-inner">` +
+function buildStitekCellHTML(d, knjia, s) {
+  s = s || PM_DEFAULTS;
+  const sigLine = s.sig_mode === 'none' ? '' :
+    `<div class="pv-sig-name">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}</div>`;
+  const brdStyle = s.cell_border ? 'border:0.5px solid #888;box-sizing:border-box;' : '';
+  return `<div class="pv-cell-inner" style="${brdStyle}padding:${s.Y1}mm ${s.X2}mm ${s.Y2}mm ${s.X1}mm;">` +
+    `<div style="max-height:${s.H}mm;overflow:hidden;padding:${s.PY}mm ${s.PX}mm 0;">` +
     `<div class="pv-title">Prohlášení o pravosti podpisu</div>` +
     `<div class="pv-p">Číslo knihy: ${knjia}</div>` +
     `<div class="pv-p">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}, ev. č. ${phd(d.aEvCislo,'č.ev.')}, se sídlem ${phd(d.aSidlo,'sídlo')};</div>` +
     `<div class="pv-p">Prohlašuji, že ${phd(d.jmeno,'JMÉNO')}, nar. ${phd(d.datumNar,'DATUM NAR.')}, místo nar. ${phd(d.mistoNar,'MÍSTO')}, bytem ${phd(d.adresa,'ADRESA')}, jehož/jejíž totožnost prokázána OP č. ${phd(d.cisloOp,'ČÍSLO OP')}, tuto listinu v ${phd(d.pocet,'POČET')} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
     `<div class="pv-sig">V Praze dne ${phd(d.datumOver,'DATUM')}</div>` +
-    `<div class="pv-sig-name">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}</div>` +
+    sigLine +
+    `</div>` +
     `<div class="pv-sep"></div>` +
-    `<div class="pv-bot"><table>` +
+    `<div class="pv-bot" style="padding:0 ${s.PX}mm;"><table>` +
     `<tr><td>V Praze, ${phd(d.aSidlo,'sídlo')} dne ${phd(d.datumOver,'datum')}</td>` +
     `<td>${phd(d.jmeno,'JMÉNO')} nar. ${phd(d.datumNar,'DATUM')}, místo nar. ${phd(d.mistoNar,'MÍSTO')}, bytem ${phd(d.adresa,'ADRESA')}</td></tr>` +
     `<tr><td>OP: ${phd(d.cisloOp,'ČÍSLO OP')}</td>` +
@@ -2038,19 +2135,149 @@ function updatePvLines() {
   if (grid) grid.classList.toggle('pv-show-lines', !!document.getElementById('pmLines')?.checked);
 }
 
+// ── PM SETTINGS ───────────────────────────────────────────────────
+function getPmSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('legalid_dolozka_rozmery') || 'null');
+    return s ? { ...PM_DEFAULTS, ...s } : { ...PM_DEFAULTS };
+  } catch { return { ...PM_DEFAULTS }; }
+}
+
+function getPmSettingsFromUI() {
+  const n = id => { const v = parseFloat(document.getElementById(id)?.value); return isNaN(v) ? 0 : v; };
+  const sig = document.querySelector('input[name="pm_sig"]:checked')?.value || 'sign';
+  return {
+    X1: n('pm_X1'), X2: n('pm_X2'), Y1: n('pm_Y1'), Y2: n('pm_Y2'),
+    W: Math.max(n('pm_W'), 10), H: Math.max(n('pm_H'), 5),
+    PX: n('pm_PX'), PY: n('pm_PY'),
+    sig_mode: sig, cell_border: !!document.getElementById('pm_border')?.checked,
+  };
+}
+
+function loadPmSettings() {
+  const s = getPmSettings();
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v; };
+  set('pm_X1', s.X1); set('pm_X2', s.X2); set('pm_Y1', s.Y1); set('pm_Y2', s.Y2);
+  set('pm_W', s.W);   set('pm_H', s.H);   set('pm_PX', s.PX); set('pm_PY', s.PY);
+  document.querySelectorAll('input[name="pm_sig"]').forEach(r => { r.checked = r.value === (s.sig_mode || 'sign'); });
+  const b = document.getElementById('pm_border'); if (b) b.checked = !!s.cell_border;
+  renderPmDiagram();
+}
+
+function togglePmSettings() {
+  const sec = document.getElementById('pmSettingsSection');
+  const btn = document.getElementById('btnPmSettings');
+  if (!sec) return;
+  const open = sec.classList.toggle('open');
+  if (btn) btn.textContent = open ? '⚙ Skrýt nastavení' : '⚙ Nastavení tisku';
+  if (open) renderPmDiagram();
+}
+
+function savePmSettings() {
+  const s = getPmSettingsFromUI();
+  try {
+    const existing = JSON.parse(localStorage.getItem('legalid_dolozka_rozmery') || '{}');
+    localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify({ ...existing, ...s }));
+  } catch { localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify(s)); }
+  buildDolozkaPreviewContent();
+  showToast('Nastavení tisku uloženo');
+}
+
+function cancelPmSettings() {
+  const sec = document.getElementById('pmSettingsSection');
+  const btn = document.getElementById('btnPmSettings');
+  if (sec) sec.classList.remove('open');
+  if (btn) btn.textContent = '⚙ Nastavení tisku';
+  loadPmSettings();
+}
+
+function onPmSettingsInput() {
+  renderPmDiagram();
+  buildDolozkaPreviewContent();
+}
+
+function pmDiagramClick(field) {
+  pmDiagramActive = pmDiagramActive === field ? null : field;
+  ['X1','X2','Y1','Y2','W','H','PX','PY'].forEach(f => {
+    const e = document.getElementById('pm_' + f);
+    if (e) e.classList.toggle('pm-hi', f === field && pmDiagramActive !== null);
+  });
+  if (pmDiagramActive) { const e = document.getElementById('pm_' + field); if (e) e.focus(); }
+  renderPmDiagram();
+}
+
+function renderPmDiagram() {
+  const svg = document.getElementById('pmDiagram');
+  if (!svg) return;
+  const s = getPmSettingsFromUI();
+  const k = 2.0, CX = 28, CY = 22, CW = 210, CH = 148;
+  const cx = CX + s.X1 * k;
+  const cy = CY + s.Y1 * k;
+  const cw = Math.min(Math.max(s.W * k, 10), CX + CW - cx);
+  const ch = Math.min(Math.max(s.H * k, 6), CY + CH - cy);
+  const sepY = cy + ch, bh = CY + CH - sepY;
+  const G = '#9a6e10', B = '#1a6eb5';
+  const ac = f => pmDiagramActive === f ? G : B;
+  const ff = "font-family='system-ui,sans-serif'";
+  const hl = (f, x, y, w, h) =>
+    `<rect x="${x}" y="${y}" width="${Math.max(w,4)}" height="${Math.max(h,4)}" fill="transparent" rx="1" style="cursor:pointer" onclick="pmDiagramClick('${f}')"/>`;
+  let o = '';
+  o += `<rect x="${CX}" y="${CY}" width="${CW}" height="${CH}" fill="#f0f2f5" stroke="#b0b8c4" stroke-width="1" rx="2"/>`;
+  o += `<rect x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" width="${cw.toFixed(1)}" height="${ch.toFixed(1)}" fill="rgba(26,110,181,.08)" stroke="${B}" stroke-width="0.8" stroke-dasharray="4,2" rx="1"/>`;
+  o += `<line x1="${cx.toFixed(1)}" y1="${sepY.toFixed(1)}" x2="${(cx+cw).toFixed(1)}" y2="${sepY.toFixed(1)}" stroke="#999" stroke-width="0.8" stroke-dasharray="5,3"/>`;
+  if (bh > 1) o += `<rect x="${cx.toFixed(1)}" y="${sepY.toFixed(1)}" width="${cw.toFixed(1)}" height="${bh.toFixed(1)}" fill="rgba(11,25,41,.05)" stroke="${B}" stroke-width="0.5" stroke-dasharray="2,2" rx="1"/>`;
+  if (cx > CX + 2) {
+    const mx = (CX + cx) / 2;
+    o += `<line x1="${CX}" y1="${CY-9}" x2="${cx}" y2="${CY-9}" stroke="${ac('X1')}" stroke-width="1"/><line x1="${CX}" y1="${CY-12}" x2="${CX}" y2="${CY-6}" stroke="${ac('X1')}" stroke-width="1"/><line x1="${cx}" y1="${CY-12}" x2="${cx}" y2="${CY-6}" stroke="${ac('X1')}" stroke-width="1"/>`;
+    o += `<text x="${mx}" y="${CY-14}" ${ff} font-size="8" fill="${ac('X1')}" text-anchor="middle">X1</text>`;
+    o += hl('X1', CX, CY-17, cx-CX, 12);
+  }
+  if (CX + CW > cx + cw + 2) {
+    const mx = (cx + cw + CX + CW) / 2;
+    o += `<line x1="${cx+cw}" y1="${CY-9}" x2="${CX+CW}" y2="${CY-9}" stroke="${ac('X2')}" stroke-width="1"/><line x1="${cx+cw}" y1="${CY-12}" x2="${cx+cw}" y2="${CY-6}" stroke="${ac('X2')}" stroke-width="1"/><line x1="${CX+CW}" y1="${CY-12}" x2="${CX+CW}" y2="${CY-6}" stroke="${ac('X2')}" stroke-width="1"/>`;
+    o += `<text x="${mx}" y="${CY-14}" ${ff} font-size="8" fill="${ac('X2')}" text-anchor="middle">X2</text>`;
+    o += hl('X2', cx+cw, CY-17, CX+CW-(cx+cw), 12);
+  }
+  if (cy > CY + 2) {
+    const my = (CY + cy) / 2;
+    o += `<line x1="${CX-9}" y1="${CY}" x2="${CX-9}" y2="${cy}" stroke="${ac('Y1')}" stroke-width="1"/><line x1="${CX-12}" y1="${CY}" x2="${CX-6}" y2="${CY}" stroke="${ac('Y1')}" stroke-width="1"/><line x1="${CX-12}" y1="${cy}" x2="${CX-6}" y2="${cy}" stroke="${ac('Y1')}" stroke-width="1"/>`;
+    o += `<text x="${CX-16}" y="${my}" ${ff} font-size="8" fill="${ac('Y1')}" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 ${CX-16} ${my})">Y1</text>`;
+    o += hl('Y1', CX-17, CY, 12, cy-CY);
+  }
+  { const wY = CY + CH + 9, mx = cx + cw / 2;
+    o += `<line x1="${cx}" y1="${wY}" x2="${cx+cw}" y2="${wY}" stroke="${ac('W')}" stroke-width="1"/><line x1="${cx}" y1="${wY-3}" x2="${cx}" y2="${wY+3}" stroke="${ac('W')}" stroke-width="1"/><line x1="${cx+cw}" y1="${wY-3}" x2="${cx+cw}" y2="${wY+3}" stroke="${ac('W')}" stroke-width="1"/>`;
+    o += `<text x="${mx}" y="${wY+10}" ${ff} font-size="8" fill="${ac('W')}" text-anchor="middle">W</text>`;
+    o += hl('W', cx, wY-5, cw, 18); }
+  if (sepY > cy + 2) {
+    const hX = CX + CW + 10, my = (cy + sepY) / 2;
+    o += `<line x1="${hX}" y1="${cy}" x2="${hX}" y2="${sepY}" stroke="${ac('H')}" stroke-width="1"/><line x1="${hX-3}" y1="${cy}" x2="${hX+3}" y2="${cy}" stroke="${ac('H')}" stroke-width="1"/><line x1="${hX-3}" y1="${sepY}" x2="${hX+3}" y2="${sepY}" stroke="${ac('H')}" stroke-width="1"/>`;
+    o += `<text x="${hX+13}" y="${my}" ${ff} font-size="8" fill="${ac('H')}" text-anchor="middle" dominant-baseline="middle" transform="rotate(90 ${hX+13} ${my})">H</text>`;
+    o += hl('H', hX-5, cy, 20, sepY-cy);
+  }
+  if (cw > 20 && ch > 20) {
+    o += `<text x="${(cx+5).toFixed(0)}" y="${(cy+10).toFixed(0)}" ${ff} font-size="8" fill="${ac('PX')}" style="cursor:pointer" onclick="pmDiagramClick('PX')">PX</text>`;
+    o += `<text x="${(cx+5).toFixed(0)}" y="${(cy+21).toFixed(0)}" ${ff} font-size="8" fill="${ac('PY')}" style="cursor:pointer" onclick="pmDiagramClick('PY')">PY</text>`;
+  }
+  if (bh > 10) {
+    const y2x = (cx + cx + cw) / 2, y2y = (sepY + CY + CH) / 2;
+    o += `<text x="${y2x.toFixed(0)}" y="${y2y.toFixed(0)}" ${ff} font-size="8" fill="${ac('Y2')}" text-anchor="middle" dominant-baseline="middle" style="cursor:pointer" onclick="pmDiagramClick('Y2')">Y2</text>`;
+    o += hl('Y2', cx, sepY, cw, bh);
+  }
+  svg.innerHTML = o;
+}
+
 function buildDolozkaPreviewContent() {
   const d = getDolozkaData();
   const knjia = `${phd(d.aCisloKnihy,'č.knihy')}/${phd(d.cisloRadku,'č.řádku')}/${phd(d.rok,'rok')}`;
   const copies = getCopies();
+  const s = getPmSettingsFromUI();
   const grid = document.getElementById('pvGrid');
   if (!grid) return;
   let html = '';
   for (let i = 0; i < 8; i++) {
-    if (i < copies) {
-      html += `<div class="pv-cell">${buildStitekCellHTML(d, knjia)}</div>`;
-    } else {
-      html += `<div class="pv-cell pv-cell-empty"></div>`;
-    }
+    html += i < copies
+      ? `<div class="pv-cell">${buildStitekCellHTML(d, knjia, s)}</div>`
+      : `<div class="pv-cell pv-cell-empty"></div>`;
   }
   grid.innerHTML = html;
   updatePvLines();
@@ -2073,17 +2300,21 @@ function printDolozka() {
   const knjia = `${d.aCisloKnihy}/${d.cisloRadku}/${d.rok}`;
   const copies = getCopies();
   const showLines = document.getElementById('pmLines')?.checked;
+  const s = getPmSettingsFromUI();
   let cells = '';
   for (let i = 0; i < 8; i++) {
     if (i < copies) {
+      const sigLine = s.sig_mode === 'none' ? '' : `<div class="sig-name">${d.aJmeno}, ${d.aRole}</div>`;
       cells +=
         `<div class="cell">` +
+        `<div class="top">` +
         `<div class="title">Prohlášení o pravosti podpisu</div>` +
         `<div class="p">Číslo knihy: ${knjia}</div>` +
         `<div class="p">${d.aJmeno}, ${d.aRole}, ev. č. ${d.aEvCislo}, se sídlem ${d.aSidlo};</div>` +
         `<div class="p">Prohlašuji, že ${d.jmeno}, nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}, jehož/jejíž totožnost prokázána OP č. ${d.cisloOp}, tuto listinu v ${d.pocet} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
         `<div class="sig">V Praze dne ${d.datumOver}</div>` +
-        `<div class="sig-name">${d.aJmeno}, ${d.aRole}</div>` +
+        sigLine +
+        `</div>` +
         `<div class="sep"></div>` +
         `<table><tr><td>V Praze, ${d.aSidlo} dne ${d.datumOver}</td><td>${d.jmeno} nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}</td></tr>` +
         `<tr><td>OP: ${d.cisloOp}</td><td>${d.pocet}x ${d.listina}</td></tr></table>` +
@@ -2092,12 +2323,14 @@ function printDolozka() {
       cells += `<div class="cell cell-empty"></div>`;
     }
   }
+  const cellBorder = s.cell_border ? 'border:0.3pt solid #888;' : showLines ? 'border:0.3pt solid #ccc;' : '';
   const html = `<!DOCTYPE html><html lang="cs"><head><meta charset="UTF-8"><style>
 @page{size:A4 portrait;margin:0}
 *{box-sizing:border-box;margin:0;padding:0}
 body{display:grid;grid-template-columns:105mm 105mm;grid-template-rows:74mm 74mm 74mm 74mm;width:210mm;height:297mm;font-family:'Times New Roman',Times,serif;font-size:7pt;line-height:1.35;color:#111}
-.cell{overflow:hidden;padding:5mm 6mm;${showLines ? 'border:0.3pt solid #ccc;' : ''}}
+.cell{overflow:hidden;padding:${s.Y1}mm ${s.X2}mm ${s.Y2}mm ${s.X1}mm;${cellBorder}}
 .cell-empty{background:#f5f5f5}
+.top{max-height:${s.H}mm;overflow:hidden;padding:${s.PY}mm ${s.PX}mm 0}
 .title{text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3pt;font-size:6.5pt}
 .p{margin-bottom:2.5pt}
 .sig{margin-top:6pt}

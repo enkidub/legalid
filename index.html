@@ -739,11 +739,6 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   font-family: var(--sans); font-size: 13px; text-align: center; color: var(--ink);
   background: var(--white);
 }
-.pm-lines-wrap {
-  display: flex; align-items: center; gap: 6px; cursor: pointer;
-  font-size: 12px; color: var(--ink-lt); white-space: nowrap; user-select: none;
-}
-.pm-lines-wrap input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--gold); }
 .btn-pm-print {
   padding: 10px 18px; border-radius: var(--r); background: var(--gold); color: #fff;
   font-family: var(--sans); font-size: 13px; font-weight: 600; border: none; cursor: pointer;
@@ -758,9 +753,10 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .btn-pm-docx:hover { border-color: var(--ink-lt); color: var(--navy); }
 /* Settings panel — right column content */
-.pm-diag-wrap {
-  margin: 0 -20px 14px; border-bottom: 1px solid var(--rule); background: var(--white);
-  padding: 10px 20px;
+.pm-diag-fixed {
+  flex-shrink: 0; height: 200px;
+  background: var(--paper-w); border-bottom: 1px solid var(--rule);
+  padding: 16px; display: flex; align-items: center; overflow: hidden;
 }
 .pm-sec-title {
   font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
@@ -1095,12 +1091,13 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
     <!-- Right column: settings -->
     <div class="pm-settings-col" id="pmSettingsCol">
-      <div class="pm-settings-scroll">
 
-        <!-- SVG diagram -->
-        <div class="pm-diag-wrap">
-          <svg id="pmDiagram" viewBox="0 0 280 195" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;max-height:180px;"></svg>
-        </div>
+      <!-- Diagram — fixed, does not scroll -->
+      <div class="pm-diag-fixed">
+        <svg id="pmDiagram" viewBox="0 0 280 195" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;max-height:168px;"></svg>
+      </div>
+
+      <div class="pm-settings-scroll">
 
         <!-- Dimension inputs: 3-column grid -->
         <div class="pm-sec-title">Rozměry (mm)</div>
@@ -1144,10 +1141,6 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
         <label class="pm-copies-label" for="pmCopies">Kopií:</label>
         <input class="pm-copies-input" id="pmCopies" type="number" min="1" max="8" value="4" oninput="buildDolozkaPreviewContent()" onchange="buildDolozkaPreviewContent()">
       </div>
-      <label class="pm-lines-wrap">
-        <input type="checkbox" id="pmLines" onchange="updatePvLines()">
-        Čáry
-      </label>
     </div>
     <div class="pm-bar-right">
       <button class="btn-pm-docx" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)))">📄 Stáhnout .docx</button>

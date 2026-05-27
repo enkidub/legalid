@@ -81,14 +81,12 @@ body { font-family: var(--sans); background: var(--paper-w); color: var(--ink); 
   .advokat-sep            { order: 8; }
   .card-advokat           { order: 9; }
   .gdpr-notice            { order: 10; }
-  #advokatBody { display: none; }
-  #advokatBody.open { display: block; }
 }
-@media (min-width: 801px) {
-  .card-advokat .preview-arrow { display: none; }
-  .card-advokat .preview-toggle { cursor: default; pointer-events: none; }
-  #advokatBody { display: block; }
+#advokatBody {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.25s ease;
 }
+#advokatBody.open { max-height: 700px; }
 
 .sec-label {
   font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
@@ -142,7 +140,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   font-family: var(--sans); font-size: 15px; font-weight: 600;
   cursor: pointer; transition: all .14s;
 }
-.btn-upload:hover { background: var(--navy); color: #fff; }
+.btn-upload:hover { background: var(--navy); color: var(--white); }
 
 .photo-chips { display: flex; gap: 7px; flex-wrap: wrap; }
 .photo-chip {
@@ -576,7 +574,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .btn-cfg:hover { background: var(--paper-w); color: var(--navy); }
 .btn-hamburger {
-  flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
+  margin-left: auto; flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: transparent; border: none; cursor: pointer;
   color: var(--ink-lt); font-size: 22px; line-height: 1;
@@ -955,7 +953,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       <img src="/icons/icon.svg" alt="Advokátní Doložka">
     </div>
     <div>
-      <div class="app-wordmark">Advokátní Doložka</div>
+      <div class="app-wordmark">Doložka</div>
       <div class="app-tagline">Prohlášení advokáta o pravosti podpisu</div>
     </div>
     <button class="btn-hamburger" onclick="openHamburger()" aria-label="Nabídka">☰</button>
@@ -1056,6 +1054,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
         <div class="card card-advokat">
           <div class="preview-toggle" onclick="toggleAdvokat()">
             <div class="card-title" style="margin:0;padding:0;border:none;">Advokát</div>
+            <button class="cfg-edit-link" style="margin-left:auto;margin-right:8px;" onclick="event.stopPropagation();openCfgPanel('advokat')">Upravit profil →</button>
             <div class="preview-arrow" id="advokatArrow">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
             </div>
@@ -1083,8 +1082,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
                 <input class="form-input" id="aSidlo" type="text" placeholder="Ulice 1, Praha 1, 110 00" oninput="updateAdvokat()">
               </div>
             </div>
-            <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;">
-              <button class="cfg-edit-link" onclick="openCfgPanel('advokat')">Upravit profil →</button>
+            <div style="margin-top:10px;display:flex;justify-content:flex-end;">
               <button class="btn-clear-storage" onclick="clearAdvokatStorage()">Vymazat uložené údaje</button>
             </div>
           </div>

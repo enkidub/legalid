@@ -657,10 +657,33 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .print-preview-outer { overflow: hidden; flex-shrink: 0; }
 .print-preview-a4 {
-  width: 794px; background: #fff; box-shadow: 0 2px 16px rgba(0,0,0,.25);
-  font-family: 'Times New Roman', Times, serif;
-  font-size: 12px; line-height: 1.65; color: #111; padding: 57px;
-  transform-origin: top center;
+  width: 794px; height: 1123px; background: #fff; box-shadow: 0 2px 16px rgba(0,0,0,.25);
+  overflow: hidden; transform-origin: top center;
+}
+.pv-grid {
+  display: grid; grid-template-columns: 397px 397px; grid-template-rows: repeat(4, 1fr);
+  width: 794px; height: 1123px;
+}
+.pv-cell { overflow: hidden; border: 0.5px solid #ccc; box-sizing: border-box; }
+.pv-cell-empty { background: #f5f5f5; }
+.pv-cell-inner {
+  padding: 6px 8px; font-family: 'Times New Roman', Times, serif;
+  font-size: 7.5pt; line-height: 1.35; color: #111; height: 100%; overflow: hidden;
+}
+.pv-title { text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; font-size: 7pt; }
+.pv-p { margin-bottom: 3px; }
+.pv-sig { margin-top: 8px; }
+.pv-sig-name { margin-top: 16px; text-align: right; }
+.pv-sep { border-top: 1px dashed #aaa; margin: 5px 0; position: relative; }
+.pv-bot table { width: 100%; border-collapse: collapse; font-size: 7pt; }
+.pv-bot td { border: 0.5px solid #888; padding: 2px 4px; vertical-align: top; line-height: 1.3; }
+.pv-bot td:first-child { width: 48%; }
+.pm-copies-wrap { display: flex; align-items: center; gap: 8px; }
+.pm-copies-label { font-size: 12px; color: var(--ink-lt); white-space: nowrap; }
+.pm-copies-input {
+  width: 58px; padding: 7px 10px; border: 1.5px solid var(--rule); border-radius: var(--r);
+  font-family: var(--sans); font-size: 13px; text-align: center; color: var(--ink);
+  background: var(--white);
 }
 .print-modal-footer {
   display: flex; gap: 8px; align-items: center; padding: 14px 20px;
@@ -959,16 +982,16 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   <div class="print-modal-body">
     <div class="print-preview-outer" id="printPreviewOuter">
       <div class="print-preview-a4" id="printPreviewA4">
-        <div id="printPreviewTop"></div>
-        <div style="border-top:1px dashed #999;margin:16px 0;position:relative;">
-          <span style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#fff;padding:0 8px;font-size:10px;color:#999;font-family:sans-serif;white-space:nowrap;">✂ oddělit</span>
-        </div>
-        <div id="printPreviewBot"></div>
+        <div class="pv-grid" id="pvGrid"></div>
       </div>
     </div>
   </div>
   <div class="print-modal-footer">
     <button class="btn-pm-settings" onclick="closePrintModal();openCfgPanel('dolozka')">⚙ Upravit rozměry</button>
+    <div class="pm-copies-wrap">
+      <label class="pm-copies-label" for="pmCopies">Kopií:</label>
+      <input class="pm-copies-input" id="pmCopies" type="number" min="1" max="8" value="4" oninput="buildDolozkaPreviewContent()">
+    </div>
     <button class="btn-pm-docx" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)))">📄 Stáhnout .docx</button>
     <button class="btn-pm-print" onclick="printDolozka()">🖨 Tisknout</button>
   </div>
@@ -1976,25 +1999,44 @@ function closePrintModal() {
   document.getElementById('printModal').classList.remove('open');
 }
 
+function getCopies() {
+  const v = parseInt(document.getElementById('pmCopies')?.value || '4', 10);
+  return Math.min(8, Math.max(1, isNaN(v) ? 4 : v));
+}
+
+function buildStitekCellHTML(d, knjia) {
+  return `<div class="pv-cell-inner">` +
+    `<div class="pv-title">Prohlášení o pravosti podpisu</div>` +
+    `<div class="pv-p">Číslo knihy: ${knjia}</div>` +
+    `<div class="pv-p">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}, ev. č. ${phd(d.aEvCislo,'č.ev.')}, se sídlem ${phd(d.aSidlo,'sídlo')};</div>` +
+    `<div class="pv-p">Prohlašuji, že ${phd(d.jmeno,'JMÉNO')}, nar. ${phd(d.datumNar,'DATUM NAR.')}, místo nar. ${phd(d.mistoNar,'MÍSTO')}, bytem ${phd(d.adresa,'ADRESA')}, jehož/jejíž totožnost prokázána OP č. ${phd(d.cisloOp,'ČÍSLO OP')}, tuto listinu v ${phd(d.pocet,'POČET')} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
+    `<div class="pv-sig">V Praze dne ${phd(d.datumOver,'DATUM')}</div>` +
+    `<div class="pv-sig-name">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}</div>` +
+    `<div class="pv-sep"></div>` +
+    `<div class="pv-bot"><table>` +
+    `<tr><td>V Praze, ${phd(d.aSidlo,'sídlo')} dne ${phd(d.datumOver,'datum')}</td>` +
+    `<td>${phd(d.jmeno,'JMÉNO')} nar. ${phd(d.datumNar,'DATUM')}, místo nar. ${phd(d.mistoNar,'MÍSTO')}, bytem ${phd(d.adresa,'ADRESA')}</td></tr>` +
+    `<tr><td>OP: ${phd(d.cisloOp,'ČÍSLO OP')}</td>` +
+    `<td>${phd(d.pocet,'počet')}x ${phd(d.listina,'LISTINA')}</td></tr>` +
+    `</table></div>` +
+    `</div>`;
+}
+
 function buildDolozkaPreviewContent() {
   const d = getDolozkaData();
   const knjia = `${phd(d.aCisloKnihy,'č.knihy')}/${phd(d.cisloRadku,'č.řádku')}/${phd(d.rok,'rok')}`;
-  document.getElementById('printPreviewTop').innerHTML =
-    `<div style="text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;font-size:12px;">Prohlášení o pravosti podpisu</div>` +
-    `<div style="margin-bottom:9px;">Běžné číslo knihy o prohlášeních o pravosti podpisu ${knjia}</div>` +
-    `<div style="margin-bottom:9px;">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}, ev. č. ${phd(d.aEvCislo,'č.ev.')}, se sídlem ${phd(d.aSidlo,'sídlo')};</div>` +
-    `<div style="margin-bottom:9px;text-align:justify;">Prohlašuji, že ${phd(d.jmeno,'JMÉNO')}, nar. ${phd(d.datumNar,'DATUM NAR.')}, místo narození ${phd(d.mistoNar,'MÍSTO')}, bytem ${phd(d.adresa,'ADRESA')}, jehož/jejíž totožnost byla prokázána z občanského průkazu č. ${phd(d.cisloOp,'ČÍSLO OP')},</div>` +
-    `<div style="margin-bottom:9px;">tuto listinu v ${phd(d.pocet,'POČET')} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
-    `<div style="margin-top:20px;">V Praze dne ${phd(d.datumOver,'DATUM')}</div>` +
-    `<div style="margin-top:40px;text-align:right;">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}</div>` +
-    `<div style="text-align:right;color:#bbb;font-size:10px;margin-top:4px;">[místo pro podpis]</div>`;
-  document.getElementById('printPreviewBot').innerHTML =
-    `<table style="width:100%;border-collapse:collapse;font-size:11px;">` +
-    `<tr><td style="border:1px solid #888;padding:5px 7px;width:48%;vertical-align:top;line-height:1.5;">V Praze, ${phd(d.aSidlo,'sídlo')} dne ${phd(d.datumOver,'datum')}</td>` +
-    `<td style="border:1px solid #888;padding:5px 7px;vertical-align:top;line-height:1.5;">${phd(d.jmeno,'JMÉNO')} nar. ${phd(d.datumNar,'DATUM')}, místo narození ${phd(d.mistoNar,'MÍSTO')}, bytem ${phd(d.adresa,'ADRESA')}</td></tr>` +
-    `<tr><td style="border:1px solid #888;padding:5px 7px;vertical-align:top;line-height:1.5;">OP: ${phd(d.cisloOp,'ČÍSLO OP')}</td>` +
-    `<td style="border:1px solid #888;padding:5px 7px;vertical-align:top;line-height:1.5;">${phd(d.pocet,'počet')}x ${phd(d.listina,'LISTINA')}</td></tr>` +
-    `</table>`;
+  const copies = getCopies();
+  const grid = document.getElementById('pvGrid');
+  if (!grid) return;
+  let html = '';
+  for (let i = 0; i < 8; i++) {
+    if (i < copies) {
+      html += `<div class="pv-cell">${buildStitekCellHTML(d, knjia)}</div>`;
+    } else {
+      html += `<div class="pv-cell pv-cell-empty"></div>`;
+    }
+  }
+  grid.innerHTML = html;
 }
 
 function scalePrintPreview() {
@@ -2006,42 +2048,48 @@ function scalePrintPreview() {
   const scale = Math.min(0.92, availW / 794);
   a4.style.transform = `scale(${scale})`;
   outer.style.width = Math.ceil(794 * scale) + 'px';
-  outer.style.height = Math.ceil(a4.scrollHeight * scale) + 'px';
+  outer.style.height = Math.ceil(1123 * scale) + 'px';
 }
 
 function printDolozka() {
   const d = getDolozkaData();
-  const ds = getDolozkaSettings();
   const knjia = `${d.aCisloKnihy}/${d.cisloRadku}/${d.rok}`;
+  const copies = getCopies();
+  let cells = '';
+  for (let i = 0; i < 8; i++) {
+    if (i < copies) {
+      cells +=
+        `<div class="cell">` +
+        `<div class="title">Prohlášení o pravosti podpisu</div>` +
+        `<div class="p">Číslo knihy: ${knjia}</div>` +
+        `<div class="p">${d.aJmeno}, ${d.aRole}, ev. č. ${d.aEvCislo}, se sídlem ${d.aSidlo};</div>` +
+        `<div class="p">Prohlašuji, že ${d.jmeno}, nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}, jehož/jejíž totožnost prokázána OP č. ${d.cisloOp}, tuto listinu v ${d.pocet} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
+        `<div class="sig">V Praze dne ${d.datumOver}</div>` +
+        `<div class="sig-name">${d.aJmeno}, ${d.aRole}</div>` +
+        `<div class="sep"></div>` +
+        `<table><tr><td>V Praze, ${d.aSidlo} dne ${d.datumOver}</td><td>${d.jmeno} nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}</td></tr>` +
+        `<tr><td>OP: ${d.cisloOp}</td><td>${d.pocet}x ${d.listina}</td></tr></table>` +
+        `</div>`;
+    } else {
+      cells += `<div class="cell cell-empty"></div>`;
+    }
+  }
   const html = `<!DOCTYPE html><html lang="cs"><head><meta charset="UTF-8"><style>
-@page{size:A4 portrait;margin:${ds.okraj_mm}mm}
+@page{size:A4 portrait;margin:0}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Times New Roman',Times,serif;font-size:12px;line-height:1.65;color:#111}
-.top{min-height:${ds.horni_cast_mm}mm;padding:${ds.py_mm}mm ${ds.px_mm}mm}
-.title{text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;font-size:12px}
-.p{margin-bottom:9px;text-align:justify}
-.sig{margin-top:20px}.sig-name{margin-top:40px;text-align:right}
-.sep{border-top:1px dashed #999;margin:8px 0;position:relative}
-.sep-lbl{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#fff;padding:0 8px;font-size:10px;color:#999;font-family:sans-serif;white-space:nowrap}
-.bot{height:${ds.dolni_cast_mm}mm;overflow:hidden;padding:${ds.py_mm}mm ${ds.px_mm}mm}
-table{width:100%;border-collapse:collapse;font-size:11px}
-td{border:1px solid #888;padding:${ds.py_mm}mm ${ds.px_mm}mm;vertical-align:top;line-height:1.5}
+body{display:grid;grid-template-columns:105mm 105mm;grid-template-rows:74mm 74mm 74mm 74mm;width:210mm;height:297mm;font-family:'Times New Roman',Times,serif;font-size:7pt;line-height:1.35;color:#111}
+.cell{overflow:hidden;border:0.3pt solid #ccc;padding:5mm 6mm;}
+.cell-empty{background:#f5f5f5}
+.title{text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3pt;font-size:6.5pt}
+.p{margin-bottom:2.5pt}
+.sig{margin-top:6pt}
+.sig-name{margin-top:12pt;text-align:right}
+.sep{border-top:0.5pt dashed #aaa;margin:4pt 0}
+table{width:100%;border-collapse:collapse;font-size:6.5pt}
+td{border:0.3pt solid #888;padding:1.5pt 3pt;vertical-align:top;line-height:1.3}
 td:first-child{width:48%}
 </style></head><body>
-<div class="top">
-<div class="title">Prohlášení o pravosti podpisu</div>
-<div class="p">Běžné číslo knihy o prohlášeních o pravosti podpisu ${knjia}</div>
-<div class="p">${d.aJmeno}, ${d.aRole}, ev. č. ${d.aEvCislo}, se sídlem ${d.aSidlo};</div>
-<div class="p">Prohlašuji, že ${d.jmeno}, nar. ${d.datumNar}, místo narození ${d.mistoNar}, bytem ${d.adresa}, jehož/jejíž totožnost byla prokázána z občanského průkazu č. ${d.cisloOp},</div>
-<div class="p">tuto listinu v ${d.pocet} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>
-<div class="sig">V Praze dne ${d.datumOver}</div>
-<div class="sig-name">${d.aJmeno}, ${d.aRole}</div>
-</div>
-<div class="sep"><span class="sep-lbl">✂ oddělit</span></div>
-<div class="bot"><table>
-<tr><td>V Praze, ${d.aSidlo} dne ${d.datumOver}</td><td>${d.jmeno} nar. ${d.datumNar}, místo narození ${d.mistoNar}, bytem ${d.adresa}</td></tr>
-<tr><td>OP: ${d.cisloOp}</td><td>${d.pocet}x ${d.listina}</td></tr>
-</table></div>
+${cells}
 <script>window.addEventListener('load',()=>window.print())<\/script>
 </body></html>`;
   const w = window.open('', '_blank');

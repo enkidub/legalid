@@ -568,6 +568,68 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .fp-step.done .fp-dot::after { content: '✓'; font-size: 12px; }
 .fp-step.done + .fp-line { background: #86efac; }
 
+/* ── HEADER CFG BUTTON ── */
+.btn-cfg {
+  margin-left: auto; flex-shrink: 0;
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; cursor: pointer;
+  color: rgba(255,255,255,.6); font-size: 18px; line-height: 1;
+  transition: background .15s, color .15s;
+}
+.btn-cfg:hover { background: rgba(255,255,255,.1); color: #fff; }
+
+/* ── CFG PANEL ── */
+.cfg-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 200;
+}
+.cfg-overlay.open { display: block; }
+.cfg-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 480px;
+  background: var(--white); box-shadow: var(--sh-lg); z-index: 201;
+  display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform .25s ease;
+}
+.cfg-panel.open { transform: translateX(0); }
+@media (max-width: 600px) {
+  .cfg-panel {
+    top: auto; left: 0; right: 0; width: 100%; max-height: 90vh;
+    border-radius: 16px 16px 0 0; transform: translateY(100%);
+  }
+  .cfg-panel.open { transform: translateY(0); }
+}
+.cfg-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--rule); flex-shrink: 0;
+}
+.cfg-head-title { font-size: 14px; font-weight: 600; color: var(--navy); }
+.btn-cfg-close {
+  background: none; border: none; cursor: pointer; color: var(--ink-lt);
+  font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: var(--r);
+}
+.btn-cfg-close:hover { color: var(--navy); background: var(--paper); }
+.cfg-body { flex: 1; overflow-y: auto; }
+.cfg-section { border-bottom: 1px solid var(--rule); }
+.cfg-section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; cursor: pointer; user-select: none;
+  background: none; border: none; width: 100%; text-align: left;
+  font-family: var(--sans);
+}
+.cfg-section-head:hover { background: var(--paper-w); }
+.cfg-section-title { font-size: 13px; font-weight: 600; color: var(--navy); }
+.cfg-section-arrow { color: var(--ink-lt); transition: transform .2s; font-size: 13px; }
+.cfg-section.open .cfg-section-arrow { transform: rotate(180deg); }
+.cfg-section-body { display: none; padding: 0 20px 20px; }
+.cfg-section.open .cfg-section-body { display: block; }
+.cfg-section-desc { font-size: 12px; color: var(--ink-lt); margin-bottom: 14px; line-height: 1.5; }
+.cfg-edit-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; color: var(--gold); background: none; border: none;
+  cursor: pointer; padding: 0; font-family: var(--sans);
+}
+.cfg-edit-link:hover { color: var(--gold-h); text-decoration: underline; }
+
 </style>
 </head>
 <body>
@@ -589,6 +651,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       <div class="app-wordmark">Legal<span>ID</span></div>
       <div class="app-tagline">Generátor doložky o pravosti podpisu</div>
     </div>
+    <button class="btn-cfg" onclick="openCfgPanel()" aria-label="Nastavení">⚙</button>
   </div>
 </header>
 
@@ -632,7 +695,8 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
                 <input class="form-input" id="aSidlo" type="text" placeholder="Ulice 1, Praha 1, 110 00" oninput="updateAdvokat()">
               </div>
             </div>
-            <div style="margin-top:10px;text-align:right;">
+            <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;">
+              <button class="cfg-edit-link" onclick="openCfgPanel('advokat')">Upravit profil →</button>
               <button class="btn-clear-storage" onclick="clearAdvokatStorage()">Vymazat uložené údaje</button>
             </div>
           </div>
@@ -827,62 +891,120 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 
 <div class="toast" id="toast"></div>
 
-<div class="settings-overlay" id="settingsOverlay" onclick="closeSettings()"></div>
-<div class="settings-panel" id="settingsPanel" role="dialog" aria-label="Nastavení etiket">
-  <div class="settings-head">
-    <span class="settings-head-title">Nastavení etiket</span>
-    <button class="btn-sp-close" onclick="closeSettings()" aria-label="Zavřít nastavení">×</button>
+<div class="cfg-overlay" id="cfgOverlay" onclick="closeCfgPanel()"></div>
+<div class="cfg-panel" id="cfgPanel" role="dialog" aria-label="Nastavení">
+  <div class="cfg-head">
+    <span class="cfg-head-title">Nastavení</span>
+    <button class="btn-cfg-close" onclick="closeCfgPanel()" aria-label="Zavřít">×</button>
   </div>
-  <div class="settings-diagram">
-    <svg id="spDiagram" viewBox="0 0 260 140" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;"></svg>
-  </div>
-  <div class="settings-body">
-    <div class="sp-section">
-      <div class="sp-section-title">Rozměry štítku</div>
-      <div class="sp-row">
-        <div class="sp-field"><label class="sp-label" for="sp_H">H — výška</label><input class="sp-input" id="sp_H" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-        <div class="sp-field"><label class="sp-label" for="sp_H1">H1 — horní část</label><input class="sp-input" id="sp_H1" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+  <div class="cfg-body">
+
+    <!-- Sekce 1: Profil advokáta -->
+    <div class="cfg-section open" id="cfgSec1">
+      <button class="cfg-section-head" onclick="toggleCfgSection('cfgSec1')">
+        <span class="cfg-section-title">Profil advokáta</span>
+        <span class="cfg-section-arrow">▾</span>
+      </button>
+      <div class="cfg-section-body">
+        <p class="cfg-section-desc">Vyplňte jednou — automaticky se uloží a použije ve všech doložkách.</p>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label class="form-label" for="cfg_aJmeno">Celé jméno *</label>
+            <input class="form-input" id="cfg_aJmeno" type="text" placeholder="JUDr. Jana Nováková" oninput="cfgUpdateAdvokat()">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cfg_aRole">Role *</label>
+            <input class="form-input" id="cfg_aRole" type="text" placeholder="advokátka" oninput="cfgUpdateAdvokat()">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cfg_aEvCislo">Ev. č. ČAK *</label>
+            <input class="form-input" id="cfg_aEvCislo" type="text" placeholder="12345" oninput="cfgUpdateAdvokat()">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cfg_aCisloKnihy">Číslo knihy *</label>
+            <input class="form-input" id="cfg_aCisloKnihy" type="text" placeholder="012345" oninput="cfgUpdateAdvokat()">
+          </div>
+          <div class="form-group full">
+            <label class="form-label" for="cfg_aSidlo">Sídlo *</label>
+            <input class="form-input" id="cfg_aSidlo" type="text" placeholder="Ulice 1, Praha 1, 110 00" oninput="cfgUpdateAdvokat()">
+          </div>
+        </div>
+        <div style="margin-top:12px;text-align:right;">
+          <button class="btn-clear-storage" onclick="clearAdvokatStorage()">Vymazat uložené údaje</button>
+        </div>
       </div>
     </div>
-    <div class="sp-section">
-      <div class="sp-section-title">Okraje archu</div>
-      <div class="sp-row">
-        <div class="sp-field"><label class="sp-label" for="sp_X">X — vlevo</label><input class="sp-input" id="sp_X" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-        <div class="sp-field"><label class="sp-label" for="sp_Y">Y — nahoře</label><input class="sp-input" id="sp_Y" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+
+    <!-- Sekce 2: Honzův vzor — rozměry -->
+    <div class="cfg-section" id="cfgSec2">
+      <button class="cfg-section-head" onclick="toggleCfgSection('cfgSec2')">
+        <span class="cfg-section-title">Honzův vzor — rozměry</span>
+        <span class="cfg-section-arrow">▾</span>
+      </button>
+      <div class="cfg-section-body">
+        <p class="cfg-section-desc">Nastavení rozměrů vzoru doložky — připravujeme.</p>
       </div>
     </div>
-    <div class="sp-section">
-      <div class="sp-section-title">Odsazení textu</div>
-      <div class="sp-row">
-        <div class="sp-field"><label class="sp-label" for="sp_PX">PX — horiz.</label><input class="sp-input" id="sp_PX" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-        <div class="sp-field"><label class="sp-label" for="sp_PY">PY — vertik.</label><input class="sp-input" id="sp_PY" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+
+    <!-- Sekce 3: Štítky do knihy — rozměry -->
+    <div class="cfg-section" id="cfgSec3">
+      <button class="cfg-section-head" onclick="toggleCfgSection('cfgSec3')">
+        <span class="cfg-section-title">Štítky do knihy — rozměry</span>
+        <span class="cfg-section-arrow">▾</span>
+      </button>
+      <div class="cfg-section-body" style="padding-top:0;">
+        <div style="margin:0 -20px;padding:12px 20px;border-bottom:1px solid var(--rule);margin-bottom:16px;">
+          <svg id="spDiagram" viewBox="0 0 260 140" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;"></svg>
+        </div>
+        <div class="sp-section">
+          <div class="sp-section-title">Rozměry štítku</div>
+          <div class="sp-row">
+            <div class="sp-field"><label class="sp-label" for="sp_H">H — výška</label><input class="sp-input" id="sp_H" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+            <div class="sp-field"><label class="sp-label" for="sp_H1">H1 — horní část</label><input class="sp-input" id="sp_H1" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+          </div>
+        </div>
+        <div class="sp-section">
+          <div class="sp-section-title">Okraje archu</div>
+          <div class="sp-row">
+            <div class="sp-field"><label class="sp-label" for="sp_X">X — vlevo</label><input class="sp-input" id="sp_X" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+            <div class="sp-field"><label class="sp-label" for="sp_Y">Y — nahoře</label><input class="sp-input" id="sp_Y" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+          </div>
+        </div>
+        <div class="sp-section">
+          <div class="sp-section-title">Odsazení textu</div>
+          <div class="sp-row">
+            <div class="sp-field"><label class="sp-label" for="sp_PX">PX — horiz.</label><input class="sp-input" id="sp_PX" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+            <div class="sp-field"><label class="sp-label" for="sp_PY">PY — vertik.</label><input class="sp-input" id="sp_PY" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+          </div>
+        </div>
+        <div class="sp-section">
+          <div class="sp-section-title">Šířky sloupců (mm)</div>
+          <div class="sp-row">
+            <div class="sp-field"><label class="sp-label" for="sp_W1">W1</label><input class="sp-input" id="sp_W1" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+            <div class="sp-field"><label class="sp-label" for="sp_W2">W2</label><input class="sp-input" id="sp_W2" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+            <div class="sp-field"><label class="sp-label" for="sp_W3">W3</label><input class="sp-input" id="sp_W3" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+            <div class="sp-field"><label class="sp-label" for="sp_W4">W4</label><input class="sp-input" id="sp_W4" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
+          </div>
+          <div class="sp-sum" id="sp_sum"></div>
+        </div>
+        <div class="sp-section">
+          <label class="sp-checkbox-row">
+            <input type="checkbox" id="sp_border" oninput="onSettingsInput()">
+            Vnější rámeček štítku
+          </label>
+          <label class="sp-checkbox-row" style="margin-top:8px;">
+            <input type="checkbox" id="sp_lines" oninput="onSettingsInput()">
+            Vodicí čáry sloupců
+          </label>
+        </div>
+        <div class="settings-footer" style="padding:14px 0 0;border-top:1px solid var(--rule);margin-top:8px;">
+          <button class="btn-sp-reset" onclick="resetSettings()">Obnovit výchozí</button>
+          <button class="btn-sp-save" onclick="saveSettings()">Uložit</button>
+          <button class="btn-sp-print" onclick="saveAndPrint()">Uložit a tisknout</button>
+        </div>
       </div>
     </div>
-    <div class="sp-section">
-      <div class="sp-section-title">Šířky sloupců (mm)</div>
-      <div class="sp-row">
-        <div class="sp-field"><label class="sp-label" for="sp_W1">W1</label><input class="sp-input" id="sp_W1" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-        <div class="sp-field"><label class="sp-label" for="sp_W2">W2</label><input class="sp-input" id="sp_W2" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-        <div class="sp-field"><label class="sp-label" for="sp_W3">W3</label><input class="sp-input" id="sp_W3" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-        <div class="sp-field"><label class="sp-label" for="sp_W4">W4</label><input class="sp-input" id="sp_W4" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-      </div>
-      <div class="sp-sum" id="sp_sum"></div>
-    </div>
-    <div class="sp-section">
-      <label class="sp-checkbox-row">
-        <input type="checkbox" id="sp_border" oninput="onSettingsInput()">
-        Vnější rámeček štítku
-      </label>
-      <label class="sp-checkbox-row" style="margin-top:8px;">
-        <input type="checkbox" id="sp_lines" oninput="onSettingsInput()">
-        Vodicí čáry sloupců
-      </label>
-    </div>
-  </div>
-  <div class="settings-footer">
-    <button class="btn-sp-reset" onclick="resetSettings()">Obnovit výchozí</button>
-    <button class="btn-sp-save" onclick="saveSettings()">Uložit</button>
-    <button class="btn-sp-print" onclick="saveAndPrint()">Uložit a tisknout</button>
+
   </div>
 </div>
 
@@ -984,6 +1106,8 @@ function clearAdvokatStorage() {
   ['aJmeno','aRole','aEvCislo','aCisloKnihy','aSidlo'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
+    const cfg = document.getElementById('cfg_' + id);
+    if (cfg) cfg.value = '';
   });
   advokat = { jmeno: '', role: '', ev_cislo: '', cislo_knihy: '', sidlo: '' };
   updatePreview();
@@ -1508,8 +1632,9 @@ ${Array(7).fill(one).join('')}
   w.document.close();
 }
 
-// ── SETTINGS ──────────────────────────────────────────────────────
-function openSettings() {
+// ── CFG PANEL ─────────────────────────────────────────────────────
+function openCfgPanel(section) {
+  syncCfgFromAdvokat();
   const s = getSettings();
   ['H','H1','X','Y','PX','PY','W1','W2','W3','W4'].forEach(f => {
     const el = document.getElementById('sp_' + f);
@@ -1518,16 +1643,52 @@ function openSettings() {
   document.getElementById('sp_border').checked = s.border !== false;
   document.getElementById('sp_lines').checked = s.lines !== false;
   updateSettingsSum();
-  document.getElementById('settingsOverlay').classList.add('open');
-  document.getElementById('settingsPanel').classList.add('open');
   renderDiagram(s);
+  if (section === 'advokat') openCfgSection('cfgSec1');
+  else if (section === 'honzuv') openCfgSection('cfgSec2');
+  else if (section === 'stitky') openCfgSection('cfgSec3');
+  document.getElementById('cfgOverlay').classList.add('open');
+  document.getElementById('cfgPanel').classList.add('open');
 }
 
-function closeSettings() {
+function closeCfgPanel() {
   diagramActive = null;
-  document.getElementById('settingsOverlay').classList.remove('open');
-  document.getElementById('settingsPanel').classList.remove('open');
+  document.getElementById('cfgOverlay').classList.remove('open');
+  document.getElementById('cfgPanel').classList.remove('open');
 }
+
+function openCfgSection(id) {
+  ['cfgSec1','cfgSec2','cfgSec3'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.classList.toggle('open', s === id);
+  });
+}
+
+function toggleCfgSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+
+function cfgUpdateAdvokat() {
+  ['aJmeno','aRole','aEvCislo','aCisloKnihy','aSidlo'].forEach(id => {
+    const cfg = document.getElementById('cfg_' + id);
+    const orig = document.getElementById(id);
+    if (cfg && orig) orig.value = cfg.value;
+  });
+  updateAdvokat();
+}
+
+function syncCfgFromAdvokat() {
+  ['aJmeno','aRole','aEvCislo','aCisloKnihy','aSidlo'].forEach(id => {
+    const orig = document.getElementById(id);
+    const cfg = document.getElementById('cfg_' + id);
+    if (orig && cfg) cfg.value = orig.value;
+  });
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────
+function openSettings() { openCfgPanel('stitky'); }
+function closeSettings() { closeCfgPanel(); }
 
 function saveSettings() {
   const s = {};

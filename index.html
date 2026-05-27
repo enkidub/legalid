@@ -773,16 +773,18 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
   color: var(--ink-lt); margin-bottom: 6px;
 }
+.pm-sticky-inner { display: flex; gap: 12px; align-items: flex-start; }
+.pm-sticky-inputs { width: 140px; flex-shrink: 0; }
 .pm-dim-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 4px;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px 6px; margin-bottom: 0;
 }
-.pm-dim-field { display: flex; flex-direction: column; gap: 3px; }
+.pm-dim-field { display: flex; flex-direction: column; gap: 2px; }
 .pm-dim-label {
-  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  font-size: 9px; font-weight: 600; text-transform: uppercase;
   letter-spacing: .4px; color: var(--ink-lt);
 }
 .pm-dim-input {
-  width: 100%; padding: 6px 6px; border-radius: var(--r); border: 1.5px solid var(--rule);
+  width: 100%; padding: 5px 8px; border-radius: var(--r); border: 1.5px solid var(--rule);
   font-family: var(--sans); font-size: 12px; color: var(--ink);
   background: var(--white); outline: none; transition: border-color .14s;
 }
@@ -1107,27 +1109,28 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     <!-- Right column: settings -->
     <div class="pm-settings-col" id="pmSettingsCol">
 
-      <!-- Sticky top: diagram + reset link -->
+      <!-- Sticky top: diagram + inputs side by side + reset link -->
       <div class="pm-sticky-top">
-        <svg id="pmDiagram" viewBox="0 0 280 195" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;height:90px;"></svg>
+        <div class="pm-sticky-inner">
+          <svg id="pmDiagram" viewBox="0 0 280 195" xmlns="http://www.w3.org/2000/svg" style="display:block;height:180px;width:100%;flex:1;min-width:0;"></svg>
+          <div class="pm-sticky-inputs">
+            <div class="pm-dim-grid">
+              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X1">X1</label><input class="pm-dim-input" id="pm_X1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X2">X2</label><input class="pm-dim-input" id="pm_X2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y1">Y1</label><input class="pm-dim-input" id="pm_Y1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y2">Y2</label><input class="pm-dim-input" id="pm_Y2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
+              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PX">PX</label><input class="pm-dim-input" id="pm_PX" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
+              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PY">PY</label><input class="pm-dim-input" id="pm_PY" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
+              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_W">W</label><input class="pm-dim-input" id="pm_W" type="number" min="10" max="105" step="0.5" oninput="onPmSettingsInput()"></div>
+              <div class="pm-dim-field"><label class="pm-dim-label" for="pm_H">H</label><input class="pm-dim-input" id="pm_H" type="number" min="5" max="70" step="0.5" oninput="onPmSettingsInput()"></div>
+            </div>
+          </div>
+        </div>
         <button class="pm-reset-link" onclick="resetPmSettings()">obnovit výchozí hodnoty</button>
       </div>
 
       <!-- Scrollable body -->
       <div class="pm-scroll-body">
-
-        <!-- Dimension inputs -->
-        <div class="pm-section-label">rozměry (mm)</div>
-        <div class="pm-dim-grid">
-          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X1">X1</label><input class="pm-dim-input" id="pm_X1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
-          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X2">X2</label><input class="pm-dim-input" id="pm_X2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
-          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PX">PX</label><input class="pm-dim-input" id="pm_PX" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
-          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y1">Y1</label><input class="pm-dim-input" id="pm_Y1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
-          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_Y2">Y2</label><input class="pm-dim-input" id="pm_Y2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
-          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_PY">PY</label><input class="pm-dim-input" id="pm_PY" type="number" min="0" max="20" step="0.5" oninput="onPmSettingsInput()"></div>
-          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_W">W</label><input class="pm-dim-input" id="pm_W" type="number" min="10" max="105" step="0.5" oninput="onPmSettingsInput()"></div>
-          <div class="pm-dim-field"><label class="pm-dim-label" for="pm_H">H</label><input class="pm-dim-input" id="pm_H" type="number" min="5" max="70" step="0.5" oninput="onPmSettingsInput()"></div>
-        </div>
 
         <!-- Advanced options toggle -->
         <div class="pm-advanced-toggle" onclick="togglePmAdvanced()">

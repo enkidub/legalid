@@ -1173,10 +1173,11 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 <body>
 
 <div id="installBanner">
-  <span>Nainstalujte aplikaci Doložka do Vašeho mobilního zařízení.</span>
-  <div style="display:flex;gap:8px;align-items:center">
-    <button id="installBtn">Instalovat</button>
-    <button class="ib-close" onclick="document.getElementById('installBanner').classList.remove('visible')">×</button>
+  <span id="ib-text"></span>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button id="installBtn" style="display:none">Instalovat</button>
+    <span id="ib-ios-hint" style="display:none;font-size:13px;opacity:.9;line-height:1.5;"></span>
+    <button class="ib-close" onclick="dismissInstallBanner()">×</button>
   </div>
 </div>
 
@@ -1870,21 +1871,52 @@ let deferredInstallPrompt = null;
 let diagramActive = null;
 
 // ── PWA install prompt ─────────────────────────────────────────────
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-  document.getElementById('installBanner').classList.add('visible');
-});
-document.getElementById('installBtn').addEventListener('click', async () => {
-  if (!deferredInstallPrompt) return;
-  deferredInstallPrompt.prompt();
-  const { outcome } = await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
+function dismissInstallBanner() {
+  localStorage.setItem('installBannerDismissed', '1');
   document.getElementById('installBanner').classList.remove('visible');
-});
-window.addEventListener('appinstalled', () => {
-  document.getElementById('installBanner').classList.remove('visible');
-});
+}
+
+(function() {
+  if (localStorage.getItem('installBannerDismissed') === '1') return;
+
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
+
+  if (isIOS && isSafari && navigator.standalone !== true) {
+    document.getElementById('ib-text').textContent = 'Přidejte Doložka na plochu';
+    document.getElementById('ib-ios-hint').innerHTML =
+      'Klepněte na <svg width="13" height="13" viewBox="0 0 24 24" fill="none"' +
+      ' stroke="currentColor" stroke-width="2.2" stroke-linecap="round"' +
+      ' stroke-linejoin="round" style="vertical-align:middle;margin:0 1px">' +
+      '<path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>' +
+      '<polyline points="16 7 12 3 8 7"/><line x1="12" y1="3" x2="12" y2="16"/></svg>' +
+      ' a zvolte \'Přidat na plochu\'';
+    document.getElementById('ib-ios-hint').style.display = '';
+    document.getElementById('installBanner').classList.add('visible');
+    return;
+  }
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    document.getElementById('ib-text').textContent = 'Nainstalujte aplikaci Doložka';
+    document.getElementById('installBtn').style.display = '';
+    document.getElementById('installBanner').classList.add('visible');
+  });
+
+  document.getElementById('installBtn').addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    document.getElementById('installBanner').classList.remove('visible');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('installBanner').classList.remove('visible');
+  });
+})();
 
 // ── Service worker registration ────────────────────────────────────
 if ('serviceWorker' in navigator) {

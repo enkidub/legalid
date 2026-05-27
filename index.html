@@ -725,6 +725,9 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .pv-bot td { border: 0.5px solid #888; padding: 2px 4px; vertical-align: top; line-height: 1.3; }
 .pv-bot td:first-child { width: 48%; }
 .pv-bot.pv-no-border td { border: none; }
+.pv-combo-wrap { display: flex !important; }
+.pv-combo-left { flex: 0 0 55%; min-width: 0; overflow: hidden; }
+.pv-combo-right { flex: 0 0 45%; min-width: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 3px 4px; }
 /* Bottom bar */
 .pm-bottom-bar {
   height: 64px; flex-shrink: 0; border-top: 1px solid var(--rule);
@@ -1130,6 +1133,8 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
         <div class="pm-border-hint">rámeček kolem tabulky ve spodní části</div>
         <label class="pm-border-label"><input type="checkbox" id="pm_cut_line" onchange="onPmSettingsInput()"> Vodící čára pro stříhání ✂</label>
         <div class="pm-border-hint">přerušovaná čára nad štítkem do knihy</div>
+        <label class="pm-border-label"><input type="checkbox" id="pm_combo" onchange="onPmSettingsInput()"> Kombinovaný formát (doložka + štítek vedle sebe)</label>
+        <div class="pm-border-hint">doložka vlevo, štítek do knihy vpravo</div>
 
         <!-- Reset button -->
         <button class="btn-pm-reset" onclick="resetPmSettings()">Obnovit výchozí hodnoty</button>
@@ -1320,7 +1325,7 @@ const FORMAT_DEFAULTS = {
 };
 
 const DOLOZKA_DEFAULTS = { horni_cast_mm: 200, dolni_cast_mm: 55, okraj_mm: 15, px_mm: 5, py_mm: 5 };
-const PM_DEFAULTS = { X1: 20, X2: 14, Y1: 8, Y2: 0, W: 78, H: 47, PX: 2, PY: 2, sig_mode: 'sign', cell_border: false, bot_border: false, cut_line: false };
+const PM_DEFAULTS = { X1: 20, X2: 14, Y1: 8, Y2: 0, W: 78, H: 47, PX: 2, PY: 2, sig_mode: 'sign', cell_border: false, bot_border: false, cut_line: false, combo: false };
 
 function getDolozkaSettings() {
   try {
@@ -2192,6 +2197,26 @@ function buildStitekCellHTML(d, knjia, s) {
   const sigLine = s.sig_mode === 'none' ? '' :
     `<div class="pv-sig-name">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}</div>`;
   const brdStyle = s.cell_border ? 'border:0.5px solid #888;box-sizing:border-box;' : '';
+  if (s.combo) {
+    return `<div class="pv-cell-inner pv-combo-wrap" style="${brdStyle}padding:${s.Y1}mm ${s.X2}mm ${s.Y2}mm ${s.X1}mm;">` +
+      `<div class="pv-combo-left">` +
+      `<div style="max-height:${s.H}mm;overflow:hidden;padding:${s.PY}mm ${s.PX}mm 0;">` +
+      `<div class="pv-title">Prohlášení o pravosti podpisu</div>` +
+      `<div class="pv-p">Číslo knihy: ${knjia}</div>` +
+      `<div class="pv-p">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}, ev. č. ${phd(d.aEvCislo,'č.ev.')}, se sídlem ${phd(d.aSidlo,'sídlo')};</div>` +
+      `<div class="pv-p">Prohlašuji, že ${phd(d.jmeno,'JMÉNO')}, nar. ${phd(d.datumNar,'DATUM NAR.')}, místo nar. ${phd(d.mistoNar,'MÍSTO')}, bytem ${phd(d.adresa,'ADRESA')}, jehož/jejíž totožnost prokázána OP č. ${phd(d.cisloOp,'ČÍSLO OP')}, tuto listinu v ${phd(d.pocet,'POČET')} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
+      `<div class="pv-sig">V Praze dne ${phd(d.datumOver,'DATUM')}</div>` +
+      sigLine +
+      `</div>` +
+      `</div>` +
+      `<div class="pv-combo-right">` +
+      `<div class="pv-p">V Praze, ${phd(d.aSidlo,'sídlo')} dne ${phd(d.datumOver,'datum')}</div>` +
+      `<div class="pv-p">${phd(d.jmeno,'JMÉNO')} nar. ${phd(d.datumNar,'DATUM')}, místo nar. ${phd(d.mistoNar,'MÍSTO')}, bytem ${phd(d.adresa,'ADRESA')}</div>` +
+      `<div class="pv-p">OP: ${phd(d.cisloOp,'ČÍSLO OP')}</div>` +
+      `<div class="pv-p">${phd(d.pocet,'počet')}x ${phd(d.listina,'LISTINA')}</div>` +
+      `</div>` +
+      `</div>`;
+  }
   return `<div class="pv-cell-inner" style="${brdStyle}padding:${s.Y1}mm ${s.X2}mm ${s.Y2}mm ${s.X1}mm;">` +
     `<div style="max-height:${s.H}mm;overflow:hidden;padding:${s.PY}mm ${s.PX}mm 0;">` +
     `<div class="pv-title">Prohlášení o pravosti podpisu</div>` +
@@ -2234,6 +2259,7 @@ function getPmSettingsFromUI() {
     sig_mode: sig, cell_border: !!document.getElementById('pm_border')?.checked,
     bot_border: !!document.getElementById('pm_bot_border')?.checked,
     cut_line: !!document.getElementById('pm_cut_line')?.checked,
+    combo: !!document.getElementById('pm_combo')?.checked,
   };
 }
 
@@ -2246,6 +2272,7 @@ function loadPmSettings() {
   const b = document.getElementById('pm_border'); if (b) b.checked = !!s.cell_border;
   const bb = document.getElementById('pm_bot_border'); if (bb) bb.checked = !!s.bot_border;
   const cl = document.getElementById('pm_cut_line'); if (cl) cl.checked = !!s.cut_line;
+  const co = document.getElementById('pm_combo'); if (co) co.checked = !!s.combo;
   renderPmDiagram();
 }
 
@@ -2262,7 +2289,7 @@ function onPmSettingsInput() {
 function resetPmSettings() {
   try {
     const existing = JSON.parse(localStorage.getItem('legalid_dolozka_rozmery') || '{}');
-    const { X1, X2, Y1, Y2, W, H, PX, PY, sig_mode, cell_border, bot_border, cut_line, ...rest } = existing;
+    const { X1, X2, Y1, Y2, W, H, PX, PY, sig_mode, cell_border, bot_border, cut_line, combo, ...rest } = existing;
     localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify(rest));
   } catch { localStorage.removeItem('legalid_dolozka_rozmery'); }
   loadPmSettings();
@@ -2398,20 +2425,42 @@ function printDolozka() {
   for (let i = 0; i < 8; i++) {
     if (i < copies) {
       const sigLine = s.sig_mode === 'none' ? '' : `<div class="sig-name">${d.aJmeno}, ${d.aRole}</div>`;
-      cells +=
-        `<div class="cell">` +
-        `<div class="top">` +
-        `<div class="title">Prohlášení o pravosti podpisu</div>` +
-        `<div class="p">Číslo knihy: ${knjia}</div>` +
-        `<div class="p">${d.aJmeno}, ${d.aRole}, ev. č. ${d.aEvCislo}, se sídlem ${d.aSidlo};</div>` +
-        `<div class="p">Prohlašuji, že ${d.jmeno}, nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}, jehož/jejíž totožnost prokázána OP č. ${d.cisloOp}, tuto listinu v ${d.pocet} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
-        `<div class="sig">V Praze dne ${d.datumOver}</div>` +
-        sigLine +
-        `</div>` +
-        `<div class="sep"></div>` +
-        `<table><tr><td>V Praze, ${d.aSidlo} dne ${d.datumOver}</td><td>${d.jmeno} nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}</td></tr>` +
-        `<tr><td>OP: ${d.cisloOp}</td><td>${d.pocet}x ${d.listina}</td></tr></table>` +
-        `</div>`;
+      if (s.combo) {
+        cells +=
+          `<div class="cell cell-combo">` +
+          `<div class="combo-left">` +
+          `<div class="top">` +
+          `<div class="title">Prohlášení o pravosti podpisu</div>` +
+          `<div class="p">Číslo knihy: ${knjia}</div>` +
+          `<div class="p">${d.aJmeno}, ${d.aRole}, ev. č. ${d.aEvCislo}, se sídlem ${d.aSidlo};</div>` +
+          `<div class="p">Prohlašuji, že ${d.jmeno}, nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}, jehož/jejíž totožnost prokázána OP č. ${d.cisloOp}, tuto listinu v ${d.pocet} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
+          `<div class="sig">V Praze dne ${d.datumOver}</div>` +
+          sigLine +
+          `</div>` +
+          `</div>` +
+          `<div class="combo-right">` +
+          `<div class="p">V Praze, ${d.aSidlo} dne ${d.datumOver}</div>` +
+          `<div class="p">${d.jmeno} nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}</div>` +
+          `<div class="p">OP: ${d.cisloOp}</div>` +
+          `<div class="p">${d.pocet}x ${d.listina}</div>` +
+          `</div>` +
+          `</div>`;
+      } else {
+        cells +=
+          `<div class="cell">` +
+          `<div class="top">` +
+          `<div class="title">Prohlášení o pravosti podpisu</div>` +
+          `<div class="p">Číslo knihy: ${knjia}</div>` +
+          `<div class="p">${d.aJmeno}, ${d.aRole}, ev. č. ${d.aEvCislo}, se sídlem ${d.aSidlo};</div>` +
+          `<div class="p">Prohlašuji, že ${d.jmeno}, nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}, jehož/jejíž totožnost prokázána OP č. ${d.cisloOp}, tuto listinu v ${d.pocet} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
+          `<div class="sig">V Praze dne ${d.datumOver}</div>` +
+          sigLine +
+          `</div>` +
+          `<div class="sep"></div>` +
+          `<table><tr><td>V Praze, ${d.aSidlo} dne ${d.datumOver}</td><td>${d.jmeno} nar. ${d.datumNar}, místo nar. ${d.mistoNar}, bytem ${d.adresa}</td></tr>` +
+          `<tr><td>OP: ${d.cisloOp}</td><td>${d.pocet}x ${d.listina}</td></tr></table>` +
+          `</div>`;
+      }
     } else {
       cells += `<div class="cell cell-empty"></div>`;
     }
@@ -2422,6 +2471,9 @@ function printDolozka() {
 *{box-sizing:border-box;margin:0;padding:0}
 body{display:grid;grid-template-columns:105mm 105mm;grid-template-rows:74mm 74mm 74mm 74mm;width:210mm;height:297mm;font-family:'Times New Roman',Times,serif;font-size:7pt;line-height:1.35;color:#111}
 .cell{overflow:hidden;padding:${s.Y1}mm ${s.X2}mm ${s.Y2}mm ${s.X1}mm;${cellBorder}}
+.cell-combo{display:flex;padding:0;${cellBorder}}
+.combo-left{flex:0 0 55%;min-width:0;overflow:hidden;padding:${s.Y1}mm ${s.X2}mm ${s.Y2}mm ${s.X1}mm;}
+.combo-right{flex:0 0 45%;min-width:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:${s.Y1}mm ${s.X2}mm ${s.Y2}mm 3pt;}
 .cell-empty{background:#f5f5f5}
 .top{max-height:${s.H}mm;overflow:hidden;padding:${s.PY}mm ${s.PX}mm 0}
 .title{text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3pt;font-size:6.5pt}

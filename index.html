@@ -630,6 +630,62 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .cfg-edit-link:hover { color: var(--gold-h); text-decoration: underline; }
 
+/* ── PRINT MODAL ── */
+.print-modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 400;
+}
+.print-modal-overlay.open { display: block; }
+.print-modal {
+  display: none; position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--white); border-radius: 16px; box-shadow: var(--sh-lg); z-index: 401;
+  width: min(640px, 96vw); max-height: 90vh; flex-direction: column;
+}
+.print-modal.open { display: flex; }
+.print-modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--rule); flex-shrink: 0;
+}
+.print-modal-title { font-size: 14px; font-weight: 600; color: var(--navy); }
+.btn-pm-close {
+  background: none; border: none; cursor: pointer; color: var(--ink-lt);
+  font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: var(--r);
+}
+.btn-pm-close:hover { color: var(--navy); background: var(--paper); }
+.print-modal-body {
+  flex: 1; overflow-y: auto; padding: 20px; background: #dde0e4;
+  display: flex; justify-content: center;
+}
+.print-preview-outer { overflow: hidden; flex-shrink: 0; }
+.print-preview-a4 {
+  width: 794px; background: #fff; box-shadow: 0 2px 16px rgba(0,0,0,.25);
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12px; line-height: 1.65; color: #111; padding: 57px;
+  transform-origin: top center;
+}
+.print-modal-footer {
+  display: flex; gap: 8px; align-items: center; padding: 14px 20px;
+  border-top: 1px solid var(--rule); flex-shrink: 0; flex-wrap: wrap;
+}
+.btn-pm-print {
+  padding: 10px 18px; border-radius: var(--r); background: var(--gold); color: #fff;
+  font-family: var(--sans); font-size: 13px; font-weight: 600; border: none; cursor: pointer;
+  transition: background .14s;
+}
+.btn-pm-print:hover { background: var(--gold-h); }
+.btn-pm-docx {
+  padding: 10px 16px; border-radius: var(--r); background: var(--paper); color: var(--ink);
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  border: 1.5px solid var(--rule); cursor: pointer; transition: border-color .14s, color .14s;
+}
+.btn-pm-docx:hover { border-color: var(--ink-lt); color: var(--navy); }
+.btn-pm-settings {
+  margin-right: auto; padding: 10px 0; background: none; border: none;
+  font-family: var(--sans); font-size: 12px; color: var(--ink-lt);
+  cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+}
+.btn-pm-settings:hover { color: var(--navy); }
+
 </style>
 </head>
 <body>
@@ -727,17 +783,20 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
             <ul id="validationList"></ul>
           </div>
           <div class="split-btn-wrap" id="splitBtnWrap">
-            <button class="split-btn-main" onclick="openPrintFlow()">
+            <button class="split-btn-main" onclick="openDolozkaPreview()">
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="7" rx="1"/><path d="M5 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M5 11h6"/></svg>
-              Tisknout do knihy
+              Vytisknout doložku
             </button>
             <button class="split-btn-arrow" onclick="toggleSplitMenu(event)" aria-label="Více možností" aria-haspopup="true">▾</button>
             <div class="split-dropdown" id="splitDropdown" role="menu">
+              <button class="split-drop-item" role="menuitem" onclick="openDolozkaPreview();closeSplitMenu()">
+                🖨 Doložka (A4)
+              </button>
               <button class="split-drop-item" role="menuitem" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)));closeSplitMenu()">
-                📄 Stáhnout doložku (.docx)
+                📄 Stáhnout .docx
               </button>
               <button class="split-drop-item" role="menuitem" onclick="openPrintFlow();closeSplitMenu()">
-                🖨 Tisknout do knihy
+                📋 Štítky do knihy
               </button>
             </div>
           </div>
@@ -890,6 +949,31 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 </main>
 
 <div class="toast" id="toast"></div>
+
+<!-- Print preview modal -->
+<div class="print-modal-overlay" id="printModalOverlay" onclick="closePrintModal()"></div>
+<div class="print-modal" id="printModal" role="dialog" aria-label="Náhled před tiskem">
+  <div class="print-modal-head">
+    <span class="print-modal-title">Náhled před tiskem</span>
+    <button class="btn-pm-close" onclick="closePrintModal()" aria-label="Zavřít">×</button>
+  </div>
+  <div class="print-modal-body">
+    <div class="print-preview-outer" id="printPreviewOuter">
+      <div class="print-preview-a4" id="printPreviewA4">
+        <div id="printPreviewTop"></div>
+        <div style="border-top:1px dashed #999;margin:16px 0;position:relative;">
+          <span style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#fff;padding:0 8px;font-size:10px;color:#999;font-family:sans-serif;white-space:nowrap;">✂ oddělit</span>
+        </div>
+        <div id="printPreviewBot"></div>
+      </div>
+    </div>
+  </div>
+  <div class="print-modal-footer">
+    <button class="btn-pm-settings" onclick="closePrintModal();openCfgPanel('dolozka')">⚙ Upravit rozměry</button>
+    <button class="btn-pm-docx" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)))">📄 Stáhnout .docx</button>
+    <button class="btn-pm-print" onclick="printDolozka()">🖨 Tisknout</button>
+  </div>
+</div>
 
 <div class="cfg-overlay" id="cfgOverlay" onclick="closeCfgPanel()"></div>
 <div class="cfg-panel" id="cfgPanel" role="dialog" aria-label="Nastavení">
@@ -1742,6 +1826,109 @@ function onSettingsInput() {
   s.lines = document.getElementById('sp_lines')?.checked ?? s.lines;
   renderStitek(s);
   renderDiagram(s);
+}
+
+// ── PRINT DOLOZKA A4 ──────────────────────────────────────────────
+function getDolozkaData() {
+  const a = advokat;
+  const v = id => document.getElementById(id)?.value.trim() || '';
+  return {
+    jmeno: v('fJmeno'), datumNar: v('fDatumNar'), mistoNar: v('fMistoNar'),
+    adresa: v('fAdresa'), cisloOp: v('fCisloOp'),
+    cisloRadku: v('fCisloRadku'), rok: v('fRok'),
+    datumOver: v('fDatumOver'), pocet: v('fPocetVyh'), listina: v('fListina'),
+    aJmeno: a.jmeno, aRole: a.role, aEvCislo: a.ev_cislo,
+    aCisloKnihy: a.cislo_knihy, aSidlo: a.sidlo,
+  };
+}
+
+function phd(val, fb) {
+  return (val && val.trim()) ? val : `<span style="color:#bbb;font-style:italic">[${fb}]</span>`;
+}
+
+function openDolozkaPreview() {
+  buildDolozkaPreviewContent();
+  document.getElementById('printModalOverlay').classList.add('open');
+  document.getElementById('printModal').classList.add('open');
+  requestAnimationFrame(scalePrintPreview);
+}
+
+function closePrintModal() {
+  document.getElementById('printModalOverlay').classList.remove('open');
+  document.getElementById('printModal').classList.remove('open');
+}
+
+function buildDolozkaPreviewContent() {
+  const d = getDolozkaData();
+  const knjia = `${phd(d.aCisloKnihy,'č.knihy')}/${phd(d.cisloRadku,'č.řádku')}/${phd(d.rok,'rok')}`;
+  document.getElementById('printPreviewTop').innerHTML =
+    `<div style="text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;font-size:12px;">Prohlášení o pravosti podpisu</div>` +
+    `<div style="margin-bottom:9px;">Běžné číslo knihy o prohlášeních o pravosti podpisu ${knjia}</div>` +
+    `<div style="margin-bottom:9px;">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}, ev. č. ${phd(d.aEvCislo,'č.ev.')}, se sídlem ${phd(d.aSidlo,'sídlo')};</div>` +
+    `<div style="margin-bottom:9px;text-align:justify;">Prohlašuji, že ${phd(d.jmeno,'JMÉNO')}, nar. ${phd(d.datumNar,'DATUM NAR.')}, místo narození ${phd(d.mistoNar,'MÍSTO')}, bytem ${phd(d.adresa,'ADRESA')}, jehož/jejíž totožnost byla prokázána z občanského průkazu č. ${phd(d.cisloOp,'ČÍSLO OP')},</div>` +
+    `<div style="margin-bottom:9px;">tuto listinu v ${phd(d.pocet,'POČET')} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>` +
+    `<div style="margin-top:20px;">V Praze dne ${phd(d.datumOver,'DATUM')}</div>` +
+    `<div style="margin-top:40px;text-align:right;">${phd(d.aJmeno,'advokát')}, ${phd(d.aRole,'role')}</div>` +
+    `<div style="text-align:right;color:#bbb;font-size:10px;margin-top:4px;">[místo pro podpis]</div>`;
+  document.getElementById('printPreviewBot').innerHTML =
+    `<table style="width:100%;border-collapse:collapse;font-size:11px;">` +
+    `<tr><td style="border:1px solid #888;padding:5px 7px;width:48%;vertical-align:top;line-height:1.5;">V Praze, ${phd(d.aSidlo,'sídlo')} dne ${phd(d.datumOver,'datum')}</td>` +
+    `<td style="border:1px solid #888;padding:5px 7px;vertical-align:top;line-height:1.5;">${phd(d.jmeno,'JMÉNO')} nar. ${phd(d.datumNar,'DATUM')}, místo narození ${phd(d.mistoNar,'MÍSTO')}, bytem ${phd(d.adresa,'ADRESA')}</td></tr>` +
+    `<tr><td style="border:1px solid #888;padding:5px 7px;vertical-align:top;line-height:1.5;">OP: ${phd(d.cisloOp,'ČÍSLO OP')}</td>` +
+    `<td style="border:1px solid #888;padding:5px 7px;vertical-align:top;line-height:1.5;">${phd(d.pocet,'počet')}x ${phd(d.listina,'LISTINA')}</td></tr>` +
+    `</table>`;
+}
+
+function scalePrintPreview() {
+  const outer = document.getElementById('printPreviewOuter');
+  const a4 = document.getElementById('printPreviewA4');
+  if (!outer || !a4) return;
+  const body = outer.parentElement;
+  const availW = body ? body.clientWidth - 40 : 560;
+  const scale = Math.min(0.92, availW / 794);
+  a4.style.transform = `scale(${scale})`;
+  outer.style.width = Math.ceil(794 * scale) + 'px';
+  outer.style.height = Math.ceil(a4.scrollHeight * scale) + 'px';
+}
+
+function printDolozka() {
+  const d = getDolozkaData();
+  const knjia = `${d.aCisloKnihy}/${d.cisloRadku}/${d.rok}`;
+  const html = `<!DOCTYPE html><html lang="cs"><head><meta charset="UTF-8"><style>
+@page{size:A4 portrait;margin:15mm}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Times New Roman',Times,serif;font-size:12px;line-height:1.65;color:#111}
+.top{min-height:200mm}
+.title{text-align:center;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;font-size:12px}
+.p{margin-bottom:9px;text-align:justify}
+.sig{margin-top:20px}.sig-name{margin-top:40px;text-align:right}
+.sep{border-top:1px dashed #999;margin:8px 0;position:relative}
+.sep-lbl{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#fff;padding:0 8px;font-size:10px;color:#999;font-family:sans-serif;white-space:nowrap}
+.bot{height:55mm;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:11px}
+td{border:1px solid #888;padding:5px 7px;vertical-align:top;line-height:1.5}
+td:first-child{width:48%}
+</style></head><body>
+<div class="top">
+<div class="title">Prohlášení o pravosti podpisu</div>
+<div class="p">Běžné číslo knihy o prohlášeních o pravosti podpisu ${knjia}</div>
+<div class="p">${d.aJmeno}, ${d.aRole}, ev. č. ${d.aEvCislo}, se sídlem ${d.aSidlo};</div>
+<div class="p">Prohlašuji, že ${d.jmeno}, nar. ${d.datumNar}, místo narození ${d.mistoNar}, bytem ${d.adresa}, jehož/jejíž totožnost byla prokázána z občanského průkazu č. ${d.cisloOp},</div>
+<div class="p">tuto listinu v ${d.pocet} vyhotovení(ch) přede mnou vlastnoručně podepsal/a.</div>
+<div class="sig">V Praze dne ${d.datumOver}</div>
+<div class="sig-name">${d.aJmeno}, ${d.aRole}</div>
+</div>
+<div class="sep"><span class="sep-lbl">✂ oddělit</span></div>
+<div class="bot"><table>
+<tr><td>V Praze, ${d.aSidlo} dne ${d.datumOver}</td><td>${d.jmeno} nar. ${d.datumNar}, místo narození ${d.mistoNar}, bytem ${d.adresa}</td></tr>
+<tr><td>OP: ${d.cisloOp}</td><td>${d.pocet}x ${d.listina}</td></tr>
+</table></div>
+<script>window.addEventListener('load',()=>window.print())<\/script>
+</body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) { showToast('Povolte popup v adresním řádku.'); return; }
+  w.document.write(html);
+  w.document.close();
 }
 
 // ── SPLIT MENU ────────────────────────────────────────────────────

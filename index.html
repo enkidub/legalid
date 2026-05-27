@@ -697,7 +697,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   .pm-settings-col { flex: 1; border-left: none; display: none; }
   .pm-settings-col.pm-col-show { display: flex; }
 }
-.pm-settings-scroll { flex: 1; overflow-y: auto; padding: 16px 20px; }
+.pm-scroll-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
 /* Print preview elements */
 .print-preview-outer { overflow: hidden; flex-shrink: 0; }
 .print-preview-a4 {
@@ -740,7 +740,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .pm-copies-wrap { display: flex; align-items: center; gap: 8px; }
 .pm-copies-label { font-size: 12px; color: var(--ink-lt); white-space: nowrap; }
 .pm-copies-input {
-  width: 58px; padding: 7px 10px; border: 1.5px solid var(--rule); border-radius: var(--r);
+  width: 52px; padding: 7px 10px; border: 1.5px solid var(--rule); border-radius: var(--r);
   font-family: var(--sans); font-size: 13px; text-align: center; color: var(--ink);
   background: var(--white);
 }
@@ -758,50 +758,60 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .btn-pm-docx:hover { border-color: var(--ink-lt); color: var(--navy); }
 /* Settings panel — right column content */
-.pm-diag-fixed {
-  flex-shrink: 0; height: 200px;
-  background: var(--paper-w); border-bottom: 1px solid var(--rule);
-  padding: 16px; display: flex; align-items: center; overflow: hidden;
+.pm-sticky-top {
+  position: sticky; top: 0; z-index: 10; flex-shrink: 0;
+  background: var(--paper-w); border-bottom: 0.5px solid var(--rule);
+  padding: 10px 14px 8px;
 }
-.pm-sec-title {
-  font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-  color: var(--ink-fnt); margin-bottom: 10px;
+.pm-reset-link {
+  font-size: 11px; color: var(--ink-lt); text-decoration: underline;
+  background: none; border: none; cursor: pointer; padding: 4px 0 0;
+  font-family: var(--sans); display: block;
+}
+.pm-reset-link:hover { color: var(--navy); }
+.pm-section-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--ink-lt); margin-bottom: 6px;
 }
 .pm-dim-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 6px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 4px;
 }
-.pm-dim-field { display: flex; flex-direction: column; gap: 4px; }
+.pm-dim-field { display: flex; flex-direction: column; gap: 3px; }
 .pm-dim-label {
   font-size: 10px; font-weight: 600; text-transform: uppercase;
   letter-spacing: .4px; color: var(--ink-lt);
 }
 .pm-dim-input {
-  width: 100%; padding: 7px 8px; border-radius: var(--r); border: 1.5px solid var(--rule);
-  font-family: var(--sans); font-size: 13px; color: var(--ink);
+  width: 100%; padding: 6px 6px; border-radius: var(--r); border: 1.5px solid var(--rule);
+  font-family: var(--sans); font-size: 12px; color: var(--ink);
   background: var(--white); outline: none; transition: border-color .14s;
 }
 .pm-dim-input:focus { border-color: var(--navy); }
 .pm-dim-input.pm-hi { border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(154,110,16,.15); }
-.pm-content-sep { height: 1px; background: var(--rule); margin: 14px 0; }
-.pm-sig-row { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+.pm-advanced-toggle {
+  display: flex; align-items: center; gap: 6px;
+  border-top: 0.5px solid var(--rule); padding: 8px 0; margin-top: 6px;
+  cursor: pointer; user-select: none;
+}
+.pm-advanced-arrow { font-size: 10px; color: var(--ink-lt); transition: transform 0.2s; line-height: 1; }
+.pm-advanced-label { font-size: 12px; color: var(--ink); flex: 1; }
+.pm-advanced-badge {
+  background: #e8f0fb; color: #1558d6;
+  font-size: 9px; padding: 1px 6px; border-radius: 8px; font-weight: 600;
+}
+.pm-advanced-body { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
+.pm-advanced-body.open { max-height: 600px; }
+.pm-sig-row { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
 .pm-sig-opt {
   display: flex; align-items: center; gap: 8px; cursor: pointer;
-  font-size: 13px; color: var(--ink); user-select: none;
+  font-size: 12px; color: var(--ink); user-select: none;
 }
 .pm-sig-opt input[type=radio] { accent-color: var(--navy); cursor: pointer; }
-.pm-border-label {
+.pm-checkbox-row {
   display: flex; align-items: center; gap: 8px; cursor: pointer;
-  font-size: 13px; color: var(--ink); user-select: none; margin-bottom: 4px;
+  font-size: 12px; color: var(--ink); user-select: none; margin-bottom: 6px;
 }
-.pm-border-label input[type=checkbox] { accent-color: var(--navy); cursor: pointer; }
-.pm-border-hint { font-size: 11px; color: var(--ink-lt); padding-left: 22px; margin-bottom: 14px; }
-.btn-pm-reset {
-  width: 100%; padding: 9px 16px; border-radius: var(--r);
-  background: transparent; color: var(--ink-lt); border: 1.5px solid var(--rule);
-  font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer;
-  transition: border-color .14s, color .14s;
-}
-.btn-pm-reset:hover { border-color: var(--ink-mid); color: var(--navy); }
+.pm-checkbox-row input[type=checkbox] { accent-color: var(--navy); cursor: pointer; }
 
 </style>
 </head>
@@ -1097,15 +1107,17 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     <!-- Right column: settings -->
     <div class="pm-settings-col" id="pmSettingsCol">
 
-      <!-- Diagram — fixed, does not scroll -->
-      <div class="pm-diag-fixed">
-        <svg id="pmDiagram" viewBox="0 0 280 195" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;max-height:168px;"></svg>
+      <!-- Sticky top: diagram + reset link -->
+      <div class="pm-sticky-top">
+        <svg id="pmDiagram" viewBox="0 0 280 195" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;height:90px;"></svg>
+        <button class="pm-reset-link" onclick="resetPmSettings()">obnovit výchozí hodnoty</button>
       </div>
 
-      <div class="pm-settings-scroll">
+      <!-- Scrollable body -->
+      <div class="pm-scroll-body">
 
-        <!-- Dimension inputs: 3-column grid -->
-        <div class="pm-sec-title">Rozměry (mm)</div>
+        <!-- Dimension inputs -->
+        <div class="pm-section-label">rozměry (mm)</div>
         <div class="pm-dim-grid">
           <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X1">X1</label><input class="pm-dim-input" id="pm_X1" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
           <div class="pm-dim-field"><label class="pm-dim-label" for="pm_X2">X2</label><input class="pm-dim-input" id="pm_X2" type="number" min="0" max="50" step="0.5" oninput="onPmSettingsInput()"></div>
@@ -1117,28 +1129,29 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
           <div class="pm-dim-field"><label class="pm-dim-label" for="pm_H">H</label><input class="pm-dim-input" id="pm_H" type="number" min="5" max="70" step="0.5" oninput="onPmSettingsInput()"></div>
         </div>
 
-        <div class="pm-content-sep"></div>
-
-        <!-- Signature mode -->
-        <div class="pm-sec-title">Na místě podpisu advokáta:</div>
-        <div class="pm-sig-row">
-          <label class="pm-sig-opt"><input type="radio" name="pm_sig" value="sign" onchange="onPmSettingsInput()"> vlastnoruční podpis advokáta</label>
-          <label class="pm-sig-opt"><input type="radio" name="pm_sig" value="none" onchange="onPmSettingsInput()"> netisknout nic</label>
-          <label class="pm-sig-opt"><input type="radio" name="pm_sig" value="name" onchange="onPmSettingsInput()"> jméno, příjmení a tituly</label>
+        <!-- Advanced options toggle -->
+        <div class="pm-advanced-toggle" onclick="togglePmAdvanced()">
+          <span class="pm-advanced-arrow" id="pmAdvancedArrow">▶</span>
+          <span class="pm-advanced-label">pokročilé možnosti tisku</span>
+          <span class="pm-advanced-badge" id="pmAdvancedBadge" style="display:none"></span>
         </div>
 
-        <!-- Border checkbox -->
-        <label class="pm-border-label"><input type="checkbox" id="pm_border" onchange="onPmSettingsInput()"> Tisknout rámeček</label>
-        <div class="pm-border-hint">pro etikety doporučujeme vypnout</div>
-        <label class="pm-border-label"><input type="checkbox" id="pm_bot_border" onchange="onPmSettingsInput()"> Ohraničení štítku do knihy</label>
-        <div class="pm-border-hint">rámeček kolem tabulky ve spodní části</div>
-        <label class="pm-border-label"><input type="checkbox" id="pm_cut_line" onchange="onPmSettingsInput()"> Vodící čára pro stříhání ✂</label>
-        <div class="pm-border-hint">přerušovaná čára nad štítkem do knihy</div>
-        <label class="pm-border-label"><input type="checkbox" id="pm_combo" onchange="onPmSettingsInput()"> Kombinovaný formát (doložka + štítek vedle sebe)</label>
-        <div class="pm-border-hint">doložka vlevo, štítek do knihy vpravo</div>
+        <!-- Advanced options (collapsible) -->
+        <div class="pm-advanced-body" id="pmAdvancedBody">
 
-        <!-- Reset button -->
-        <button class="btn-pm-reset" onclick="resetPmSettings()">Obnovit výchozí hodnoty</button>
+          <div class="pm-section-label" style="margin-top:10px;">na místě podpisu advokáta</div>
+          <div class="pm-sig-row">
+            <label class="pm-sig-opt"><input type="radio" name="pm_sig" value="sign" onchange="onPmSettingsInput()"> vlastnoruční podpis advokáta</label>
+            <label class="pm-sig-opt"><input type="radio" name="pm_sig" value="none" onchange="onPmSettingsInput()"> netisknout nic</label>
+            <label class="pm-sig-opt"><input type="radio" name="pm_sig" value="name" onchange="onPmSettingsInput()"> jméno, příjmení a tituly</label>
+          </div>
+
+          <label class="pm-checkbox-row"><input type="checkbox" id="pm_border" onchange="onPmSettingsInput()"> tisknout rámeček</label>
+          <label class="pm-checkbox-row"><input type="checkbox" id="pm_bot_border" onchange="onPmSettingsInput()"> ohraničení štítku do knihy</label>
+          <label class="pm-checkbox-row"><input type="checkbox" id="pm_cut_line" onchange="onPmSettingsInput()"> vodící čára pro stříhání ✂</label>
+          <label class="pm-checkbox-row"><input type="checkbox" id="pm_combo" onchange="onPmSettingsInput()"> kombinovaný formát (štítek vedle doložky)</label>
+
+        </div>
 
       </div>
     </div>
@@ -2275,6 +2288,28 @@ function loadPmSettings() {
   const cl = document.getElementById('pm_cut_line'); if (cl) cl.checked = !!s.cut_line;
   const co = document.getElementById('pm_combo'); if (co) co.checked = !!s.combo;
   renderPmDiagram();
+  updatePmAdvancedBadge();
+}
+
+function togglePmAdvanced() {
+  const body = document.getElementById('pmAdvancedBody');
+  const arrow = document.getElementById('pmAdvancedArrow');
+  if (!body) return;
+  const open = body.classList.toggle('open');
+  if (arrow) arrow.style.transform = open ? 'rotate(90deg)' : '';
+}
+
+function updatePmAdvancedBadge() {
+  const badge = document.getElementById('pmAdvancedBadge');
+  if (!badge) return;
+  let count = 0;
+  const sig = document.querySelector('input[name="pm_sig"]:checked')?.value;
+  if (sig && sig !== 'sign') count++;
+  ['pm_border', 'pm_bot_border', 'pm_cut_line', 'pm_combo'].forEach(id => {
+    if (document.getElementById(id)?.checked) count++;
+  });
+  badge.textContent = count;
+  badge.style.display = count > 0 ? '' : 'none';
 }
 
 function onPmSettingsInput() {
@@ -2285,6 +2320,7 @@ function onPmSettingsInput() {
   } catch { localStorage.setItem('legalid_dolozka_rozmery', JSON.stringify(s)); }
   renderPmDiagram();
   buildDolozkaPreviewContent();
+  updatePmAdvancedBadge();
 }
 
 function resetPmSettings() {

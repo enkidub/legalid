@@ -1,7 +1,7 @@
 {
   "name": "Advokátní Doložka",
-  "short_name": "Advokátní Doložka",
-  "description": "Generátor advokátní doložky o pravosti podpisu s AI rozpoznáváním OP",
+  "short_name": "Doložka",
+  "description": "Prohlášení advokáta o pravosti podpisu s AI rozpoznáváním OP",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

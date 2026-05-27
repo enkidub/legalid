@@ -616,12 +616,13 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   font-family: var(--sans); transition: background .14s;
 }
 .nav-item:hover { background: var(--paper-w); }
-.nav-item-icon { font-size: 20px; flex-shrink: 0; width: 28px; text-align: center; }
+.nav-item-icon { font-size: 18px; flex-shrink: 0; width: 28px; text-align: center; color: var(--ink-lt); }
 .nav-item-text { display: flex; flex-direction: column; gap: 2px; }
 .nav-item-label { font-size: 14px; color: var(--ink); font-weight: 500; }
 .nav-item-sub { font-size: 11px; color: var(--ink-lt); }
 .nav-item-pro { background: var(--gold-p); }
 .nav-item-pro:hover { background: #f9f1da; }
+.nav-item-pro .nav-item-icon { color: var(--gold); }
 .nav-footer {
   padding: 14px 16px; border-top: 1px solid var(--rule);
   font-size: 11px; color: var(--ink-fnt); text-align: center; flex-shrink: 0;
@@ -980,35 +981,34 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   </div>
   <div class="nav-menu">
     <button class="nav-item" onclick="closeHamburger();openCfgPanel()">
-      <span class="nav-item-icon">⚙</span>
+      <span class="nav-item-icon">&#x2699;&#xFE0E;</span>
       <div class="nav-item-text">
         <span class="nav-item-label">Nastavení</span>
         <span class="nav-item-sub">Profil advokáta a rozměry tisku</span>
       </div>
     </button>
     <button class="nav-item" onclick="closeHamburger();openAboutModal()">
-      <span class="nav-item-icon">ℹ️</span>
+      <span class="nav-item-icon">ℹ</span>
       <div class="nav-item-text">
         <span class="nav-item-label">O aplikaci</span>
         <span class="nav-item-sub">legalid.cz · Verze 1.0</span>
       </div>
     </button>
     <button class="nav-item" onclick="closeHamburger();window.open('mailto:info@legalid.cz?subject=N%C3%A1pov%C4%9Bda%20-%20Dolo%C5%BEka','_blank')">
-      <span class="nav-item-icon">❓</span>
+      <span class="nav-item-icon">?</span>
       <div class="nav-item-text">
         <span class="nav-item-label">Nápověda</span>
         <span class="nav-item-sub">Jak používat aplikaci</span>
       </div>
     </button>
     <button class="nav-item" onclick="closeHamburger();openRegistrationModal()">
-      <span class="nav-item-icon">🔑</span>
       <div class="nav-item-text">
         <span class="nav-item-label">Registrace</span>
         <span class="nav-item-sub" style="color:var(--gold)">30 dní zdarma, pak 9 €/měs</span>
       </div>
     </button>
     <button class="nav-item nav-item-pro" onclick="closeHamburger();openRegistrationModal()">
-      <span class="nav-item-icon">⭐</span>
+      <span class="nav-item-icon">★</span>
       <div class="nav-item-text">
         <span class="nav-item-label" style="color:var(--gold)">Upgradovat na Pro</span>
         <span class="nav-item-sub" style="color:var(--gold)">Neomezené doložky · Prioritní podpora</span>

@@ -27,11 +27,11 @@
   --ink-mid:#3d4f6a;
   --ink-lt: #6b7d96;
   --ink-fnt:#9babbe;
-  --paper:  #ffffff;
-  --paper-w:#f4f6f9;
+  --paper:  #f9f8f5;
+  --paper-w:#ffffff;
   --rule:   #e8eaed;
-  --gold:   #9a6e10;
-  --gold-h: #7d5808;
+  --gold:   #8B6014;
+  --gold-h: #6d4a0f;
   --gold-p: #fdf8ec;
   --white:  #ffffff;
   --serif:  'Cormorant Garamond', Georgia, serif;
@@ -43,7 +43,7 @@
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 15px; -webkit-font-smoothing: antialiased; }
-body { font-family: var(--sans); background: var(--paper-w); color: var(--ink); line-height: 1.6; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.6; }
 
 /* ── HEADER ── */
 .app-header {
@@ -60,8 +60,10 @@ body { font-family: var(--sans); background: var(--paper-w); color: var(--ink); 
 .app-logo-mark {
   width: 32px; height: 32px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
+  background: var(--paper-w);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
 }
-.app-logo-mark img { width: 30px; height: 30px; display: block; }
 .app-wordmark { font-family: var(--serif); font-size: 22px; font-weight: 700; color: var(--navy); letter-spacing: -.3px; line-height: 1; }
 .app-tagline { font-size: 11px; color: var(--ink-lt); margin-top: 2px; letter-spacing: .2px; }
 
@@ -98,7 +100,7 @@ body { font-family: var(--sans); background: var(--paper-w); color: var(--ink); 
 
 /* ── CARD ── */
 .card {
-  background: #ffffff; border: 1px solid var(--rule);
+  background: var(--paper-w); border: 1px solid var(--rule);
   border-radius: 12px; padding: 24px; margin-bottom: 16px;
   box-shadow: 0 1px 3px rgba(11,25,41,0.06), 0 2px 8px rgba(11,25,41,0.04);
 }
@@ -117,7 +119,7 @@ body { font-family: var(--sans); background: var(--paper-w); color: var(--ink); 
 .form-input {
   width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #e8eaed;
   font-family: var(--sans); font-size: 13px; color: var(--ink);
-  background: #ffffff; transition: border-color .14s, box-shadow .14s; outline: none;
+  background: var(--paper-w); transition: border-color .14s, box-shadow .14s; outline: none;
   min-width: 0;
 }
 .form-input:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(11,25,41,.06); }
@@ -448,7 +450,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 /* ── SPLIT BUTTON ── */
 .split-btn-wrap {
   position: relative; display: flex; align-items: stretch; width: 100%;
-  border-radius: var(--r); box-shadow: 0 2px 10px rgba(154,110,16,.3);
+  border-radius: var(--r); box-shadow: 0 2px 12px rgba(139,96,20,0.25);
 }
 .split-btn-main {
   display: inline-flex; align-items: center; gap: 8px; flex: 1;
@@ -502,7 +504,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   .flow-sep {
     display: flex; align-items: center; gap: 10px;
     margin: 0 0 8px; padding: 8px 0 0;
-    color: var(--ink-fnt); font-size: 11px;
+    color: var(--ink-fnt); font-size: 12px;
   }
   .flow-sep::before, .flow-sep::after {
     content: ''; flex: 1; height: 1px; background: var(--rule);
@@ -544,25 +546,25 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   width: 22px; height: 22px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; font-weight: 700;
-  border: 2px solid var(--rule); color: var(--ink-fnt);
-  background: #fff; transition: all .2s; line-height: 1;
+  border: 1.5px solid var(--rule); color: var(--ink-fnt);
+  background: transparent; transition: all .2s; line-height: 1;
 }
 .fp-label {
-  font-size: 9px; font-weight: 600; letter-spacing: .3px;
-  color: var(--ink-fnt); text-transform: uppercase;
+  font-size: 11px; font-weight: 600; letter-spacing: 0;
+  color: var(--ink-fnt); text-transform: none;
   white-space: nowrap; transition: color .2s;
 }
 .fp-line {
   flex: 1; height: 2px; background: var(--rule);
   margin: 10px 4px 0; min-width: 24px; transition: background .2s;
 }
-.fp-step.active .fp-dot { border-color: var(--gold); background: var(--gold-p); color: var(--gold); }
+.fp-step.active .fp-dot { border-color: var(--gold); background: var(--gold); color: var(--white); }
 .fp-step.active .fp-label { color: var(--gold); }
-.fp-step.done .fp-dot { border-color: #16a34a; background: #f0fdf4; color: #16a34a; }
-.fp-step.done .fp-label { color: #16a34a; }
+.fp-step.done .fp-dot { border-color: var(--gold); background: var(--gold); color: var(--white); }
+.fp-step.done .fp-label { color: var(--gold); }
 .fp-step.done .fp-dot .fp-num { display: none; }
 .fp-step.done .fp-dot::after { content: '✓'; font-size: 12px; }
-.fp-step.done + .fp-line { background: #86efac; }
+.fp-step.done + .fp-line { background: var(--gold); }
 
 /* ── HEADER CFG BUTTON ── */
 .btn-cfg {
@@ -1072,7 +1074,15 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 <header class="app-header">
   <div class="app-header-i">
     <div class="app-logo-mark">
-      <img src="/icons/icon.svg" alt="Advokátní Doložka">
+      <svg width="20" height="20" viewBox="0 0 64 64" fill="none">
+        <rect x="2" y="10" width="60" height="38" rx="7" fill="none" stroke="var(--navy)" stroke-width="3"/>
+        <rect x="8" y="16" width="16" height="16" rx="3" fill="var(--navy)" opacity="0.15"/>
+        <circle cx="16" cy="22" r="4" fill="var(--navy)" opacity="0.4"/>
+        <rect x="30" y="18" width="26" height="4" rx="2" fill="var(--navy)" opacity="0.6"/>
+        <rect x="30" y="26" width="18" height="3" rx="1.5" fill="var(--navy)" opacity="0.35"/>
+        <circle cx="50" cy="46" r="12" fill="#8B6014"/>
+        <path d="M44 46 L49 51 L57 40" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </div>
     <div>
       <div class="app-wordmark">Doložka</div>

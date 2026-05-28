@@ -827,6 +827,113 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .btn-upgrade-dismiss:hover { color: var(--navy); }
 
+/* ── CENÍK MODAL ── */
+.cenik-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 220;
+  align-items: flex-start; justify-content: center;
+  padding: 24px 16px; overflow-y: auto;
+}
+.cenik-overlay.open { display: flex; }
+.cenik-modal {
+  background: var(--white); border-radius: var(--rl); box-shadow: var(--sh-lg);
+  width: 100%; max-width: 720px; padding: 36px 32px 28px; position: relative; margin: auto;
+}
+@media (max-width: 600px) { .cenik-modal { padding: 24px 14px 20px; } }
+.btn-cenik-close {
+  position: absolute; top: 14px; right: 16px;
+  background: none; border: none; cursor: pointer; color: var(--ink-lt);
+  font-size: 22px; line-height: 1; padding: 2px 8px; border-radius: var(--r);
+}
+.btn-cenik-close:hover { color: var(--navy); background: var(--paper); }
+.cenik-title {
+  font-family: var(--serif); font-size: 26px; font-weight: 700; color: var(--navy);
+  text-align: center; margin-bottom: 6px;
+}
+.cenik-subtitle { font-size: 13px; color: var(--ink-lt); text-align: center; margin-bottom: 18px; line-height: 1.6; }
+.cenik-path {
+  background: var(--gold-p); border: 1px solid rgba(139,96,20,.2); border-radius: var(--r);
+  padding: 10px 16px; font-size: 12px; color: var(--gold-h); line-height: 1.7;
+  margin-bottom: 28px; text-align: center;
+}
+.cenik-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+@media (max-width: 600px) { .cenik-cards { grid-template-columns: 1fr; } }
+.cenik-card {
+  border: 1.5px solid var(--rule); border-radius: var(--rl); padding: 22px 14px 16px;
+  display: flex; flex-direction: column; position: relative; background: var(--white);
+}
+.cenik-card--featured { border-color: var(--gold); border-width: 2px; box-shadow: 0 4px 20px rgba(139,96,20,.13); }
+.cenik-badge {
+  position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+  background: var(--gold); color: #fff; font-size: 9px; font-weight: 700;
+  letter-spacing: .5px; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+}
+.cenik-plan-name {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--ink-fnt); margin-bottom: 8px;
+}
+.cenik-price { font-family: var(--serif); font-size: 30px; font-weight: 700; color: var(--navy); line-height: 1; margin-bottom: 2px; }
+.cenik-price span { font-size: 13px; font-weight: 400; color: var(--ink-lt); font-family: var(--sans); }
+.cenik-price-sub { font-size: 11px; color: var(--ink-lt); margin-bottom: 14px; min-height: 16px; }
+.cenik-price-sub strong { color: var(--gold-h); }
+.cenik-features { list-style: none; display: flex; flex-direction: column; gap: 6px; flex: 1; margin-bottom: 16px; font-size: 12px; color: var(--ink-mid); }
+.cenik-features li::before { content: '✓ '; color: var(--gold); font-weight: 700; }
+.cenik-features li.muted { color: var(--ink-fnt); }
+.cenik-features li.muted::before { content: '– '; color: var(--ink-fnt); }
+.btn-cenik-select {
+  display: block; width: 100%; padding: 10px; border-radius: var(--r);
+  font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 1.5px solid var(--navy); background: transparent; color: var(--navy); transition: all .14s;
+}
+.btn-cenik-select:hover { background: var(--navy); color: #fff; }
+.cenik-card--featured .btn-cenik-select { background: var(--gold); color: #fff; border-color: var(--gold); }
+.cenik-card--featured .btn-cenik-select:hover { background: var(--gold-h); border-color: var(--gold-h); }
+.cenik-compare { margin-bottom: 22px; }
+.cenik-section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--ink-fnt); margin-bottom: 10px;
+}
+.cenik-compare-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cenik-compare-table th {
+  text-align: left; padding: 6px 8px; border-bottom: 1.5px solid var(--rule);
+  font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-fnt);
+}
+.cenik-compare-table th:not(:first-child) { text-align: center; }
+.cenik-compare-table td { padding: 8px 8px; border-bottom: 1px solid var(--rule); color: var(--ink-mid); }
+.cenik-compare-table td:not(:first-child) { text-align: center; }
+.cenik-compare-table tr:last-child td { border-bottom: none; }
+.cenik-ck { color: var(--gold); font-weight: 700; font-size: 14px; }
+.cenik-no { color: var(--ink-fnt); }
+.cenik-faq { border-top: 1px solid var(--rule); padding-top: 20px; margin-bottom: 4px; }
+.cenik-faq-item { margin-bottom: 14px; }
+.cenik-faq-q { font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 3px; }
+.cenik-faq-a { font-size: 12px; color: var(--ink-mid); line-height: 1.65; }
+.cenik-disclaimer { font-size: 11px; color: var(--ink-fnt); text-align: center; margin-top: 12px; line-height: 1.5; }
+/* ── UPGRADE MODAL — mini plány ── */
+.upgrade-plan-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.upgrade-plan-card {
+  border: 1.5px solid var(--rule); border-radius: var(--r); padding: 14px 10px 12px;
+  display: flex; flex-direction: column; align-items: center; text-align: center; position: relative;
+}
+.upgrade-plan-card--featured { border-color: var(--gold); border-width: 2px; }
+.upgrade-plan-badge {
+  position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+  background: var(--gold); color: #fff; font-size: 9px; font-weight: 700;
+  padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+}
+.upgrade-plan-name { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-fnt); margin-bottom: 4px; }
+.upgrade-plan-price { font-family: var(--serif); font-size: 22px; font-weight: 700; color: var(--navy); line-height: 1; }
+.upgrade-plan-price span { font-size: 11px; font-family: var(--sans); font-weight: 400; color: var(--ink-lt); }
+.upgrade-plan-sub { font-size: 10px; color: var(--ink-lt); margin-bottom: 10px; min-height: 14px; }
+.upgrade-plan-sub strong { color: var(--gold-h); }
+.btn-upgrade-plan {
+  display: block; width: 100%; padding: 8px 6px; border-radius: var(--r);
+  font-family: var(--sans); font-size: 12px; font-weight: 600; cursor: pointer;
+  border: 1.5px solid var(--navy); background: transparent; color: var(--navy); transition: all .14s;
+}
+.btn-upgrade-plan:hover { background: var(--navy); color: #fff; }
+.upgrade-plan-card--featured .btn-upgrade-plan { background: var(--gold); color: #fff; border-color: var(--gold); }
+.upgrade-plan-card--featured .btn-upgrade-plan:hover { background: var(--gold-h); }
+
 /* ── LEGALID PANELS (Kniha / Klienti) ── */
 .lp-overlay {
   display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 200;
@@ -1274,6 +1381,13 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       </button>
     </div>
     <div class="nav-section nav-section-sep">
+      <button class="nav-item" onclick="closeHamburger();openCenikModal()">
+        <span class="nav-item-icon"><i class="ti ti-receipt"></i></span>
+        <div class="nav-item-text">
+          <span class="nav-item-label">Ceník</span>
+          <span class="nav-item-sub">Plány a funkce</span>
+        </div>
+      </button>
       <button class="nav-item" onclick="openCfgPanel()">
         <span class="nav-item-icon">&#x2699;&#xFE0E;</span>
         <div class="nav-item-text">
@@ -1287,7 +1401,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     <span class="nav-item-icon">★</span>
     <div class="nav-item-text">
       <span class="nav-item-label" style="color:var(--gold)">Upgradovat na Pro</span>
-      <span class="nav-item-sub" style="color:var(--gold)">Vyzkoušet zdarma 30 dní →</span>
+      <span class="nav-item-sub" style="color:var(--gold)">od 182 Kč/měs · 30 dní zdarma →</span>
     </div>
   </button>
   <div class="nav-footer">
@@ -1360,9 +1474,129 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     <div class="upgrade-modal-icon">⭐</div>
     <div class="upgrade-modal-title">Přejděte na Pro</div>
     <div class="upgrade-modal-body" id="upgradeModalMsg"></div>
-    <button class="btn-upgrade-pro" id="upgradeProBtn" onclick="closeUpgradeModal()">Upgradovat na Pro →</button>
+    <div id="upgradeProOptions">
+      <div class="upgrade-plan-row">
+        <div class="upgrade-plan-card">
+          <div class="upgrade-plan-name">Pro měsíční</div>
+          <div class="upgrade-plan-price">220 <span>Kč/měs</span></div>
+          <div class="upgrade-plan-sub">zrušíte kdykoli</div>
+          <button class="btn-upgrade-plan" onclick="selectPlan('monthly')">Vybrat měsíční</button>
+        </div>
+        <div class="upgrade-plan-card upgrade-plan-card--featured">
+          <div class="upgrade-plan-badge">Doporučeno</div>
+          <div class="upgrade-plan-name">Pro roční</div>
+          <div class="upgrade-plan-price">2 190 <span>Kč/rok</span></div>
+          <div class="upgrade-plan-sub"><strong>182 Kč/měs</strong> · 2 měsíce zdarma</div>
+          <button class="btn-upgrade-plan" onclick="selectPlan('annual')">Vybrat roční</button>
+        </div>
+      </div>
+      <div style="text-align:center;margin-bottom:4px;">
+        <button style="background:none;border:none;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--ink-lt);padding:2px;" onclick="closeUpgradeModal();openCenikModal()">Zobrazit celý ceník →</button>
+      </div>
+    </div>
     <button class="btn-upgrade-pro" id="upgradeLoginBtn" style="display:none" onclick="closeUpgradeModal();openRegistrationModal()">Přihlásit se / Registrovat →</button>
     <button class="btn-upgrade-dismiss" onclick="closeUpgradeModal()">Teď ne</button>
+  </div>
+</div>
+
+<!-- Ceník modal -->
+<div class="cenik-overlay" id="cenikOverlay" onclick="if(event.target===this)closeCenikModal()">
+  <div class="cenik-modal">
+    <button class="btn-cenik-close" onclick="closeCenikModal()" aria-label="Zavřít">×</button>
+    <div class="cenik-title">Ceník</div>
+    <div class="cenik-subtitle">Pro advokáty, kteří chtějí pracovat rychle a bez papírování.</div>
+    <div class="cenik-path">
+      <strong>Jak to funguje:</strong> 5 doložek zdarma bez registrace → po přihlášení 30 dní neomezeně → poté buď Pro, nebo 2 doložky měsíčně zdarma napořád. Žádná karta při registraci.
+    </div>
+
+    <div class="cenik-cards">
+      <!-- Zdarma -->
+      <div class="cenik-card">
+        <div class="cenik-plan-name">Zdarma</div>
+        <div class="cenik-price">0 <span>Kč/měs</span></div>
+        <div class="cenik-price-sub">navždy</div>
+        <ul class="cenik-features">
+          <li>5 doložek bez registrace</li>
+          <li>Po přihlášení 30 dní neomezeně</li>
+          <li>Poté 2 doložky / měsíc</li>
+          <li>Tisk a stažení .docx</li>
+          <li class="muted">Skenování pasů</li>
+          <li class="muted">Offline provoz</li>
+        </ul>
+        <button class="btn-cenik-select" onclick="closeCenikModal();openRegistrationModal()">Začít zdarma</button>
+      </div>
+
+      <!-- Pro měsíční -->
+      <div class="cenik-card">
+        <div class="cenik-plan-name">Pro měsíční</div>
+        <div class="cenik-price">220 <span>Kč/měs</span></div>
+        <div class="cenik-price-sub">zrušíte kdykoli</div>
+        <ul class="cenik-features">
+          <li>Neomezený počet doložek</li>
+          <li>Tisk a stažení .docx</li>
+          <li>Skenování pasů</li>
+          <li>Offline provoz</li>
+          <li>Faktura na IČO</li>
+        </ul>
+        <button class="btn-cenik-select" onclick="selectPlan('monthly')">Vybrat měsíční</button>
+      </div>
+
+      <!-- Pro roční -->
+      <div class="cenik-card cenik-card--featured">
+        <div class="cenik-badge">2 měsíce zdarma</div>
+        <div class="cenik-plan-name">Pro roční</div>
+        <div class="cenik-price">2 190 <span>Kč/rok</span></div>
+        <div class="cenik-price-sub"><strong>182 Kč/měs</strong> · ušetříte 450 Kč</div>
+        <ul class="cenik-features">
+          <li>Neomezený počet doložek</li>
+          <li>Tisk a stažení .docx</li>
+          <li>Skenování pasů</li>
+          <li>Offline provoz</li>
+          <li>Faktura na IČO</li>
+        </ul>
+        <button class="btn-cenik-select" onclick="selectPlan('annual')">Vybrat roční</button>
+      </div>
+    </div>
+
+    <div class="cenik-compare">
+      <div class="cenik-section-label">Srovnání funkcí</div>
+      <table class="cenik-compare-table">
+        <thead>
+          <tr>
+            <th>Funkce</th>
+            <th>Zdarma</th>
+            <th>Pro</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Doložky / měsíc</td><td>2 (po trialu)</td><td>Neomezeně</td></tr>
+          <tr><td>Tisk a stažení .docx</td><td><span class="cenik-ck">✓</span></td><td><span class="cenik-ck">✓</span></td></tr>
+          <tr><td>Kniha prohlášení</td><td><span class="cenik-ck">✓</span></td><td><span class="cenik-ck">✓</span></td></tr>
+          <tr><td>Evidence klientů</td><td><span class="cenik-ck">✓</span></td><td><span class="cenik-ck">✓</span></td></tr>
+          <tr><td>Skenování pasů</td><td><span class="cenik-no">–</span></td><td><span class="cenik-ck">✓</span></td></tr>
+          <tr><td>Offline provoz</td><td><span class="cenik-no">–</span></td><td><span class="cenik-ck">✓</span></td></tr>
+          <tr><td>Faktura na IČO</td><td><span class="cenik-no">–</span></td><td><span class="cenik-ck">✓</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cenik-faq">
+      <div class="cenik-section-label">Časté otázky</div>
+      <div class="cenik-faq-item">
+        <div class="cenik-faq-q">Co se stane po 30 dnech trialu?</div>
+        <div class="cenik-faq-a">Přejdete automaticky na bezplatný plán s limitem 2 doložky měsíčně. Nic se neúčtuje, kartu při registraci nevyžadujeme.</div>
+      </div>
+      <div class="cenik-faq-item">
+        <div class="cenik-faq-q">Můžu předplatné zrušit?</div>
+        <div class="cenik-faq-a">Ano, kdykoliv bez podmínek. U měsíčního plánu stačí nezobnovit, u ročního zrušíte v nastavení účtu. Žádné skryté poplatky za zrušení.</div>
+      </div>
+      <div class="cenik-faq-item">
+        <div class="cenik-faq-q">Jak se platí?</div>
+        <div class="cenik-faq-a">Platba platební kartou online. Na vyžádání vystavíme fakturu na IČO. Platby jsou zabezpečeny přes Stripe.</div>
+      </div>
+    </div>
+
+    <div class="cenik-disclaimer">Bez závazků · Zrušíte kdykoli · Žádné skryté podmínky</div>
   </div>
 </div>
 
@@ -4165,12 +4399,26 @@ function renderKlientiList() {
   </div>`).join('');
 }
 
+function openCenikModal() {
+  document.getElementById('cenikOverlay').classList.add('open');
+}
+function closeCenikModal() {
+  document.getElementById('cenikOverlay').classList.remove('open');
+}
+function selectPlan(type) {
+  closeCenikModal();
+  closeUpgradeModal();
+  // type: 'monthly' | 'annual'
+  // TODO: if logged in → fetch('/api/checkout?plan=' + type, { method:'POST', credentials:'include' })
+  openRegistrationModal();
+}
+
 function showUpgradeModal(msg, showLogin) {
   document.getElementById('upgradeModalMsg').textContent = msg;
-  const proBtn = document.getElementById('upgradeProBtn');
-  const loginBtn = document.getElementById('upgradeLoginBtn');
-  if (proBtn)   proBtn.style.display   = showLogin ? 'none' : '';
-  if (loginBtn) loginBtn.style.display = showLogin ? '' : 'none';
+  const proOptions = document.getElementById('upgradeProOptions');
+  const loginBtn   = document.getElementById('upgradeLoginBtn');
+  if (proOptions) proOptions.style.display = showLogin ? 'none' : '';
+  if (loginBtn)   loginBtn.style.display   = showLogin ? '' : 'none';
   document.getElementById('upgradeOverlay').classList.add('open');
 }
 function closeUpgradeModal() {

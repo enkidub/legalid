@@ -1,4 +1,4 @@
-const CACHE = 'legalid-v12';
+const CACHE = 'legalid-v13'; // ← BUMP při každém deployi
 
 const APP_SHELL = [
   '/',
@@ -14,7 +14,11 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE).then(cache => cache.addAll(APP_SHELL))
   );
-  self.skipWaiting();
+  // Nevolá skipWaiting — čeká na souhlas uživatele přes message
+});
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {

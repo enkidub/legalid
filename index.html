@@ -236,6 +236,25 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 #installBanner .ib-close { background: transparent; color: rgba(255,255,255,.5); padding: 4px 8px; font-size: 18px; line-height: 1; }
 
+/* ── UPDATE BAR ── */
+#updateBar {
+  display: none; background: var(--navy-h); color: #fff;
+  padding: 10px var(--pad); align-items: center; justify-content: space-between; gap: 12px;
+  font-size: 13px;
+}
+#updateBar.show { display: flex; }
+#updateBar .ub-btn {
+  background: var(--gold); color: #fff; border: none;
+  padding: 6px 14px; border-radius: var(--r);
+  font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+  font-family: var(--sans); transition: background .14s;
+}
+#updateBar .ub-btn:hover { background: var(--gold-h); }
+#updateBar .ub-dismiss {
+  background: transparent; color: rgba(255,255,255,.5); border: none;
+  font-size: 20px; line-height: 1; cursor: pointer; padding: 0; flex-shrink: 0;
+}
+
 /* ── MOBILE ── */
 @media (max-width: 600px) {
   .app-tagline { display: none; }
@@ -1358,6 +1377,12 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   </div>
 </div>
 
+<div id="updateBar">
+  <span>💡 Nová verze aplikace je připravena.</span>
+  <button class="ub-btn" onclick="applyUpdate()">Obnovit</button>
+  <button class="ub-dismiss" onclick="document.getElementById('updateBar').classList.remove('show')" aria-label="Zavřít">×</button>
+</div>
+
 <header class="app-header">
   <div class="app-header-i">
     <div class="app-logo-mark">
@@ -2195,8 +2220,46 @@ function dismissInstallBanner() {
 })();
 
 // ── Service worker registration ────────────────────────────────────
+let _waitingSW = null;
+
+function applyUpdate() {
+  const target = _waitingSW || navigator.serviceWorker.controller;
+  if (target) {
+    target.postMessage({ type: 'SKIP_WAITING' });
+    navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), { once: true });
+  } else {
+    location.reload();
+  }
+}
+
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+
+      const showBar = (sw) => {
+        _waitingSW = sw;
+        document.getElementById('updateBar').classList.add('show');
+      };
+
+      // Nový SW právě stahován
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            showBar(newSW);
+          }
+        });
+      });
+
+      // SW čeká od předchozí návštěvy (druhá záložka, obnovení stránky)
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        showBar(reg.waiting);
+      }
+    } catch (e) {
+      console.warn('SW registration failed:', e);
+    }
+  });
 }
 
 // ── Init ──────────────────────────────────────────────────────────

@@ -75,15 +75,16 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); li
   .main-cols { grid-template-columns: 1fr; row-gap: 0; }
   .main-cols > div { display: contents; }
   .sticky-download        { order: 1; }
-  .card-foto              { order: 2; }
-  .flow-sep-manual        { order: 3; }
-  .stitek-preview-section { order: 4; }
-  .card-op                { order: 5; }
-  .card-dolozka-data      { order: 6; }
-  .card-nahled            { order: 7; }
-  .advokat-sep            { order: 8; }
-  .card-advokat           { order: 9; }
-  .gdpr-notice            { order: 10; }
+  .flow-progress          { order: 2; }
+  .card-foto              { order: 3; }
+  .flow-sep-manual        { order: 4; }
+  .stitek-preview-section { order: 5; }
+  .card-op                { order: 6; }
+  .card-dolozka-data      { order: 7; }
+  .card-nahled            { order: 8; }
+  .advokat-sep            { order: 9; }
+  .card-advokat           { order: 10; }
+  .gdpr-notice            { order: 11; }
 }
 #advokatBody {
   max-height: 0; overflow: hidden;
@@ -291,6 +292,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   font-family: var(--sans); transition: color .14s;
 }
 .btn-nove-overeni:hover { color: var(--navy); }
+@media (max-width: 800px) { .btn-nove-overeni { display: none; } }
 
 /* safe area for notched phones */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
@@ -1364,22 +1366,6 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       <!-- RIGHT -->
       <div>
         <div class="sticky-download">
-          <div class="flow-progress" id="flowProgress">
-            <div class="fp-step active" id="fp1">
-              <div class="fp-dot"><span class="fp-num">1</span></div>
-              <div class="fp-label">Doklad</div>
-            </div>
-            <div class="fp-line"></div>
-            <div class="fp-step future" id="fp2">
-              <div class="fp-dot"><span class="fp-num">2</span></div>
-              <div class="fp-label">Údaje</div>
-            </div>
-            <div class="fp-line"></div>
-            <div class="fp-step future" id="fp3">
-              <div class="fp-dot"><span class="fp-num">3</span></div>
-              <div class="fp-label">Tisk</div>
-            </div>
-          </div>
           <div class="validation-errors" id="validationErrors">
             Před tiskem zkontrolujte vyplnění označených polí.
           </div>
@@ -1418,6 +1404,23 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
             <div class="format-panel-footer">
               <button class="btn-panel-close" onclick="closeFormatPanel()" aria-label="Zavřít panel výběru formátu">Zavřít</button>
             </div>
+          </div>
+        </div>
+
+        <div class="flow-progress" id="flowProgress">
+          <div class="fp-step active" id="fp1">
+            <div class="fp-dot"><span class="fp-num">1</span></div>
+            <div class="fp-label">Doklad</div>
+          </div>
+          <div class="fp-line"></div>
+          <div class="fp-step future" id="fp2">
+            <div class="fp-dot"><span class="fp-num">2</span></div>
+            <div class="fp-label">Údaje</div>
+          </div>
+          <div class="fp-line"></div>
+          <div class="fp-step future" id="fp3">
+            <div class="fp-dot"><span class="fp-num">3</span></div>
+            <div class="fp-label">Tisk</div>
           </div>
         </div>
 

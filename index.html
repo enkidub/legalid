@@ -1360,7 +1360,8 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     <div class="upgrade-modal-icon">⭐</div>
     <div class="upgrade-modal-title">Přejděte na Pro</div>
     <div class="upgrade-modal-body" id="upgradeModalMsg"></div>
-    <button class="btn-upgrade-pro" onclick="closeUpgradeModal()">Upgradovat na Pro →</button>
+    <button class="btn-upgrade-pro" id="upgradeProBtn" onclick="closeUpgradeModal()">Upgradovat na Pro →</button>
+    <button class="btn-upgrade-pro" id="upgradeLoginBtn" style="display:none" onclick="closeUpgradeModal();openRegistrationModal()">Přihlásit se / Registrovat →</button>
     <button class="btn-upgrade-dismiss" onclick="closeUpgradeModal()">Teď ne</button>
   </div>
 </div>
@@ -4164,8 +4165,12 @@ function renderKlientiList() {
   </div>`).join('');
 }
 
-function showUpgradeModal(msg) {
+function showUpgradeModal(msg, showLogin) {
   document.getElementById('upgradeModalMsg').textContent = msg;
+  const proBtn = document.getElementById('upgradeProBtn');
+  const loginBtn = document.getElementById('upgradeLoginBtn');
+  if (proBtn)   proBtn.style.display   = showLogin ? 'none' : '';
+  if (loginBtn) loginBtn.style.display = showLogin ? '' : 'none';
   document.getElementById('upgradeOverlay').classList.add('open');
 }
 function closeUpgradeModal() {
@@ -4179,14 +4184,22 @@ async function trackUsage() {
       credentials: 'include',
     });
     const data = await r.json();
+
+    if (data.anonymous) {
+      const FREE_KEY = 'legalid_free_count';
+      const count = parseInt(localStorage.getItem(FREE_KEY) || '0', 10);
+      if (count >= 5) {
+        showUpgradeModal('Vyčerpali jste 5 doložek zdarma. Zaregistrujte se a získejte 30 dní neomezeně zdarma.', true);
+        return false;
+      }
+      localStorage.setItem(FREE_KEY, count + 1);
+      return true;
+    }
+
     if (data.allowed) return true;
-    if (data.reason === 'login_required') { openRegistrationModal(); return false; }
+
     if (data.reason === 'limit') {
       showUpgradeModal('Dosáhli jste limitu 2 doložek tento měsíc. Upgradujte na Pro pro neomezené použití.');
-      return false;
-    }
-    if (data.reason === 'trial_expired') {
-      showUpgradeModal('Váš 30denní trial skončil. Upgradujte na Pro.');
       return false;
     }
     return false;

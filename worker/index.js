@@ -265,9 +265,10 @@ export default {
 
       const sessionToken = getSessionToken(request);
       const payload = sessionToken ? await verifyJWT(sessionToken, env.JWT_SECRET) : null;
+
       if (!payload) {
-        return new Response(JSON.stringify({ allowed: false, reason: 'login_required' }), {
-          status: 401,
+        return new Response(JSON.stringify({ allowed: true, anonymous: true }), {
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -283,20 +284,14 @@ export default {
         });
       }
 
-      if (user.plan === 'trial') {
-        if (new Date(user.trial_ends_at) > new Date()) {
-          return new Response(JSON.stringify({ allowed: true }), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        return new Response(JSON.stringify({ allowed: false, reason: 'trial_expired' }), {
+      if (user.plan === 'trial' && new Date(user.trial_ends_at) > new Date()) {
+        return new Response(JSON.stringify({ allowed: true }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      // free — měsíční limit
+      // free + vypršelý trial — měsíční limit 2
       const currentMonth = new Date().toISOString().slice(0, 7);
       let used = user.dolozky_month !== currentMonth ? 0 : (user.dolozky_this_month || 0);
 
@@ -312,7 +307,7 @@ export default {
         'UPDATE users SET dolozky_this_month = ?, dolozky_month = ? WHERE id = ?'
       ).bind(used, currentMonth, user.id).run();
 
-      return new Response(JSON.stringify({ allowed: true, used }), {
+      return new Response(JSON.stringify({ allowed: true, used, plan: 'free' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

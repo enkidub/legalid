@@ -1679,9 +1679,6 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
             </button>
             <button class="split-btn-arrow" onclick="toggleSplitMenu(event)" aria-label="Více možností" aria-haspopup="true">▾</button>
             <div class="split-dropdown" id="splitDropdown" role="menu">
-              <button class="split-drop-item" role="menuitem" onclick="openDolozkaPreview();closeSplitMenu()">
-                🖨 Advokátní Doložka (A4)
-              </button>
               <button class="split-drop-item" role="menuitem" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)));closeSplitMenu()">
                 📄 Stáhnout .docx
               </button>

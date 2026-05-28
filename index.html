@@ -2821,6 +2821,19 @@ async function submitRegEmail() {
   }
 }
 
+function _closeAllSidePanels() {
+  [['cfgPanel','cfgOverlay'],['knihaPanel','knihaOverlay'],['klientiPanel','klientiOverlay']]
+    .forEach(([pid, oid]) => {
+      const p = document.getElementById(pid);
+      const o = document.getElementById(oid);
+      if (p) p.classList.remove('open', 'from-menu');
+      if (o) o.classList.remove('open');
+    });
+  const nav = document.getElementById('navPanel');
+  if (nav) { nav.classList.remove('sliding-left'); nav.style.transform = ''; nav.style.transition = ''; }
+  diagramActive = null;
+}
+
 function _openPanelFromMenu(panel, overlay) {
   const nav = document.getElementById('navPanel');
   nav.classList.add('sliding-left');
@@ -2846,6 +2859,7 @@ function _closePanelToMenu(panel, overlay) {
 }
 
 function openCfgPanel(section) {
+  _closeAllSidePanels();
   syncCfgFromAdvokat();
   syncDolozkaInputs();
   const s = getSettings();
@@ -3858,6 +3872,7 @@ function autoSaveRecord() {
 
 // ── KNIHA PROHLÁŠENÍ ──────────────────────────────────────────────
 function openKnihaPanel() {
+  _closeAllSidePanels();
   renderKnihaList();
   const panel = document.getElementById('knihaPanel');
   const overlay = document.getElementById('knihaOverlay');
@@ -4008,6 +4023,7 @@ function renderKnihaList() {
 
 // ── KLIENTI ───────────────────────────────────────────────────────
 function openKlientiPanel() {
+  _closeAllSidePanels();
   renderKlientiList();
   const panel = document.getElementById('klientiPanel');
   const overlay = document.getElementById('klientiOverlay');
@@ -4198,9 +4214,8 @@ async function checkSession() {
         navItem.querySelector('.nav-item-sub').textContent   = 'Odhlásit se';
         navItem.onclick = () => { closeHamburger(); handleLogout(); };
       }
-      const loggedNotice = 'Záznamy jsou uloženy ve vašem účtu.';
-      if (knihaNotice)   knihaNotice.textContent   = loggedNotice;
-      if (klientiNotice) klientiNotice.textContent = loggedNotice;
+      if (knihaNotice)   { knihaNotice.textContent = 'Záznamy jsou uloženy ve vašem účtu.'; knihaNotice.style.display = ''; }
+      if (klientiNotice) { klientiNotice.textContent = 'Záznamy jsou uloženy ve vašem účtu.'; klientiNotice.style.display = ''; }
     } else {
       if (loginBtn)  loginBtn.style.display  = '';
       if (emailEl)   emailEl.style.display   = 'none';
@@ -4210,13 +4225,8 @@ async function checkSession() {
         navItem.querySelector('.nav-item-sub').textContent   = 'Vyzkoušet zdarma 30 dní →';
         navItem.onclick = () => { closeHamburger(); openRegistrationModal(); };
       }
-      const guestNotice = html =>
-        Object.assign(document.createElement('span'), { innerHTML: html });
-      const nudge = `Bez přihlášení záznamy zmizí, když smažete data prohlížeče. ` +
-        `<a href="#" style="color:var(--gold);font-weight:500;white-space:nowrap;" ` +
-        `onclick="event.preventDefault();openRegistrationModal()">Přihlásit se zdarma →</a>`;
-      if (knihaNotice)   knihaNotice.innerHTML   = nudge;
-      if (klientiNotice) klientiNotice.innerHTML = nudge;
+      if (knihaNotice)   knihaNotice.style.display = 'none';
+      if (klientiNotice) klientiNotice.style.display = 'none';
     }
   } catch {}
 }

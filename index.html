@@ -91,6 +91,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); li
   transition: max-height 0.25s ease;
 }
 #advokatBody.open { max-height: 700px; }
+.card-nahled { display: none; }
 
 .sec-label {
   font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
@@ -297,6 +298,24 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 /* safe area for notched phones */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   body { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* ── MOBILE OPRAVY ── */
+@media (max-width: 800px) {
+  .split-dropdown {
+    top: auto;
+    bottom: calc(100% + 6px);
+  }
+}
+@media (max-width: 380px) {
+  #headerUserEmail, #headerLogoutBtn { display: none !important; }
+  #headerLoginBtn { padding: 5px 8px; font-size: 11px; }
+}
+@media (max-width: 400px) {
+  .cenik-modal { padding: 20px 10px 16px; }
+}
+@media (max-width: 380px) {
+  .upgrade-plan-row { grid-template-columns: 1fr; }
 }
 
 /* ── PRINT BUTTON ── */
@@ -1665,6 +1684,12 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
               </button>
               <button class="split-drop-item" role="menuitem" onclick="downloadDocx().catch(e=>showToast('Chyba: '+(e?.message||e)));closeSplitMenu()">
                 📄 Stáhnout .docx
+              </button>
+              <button class="split-drop-item" role="menuitem" onclick="printDolozka();closeSplitMenu()">
+                🖨 <span style="display:flex;flex-direction:column;gap:1px;">
+                  <span>Stáhnout PDF</span>
+                  <span style="font-size:11px;color:var(--ink-lt);font-weight:400;">Otevře tiskový dialog — zvolte „Uložit jako PDF"</span>
+                </span>
               </button>
             </div>
           </div>

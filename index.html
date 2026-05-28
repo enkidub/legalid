@@ -874,8 +874,8 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   padding: 10px 16px; font-size: 12px; color: var(--gold-h); line-height: 1.7;
   margin-bottom: 28px; text-align: center;
 }
-.cenik-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
-@media (max-width: 600px) { .cenik-cards { grid-template-columns: 1fr; } }
+.cenik-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+@media (max-width: 360px) { .cenik-cards { grid-template-columns: 1fr; } }
 .cenik-card {
   border: 1.5px solid var(--rule); border-radius: var(--rl); padding: 22px 14px 16px;
   display: flex; flex-direction: column; position: relative; background: var(--white);
@@ -898,6 +898,18 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .cenik-features li::before { content: '✓ '; color: var(--gold); font-weight: 700; }
 .cenik-features li.muted { color: var(--ink-fnt); }
 .cenik-features li.muted::before { content: '– '; color: var(--ink-fnt); }
+.cenik-features-compact { font-size: 12px; color: var(--ink-mid); line-height: 1.7; margin-bottom: 16px; flex: 1; }
+.cenik-faq-item { border-bottom: 1px solid var(--rule); }
+.cenik-faq-item:last-child { border-bottom: none; }
+.cenik-faq-q {
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer; padding: 10px 0; user-select: none;
+  font-size: 13px; font-weight: 600; color: var(--navy); gap: 8px;
+}
+.cenik-faq-q::after { content: '+'; color: var(--ink-lt); font-size: 18px; line-height: 1; flex-shrink: 0; transition: transform .15s; }
+.cenik-faq-item.open .cenik-faq-q::after { content: '–'; }
+.cenik-faq-a { display: none; padding-bottom: 12px; font-size: 12px; color: var(--ink-mid); line-height: 1.65; }
+.cenik-faq-item.open .cenik-faq-a { display: block; }
 .btn-cenik-select {
   display: block; width: 100%; padding: 10px; border-radius: var(--r);
   font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer;
@@ -1529,34 +1541,12 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     </div>
 
     <div class="cenik-cards">
-      <!-- Zdarma -->
-      <div class="cenik-card">
-        <div class="cenik-plan-name">Zdarma</div>
-        <div class="cenik-price">0 <span>Kč/měs</span></div>
-        <div class="cenik-price-sub">navždy</div>
-        <ul class="cenik-features">
-          <li>5 doložek bez registrace</li>
-          <li>Po přihlášení 30 dní neomezeně</li>
-          <li>Poté 2 doložky / měsíc</li>
-          <li>Tisk a stažení .docx</li>
-          <li class="muted">Skenování pasů</li>
-          <li class="muted">Offline provoz</li>
-        </ul>
-        <button class="btn-cenik-select" onclick="closeCenikModal();openRegistrationModal()">Začít zdarma</button>
-      </div>
-
       <!-- Pro měsíční -->
       <div class="cenik-card">
         <div class="cenik-plan-name">Pro měsíční</div>
         <div class="cenik-price">220 <span>Kč/měs</span></div>
         <div class="cenik-price-sub">zrušíte kdykoli</div>
-        <ul class="cenik-features">
-          <li>Neomezený počet doložek</li>
-          <li>Tisk a stažení .docx</li>
-          <li>Skenování pasů</li>
-          <li>Offline provoz</li>
-          <li>Faktura na IČO</li>
-        </ul>
+        <div class="cenik-features-compact">Neomezené doložky · skenování pasů · offline provoz · faktura na IČO</div>
         <button class="btn-cenik-select" onclick="selectPlan('monthly')">Vybrat měsíční</button>
       </div>
 
@@ -1566,51 +1556,23 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
         <div class="cenik-plan-name">Pro roční</div>
         <div class="cenik-price">2 190 <span>Kč/rok</span></div>
         <div class="cenik-price-sub"><strong>182 Kč/měs</strong> · ušetříte 450 Kč</div>
-        <ul class="cenik-features">
-          <li>Neomezený počet doložek</li>
-          <li>Tisk a stažení .docx</li>
-          <li>Skenování pasů</li>
-          <li>Offline provoz</li>
-          <li>Faktura na IČO</li>
-        </ul>
+        <div class="cenik-features-compact">Neomezené doložky · skenování pasů · offline provoz · faktura na IČO</div>
         <button class="btn-cenik-select" onclick="selectPlan('annual')">Vybrat roční</button>
       </div>
-    </div>
-
-    <div class="cenik-compare">
-      <div class="cenik-section-label">Srovnání funkcí</div>
-      <table class="cenik-compare-table">
-        <thead>
-          <tr>
-            <th>Funkce</th>
-            <th>Zdarma</th>
-            <th>Pro</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>Doložky / měsíc</td><td>2 (po trialu)</td><td>Neomezeně</td></tr>
-          <tr><td>Tisk a stažení .docx</td><td><span class="cenik-ck">✓</span></td><td><span class="cenik-ck">✓</span></td></tr>
-          <tr><td>Kniha prohlášení</td><td><span class="cenik-ck">✓</span></td><td><span class="cenik-ck">✓</span></td></tr>
-          <tr><td>Evidence klientů</td><td><span class="cenik-ck">✓</span></td><td><span class="cenik-ck">✓</span></td></tr>
-          <tr><td>Skenování pasů</td><td><span class="cenik-no">–</span></td><td><span class="cenik-ck">✓</span></td></tr>
-          <tr><td>Offline provoz</td><td><span class="cenik-no">–</span></td><td><span class="cenik-ck">✓</span></td></tr>
-          <tr><td>Faktura na IČO</td><td><span class="cenik-no">–</span></td><td><span class="cenik-ck">✓</span></td></tr>
-        </tbody>
-      </table>
     </div>
 
     <div class="cenik-faq">
       <div class="cenik-section-label">Časté otázky</div>
       <div class="cenik-faq-item">
-        <div class="cenik-faq-q">Co se stane po 30 dnech trialu?</div>
+        <div class="cenik-faq-q" onclick="this.closest('.cenik-faq-item').classList.toggle('open')">Co se stane po 30 dnech trialu?</div>
         <div class="cenik-faq-a">Přejdete automaticky na bezplatný plán s limitem 2 doložky měsíčně. Nic se neúčtuje, kartu při registraci nevyžadujeme.</div>
       </div>
       <div class="cenik-faq-item">
-        <div class="cenik-faq-q">Můžu předplatné zrušit?</div>
+        <div class="cenik-faq-q" onclick="this.closest('.cenik-faq-item').classList.toggle('open')">Můžu předplatné zrušit?</div>
         <div class="cenik-faq-a">Ano, kdykoliv bez podmínek. U měsíčního plánu stačí nezobnovit, u ročního zrušíte v nastavení účtu. Žádné skryté poplatky za zrušení.</div>
       </div>
       <div class="cenik-faq-item">
-        <div class="cenik-faq-q">Jak se platí?</div>
+        <div class="cenik-faq-q" onclick="this.closest('.cenik-faq-item').classList.toggle('open')">Jak se platí?</div>
         <div class="cenik-faq-a">Platba platební kartou online. Na vyžádání vystavíme fakturu na IČO. Platby jsou zabezpečeny přes Stripe.</div>
       </div>
     </div>

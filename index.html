@@ -795,6 +795,38 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .btn-reg-submit:hover { background: var(--gold-h); }
 
+/* ── UPGRADE MODAL ── */
+.upgrade-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 220;
+  align-items: center; justify-content: center;
+}
+.upgrade-overlay.open { display: flex; }
+.upgrade-modal {
+  background: var(--white); border-radius: var(--rl); box-shadow: var(--sh-lg);
+  width: min(380px, 90vw); padding: 28px 24px 24px; position: relative; text-align: center;
+}
+.upgrade-modal-icon { font-size: 42px; margin-bottom: 12px; }
+.upgrade-modal-title { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+.upgrade-modal-body { font-size: 13px; color: var(--ink-mid); line-height: 1.7; margin-bottom: 20px; }
+.btn-upgrade-close {
+  position: absolute; top: 12px; right: 14px;
+  background: none; border: none; cursor: pointer; color: var(--ink-lt);
+  font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: var(--r);
+}
+.btn-upgrade-close:hover { background: var(--paper-w); color: var(--navy); }
+.btn-upgrade-pro {
+  display: block; width: 100%; padding: 11px; border: none; border-radius: var(--r);
+  background: var(--gold); color: #fff; font-family: var(--sans); font-size: 14px;
+  font-weight: 600; cursor: pointer; transition: background .14s; margin-bottom: 8px;
+}
+.btn-upgrade-pro:hover { background: var(--gold-h); }
+.btn-upgrade-dismiss {
+  display: block; width: 100%; padding: 8px; border: none; border-radius: var(--r);
+  background: none; color: var(--ink-lt); font-family: var(--sans); font-size: 13px;
+  cursor: pointer; transition: color .14s;
+}
+.btn-upgrade-dismiss:hover { color: var(--navy); }
+
 /* ── LEGALID PANELS (Kniha / Klienti) ── */
 .lp-overlay {
   display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 200;
@@ -1321,6 +1353,18 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   </div>
 </div>
 
+<!-- Upgrade modal -->
+<div class="upgrade-overlay" id="upgradeOverlay" onclick="if(event.target===this)closeUpgradeModal()">
+  <div class="upgrade-modal">
+    <button class="btn-upgrade-close" onclick="closeUpgradeModal()" aria-label="Zavřít">×</button>
+    <div class="upgrade-modal-icon">⭐</div>
+    <div class="upgrade-modal-title">Přejděte na Pro</div>
+    <div class="upgrade-modal-body" id="upgradeModalMsg"></div>
+    <button class="btn-upgrade-pro" onclick="closeUpgradeModal()">Upgradovat na Pro →</button>
+    <button class="btn-upgrade-dismiss" onclick="closeUpgradeModal()">Teď ne</button>
+  </div>
+</div>
+
 <main class="page">
   <div class="wrap">
     <div class="main-cols">
@@ -1817,7 +1861,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     <button class="btn-lp-close" onclick="closeKnihaPanel()" aria-label="Zavřít">×</button>
   </div>
   <div class="lp-body">
-    <div class="lp-notice">Data uložena v prohlížeči.</div>
+    <div class="lp-notice" id="knihaNotice"></div>
     <div class="lp-list" id="knihaList"></div>
   </div>
 </div>
@@ -1834,7 +1878,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     <button class="btn-lp-close" onclick="closeKlientiPanel()" aria-label="Zavřít">×</button>
   </div>
   <div class="lp-body">
-    <div class="lp-notice">Data uložena v prohlížeči.</div>
+    <div class="lp-notice" id="klientiNotice"></div>
     <input class="lp-search" id="klientiSearch" type="search" placeholder="Hledat jméno, IČO…" oninput="renderKlientiList()">
     <div class="lp-list" id="klientiList"></div>
   </div>
@@ -2268,6 +2312,7 @@ function getPrijmeni(s) { const p=(s||'').trim().split(/\s+/); return p[p.length
 
 // ── DOCX ──────────────────────────────────────────────────────────
 async function downloadDocx() {
+  if (!await trackUsage()) return;
   softValidate();
   try {
     loadPmSettings();
@@ -3431,7 +3476,8 @@ function scalePrintPreview() {
   if (scroll) scroll.style.justifyContent = isCombo ? 'center' : '';
 }
 
-function printDolozka() {
+async function printDolozka() {
+  if (!await trackUsage()) return;
   const d = getDolozkaData();
   const knjia = `${d.aCisloKnihy}/${d.cisloRadku}/${d.rok}`;
   const copies = getCopies();
@@ -4093,6 +4139,37 @@ function renderKlientiList() {
   </div>`).join('');
 }
 
+function showUpgradeModal(msg) {
+  document.getElementById('upgradeModalMsg').textContent = msg;
+  document.getElementById('upgradeOverlay').classList.add('open');
+}
+function closeUpgradeModal() {
+  document.getElementById('upgradeOverlay').classList.remove('open');
+}
+
+async function trackUsage() {
+  try {
+    const r = await fetch('https://legalid.kuba-houser.workers.dev/api/track', {
+      method: 'POST',
+      credentials: 'include',
+    });
+    const data = await r.json();
+    if (data.allowed) return true;
+    if (data.reason === 'login_required') { openRegistrationModal(); return false; }
+    if (data.reason === 'limit') {
+      showUpgradeModal('Dosáhli jste limitu 2 doložek tento měsíc. Upgradujte na Pro pro neomezené použití.');
+      return false;
+    }
+    if (data.reason === 'trial_expired') {
+      showUpgradeModal('Váš 30denní trial skončil. Upgradujte na Pro.');
+      return false;
+    }
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 async function checkSession() {
   try {
     const r = await fetch('https://legalid.kuba-houser.workers.dev/auth/me', { credentials: 'include' });
@@ -4101,6 +4178,8 @@ async function checkSession() {
     const emailEl    = document.getElementById('headerUserEmail');
     const logoutBtn  = document.getElementById('headerLogoutBtn');
     const navItem    = document.getElementById('navLoginItem');
+    const knihaNotice   = document.getElementById('knihaNotice');
+    const klientiNotice = document.getElementById('klientiNotice');
     if (data.loggedIn) {
       if (loginBtn)  loginBtn.style.display  = 'none';
       if (emailEl)   { emailEl.textContent = data.email; emailEl.style.display = ''; }
@@ -4110,6 +4189,9 @@ async function checkSession() {
         navItem.querySelector('.nav-item-sub').textContent   = 'Odhlásit se';
         navItem.onclick = () => { closeHamburger(); handleLogout(); };
       }
+      const loggedNotice = 'Záznamy jsou uloženy ve vašem účtu.';
+      if (knihaNotice)   knihaNotice.textContent   = loggedNotice;
+      if (klientiNotice) klientiNotice.textContent = loggedNotice;
     } else {
       if (loginBtn)  loginBtn.style.display  = '';
       if (emailEl)   emailEl.style.display   = 'none';
@@ -4119,6 +4201,13 @@ async function checkSession() {
         navItem.querySelector('.nav-item-sub').textContent   = 'Vyzkoušet zdarma 30 dní →';
         navItem.onclick = () => { closeHamburger(); openRegistrationModal(); };
       }
+      const guestNotice = html =>
+        Object.assign(document.createElement('span'), { innerHTML: html });
+      const nudge = `Bez přihlášení záznamy zmizí, když smažete data prohlížeče. ` +
+        `<a href="#" style="color:var(--gold);font-weight:500;white-space:nowrap;" ` +
+        `onclick="event.preventDefault();openRegistrationModal()">Přihlásit se zdarma →</a>`;
+      if (knihaNotice)   knihaNotice.innerHTML   = nudge;
+      if (klientiNotice) klientiNotice.innerHTML = nudge;
     }
   } catch {}
 }

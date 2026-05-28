@@ -176,9 +176,10 @@ export default {
         'SELECT * FROM users WHERE email = ?'
       ).bind(email).first();
       if (!user) {
+        const trialEnd = new Date(Date.now() + 30*24*3600*1000).toISOString();
         await env.DB.prepare(
-          'INSERT INTO users (email) VALUES (?)'
-        ).bind(email).run();
+          "INSERT INTO users (email, plan, trial_ends_at) VALUES (?, 'trial', ?)"
+        ).bind(email, trialEnd).run();
         user = await env.DB.prepare(
           'SELECT * FROM users WHERE email = ?'
         ).bind(email).first();
@@ -250,6 +251,70 @@ export default {
           'Content-Type': 'application/json',
           'Set-Cookie': 'session=; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=0',
         },
+      });
+    }
+
+    // --- POST /api/track ---
+    if (url.pathname === '/api/track') {
+      if (request.method !== 'POST') {
+        return new Response(JSON.stringify({ error: 'method_not_allowed' }), {
+          status: 405,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const sessionToken = getSessionToken(request);
+      const payload = sessionToken ? await verifyJWT(sessionToken, env.JWT_SECRET) : null;
+      if (!payload) {
+        return new Response(JSON.stringify({ allowed: false, reason: 'login_required' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const user = await env.DB.prepare(
+        'SELECT id, plan, trial_ends_at, dolozky_this_month, dolozky_month FROM users WHERE id = ?'
+      ).bind(payload.sub).first();
+
+      if (user.plan === 'pro') {
+        return new Response(JSON.stringify({ allowed: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (user.plan === 'trial') {
+        if (new Date(user.trial_ends_at) > new Date()) {
+          return new Response(JSON.stringify({ allowed: true }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response(JSON.stringify({ allowed: false, reason: 'trial_expired' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // free — měsíční limit
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      let used = user.dolozky_month !== currentMonth ? 0 : (user.dolozky_this_month || 0);
+
+      if (used >= 2) {
+        return new Response(JSON.stringify({ allowed: false, reason: 'limit' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      used += 1;
+      await env.DB.prepare(
+        'UPDATE users SET dolozky_this_month = ?, dolozky_month = ? WHERE id = ?'
+      ).bind(used, currentMonth, user.id).run();
+
+      return new Response(JSON.stringify({ allowed: true, used }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 

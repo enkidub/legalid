@@ -1,6 +1,11 @@
-name = "legalid-ocr-proxy"
+name = "legalid"
 main = "index.js"
 compatibility_date = "2024-01-01"
 
 [vars]
 ALLOWED_ORIGINS = "https://legalid.cz,http://localhost:8080"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "legalid-db"
+database_id = "96d93117-a80f-4bd5-b423-97f95829ca0e"

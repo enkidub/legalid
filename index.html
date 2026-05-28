@@ -1205,7 +1205,12 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       <div class="app-wordmark">Doložka</div>
       <div class="app-tagline">Prohlášení advokáta o pravosti podpisu</div>
     </div>
-    <button class="btn-hamburger" onclick="openHamburger()" aria-label="Nabídka">☰</button>
+    <div id="headerAuth" style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+      <span id="headerUserEmail" style="display:none;font-size:12px;color:var(--ink-lt);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      <button id="headerLogoutBtn" style="display:none;font-size:12px;color:var(--ink-lt);background:none;border:none;cursor:pointer;font-family:var(--sans);padding:4px 8px;border-radius:var(--r);transition:color .14s;" onclick="handleLogout()">Odhlásit</button>
+      <button id="headerLoginBtn" style="font-size:12px;font-weight:500;color:var(--navy);background:none;border:1.5px solid var(--rule);cursor:pointer;font-family:var(--sans);padding:6px 12px;border-radius:var(--r);transition:border-color .14s;" onclick="openRegistrationModal()">Přihlásit</button>
+    </div>
+    <button class="btn-hamburger" style="margin-left:0" onclick="openHamburger()" aria-label="Nabídka">☰</button>
   </div>
 </header>
 
@@ -1246,7 +1251,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
       </button>
     </div>
   </div>
-  <button class="nav-item nav-item-pro" onclick="closeHamburger();openRegistrationModal()">
+  <button class="nav-item nav-item-pro" id="navLoginItem" onclick="closeHamburger();openRegistrationModal()">
     <span class="nav-item-icon">★</span>
     <div class="nav-item-text">
       <span class="nav-item-label" style="color:var(--gold)">Upgradovat na Pro</span>
@@ -1300,8 +1305,8 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   <div class="reg-modal" id="regModal">
     <button class="btn-reg-close" onclick="closeRegistrationModal()" aria-label="Zavřít">×</button>
     <div id="regFormView">
-      <div class="reg-modal-title">Registrace</div>
-      <div class="reg-modal-body">Registrace bude brzy dostupná.<br>Zanechte email a budeme vás informovat.</div>
+      <div class="reg-modal-title">Přihlásit se</div>
+      <div class="reg-modal-body">Zadejte email a pošleme vám přihlašovací odkaz.</div>
       <input class="reg-email-input" id="regEmail" type="email" placeholder="váš@email.cz">
       <div id="regEmailError" style="display:none;color:#dc2626;font-size:12px;margin-top:4px;margin-bottom:6px;"></div>
       <button class="btn-reg-submit" id="regSubmitBtn" onclick="submitRegEmail()">Odeslat</button>
@@ -1309,8 +1314,8 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
     </div>
     <div id="regSuccessView" style="display:none;text-align:center;padding:12px 0 4px;">
       <div style="font-size:48px;color:#16a34a;margin-bottom:12px;">✓</div>
-      <div class="reg-modal-title" style="margin-bottom:8px;">Děkujeme za zájem!</div>
-      <div class="reg-modal-body">Váš email byl zařazen do předběžného přístupu. Ozveme se vám jakmile bude registrace spuštěna.</div>
+      <div class="reg-modal-title" style="margin-bottom:8px;">Hotovo!</div>
+      <div class="reg-modal-body" id="regSuccessMsg"></div>
       <button class="btn-reg-submit" onclick="closeRegistrationModal()">Zavřít</button>
     </div>
   </div>
@@ -2737,7 +2742,7 @@ function openRegistrationModal() {
 function closeRegistrationModal() {
   document.getElementById('regOverlay').classList.remove('open');
 }
-function submitRegEmail() {
+async function submitRegEmail() {
   const emailEl = document.getElementById('regEmail');
   const errorEl = document.getElementById('regEmailError');
   const sendErrEl = document.getElementById('regSendError');
@@ -2750,24 +2755,25 @@ function submitRegEmail() {
   sendErrEl.style.display = 'none';
   btn.disabled = true;
   btn.textContent = 'Odesílám…';
-  fetch('https://formspree.io/f/mzdyldjy', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email,
-      zdroj: 'legalid.cz waitlist',
-      datum: new Date().toLocaleDateString('cs-CZ')
-    })
-  }).then(r => {
-    if (!r.ok) throw new Error('http ' + r.status);
+  try {
+    const r = await fetch('https://legalid.kuba-houser.workers.dev/auth/send', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error('failed');
+    document.getElementById('regSuccessMsg').textContent =
+      `Na ${email} jsme poslali přihlašovací odkaz. Zkontrolujte schránku (i spam), platí 15 minut.`;
     document.getElementById('regFormView').style.display = 'none';
     document.getElementById('regSuccessView').style.display = 'block';
-  }).catch(() => {
+  } catch {
     btn.disabled = false;
     btn.textContent = 'Odeslat';
     sendErrEl.style.display = 'block';
-    sendErrEl.textContent = 'Nepodařilo se odeslat. Zkuste prosím znovu.';
-  });
+    sendErrEl.textContent = 'Něco se nepovedlo, zkuste to znovu.';
+  }
 }
 
 function _openPanelFromMenu(panel, overlay) {
@@ -4086,6 +4092,45 @@ function renderKlientiList() {
     </div>
   </div>`).join('');
 }
+
+async function checkSession() {
+  try {
+    const r = await fetch('https://legalid.kuba-houser.workers.dev/auth/me', { credentials: 'include' });
+    const data = await r.json();
+    const loginBtn   = document.getElementById('headerLoginBtn');
+    const emailEl    = document.getElementById('headerUserEmail');
+    const logoutBtn  = document.getElementById('headerLogoutBtn');
+    const navItem    = document.getElementById('navLoginItem');
+    if (data.loggedIn) {
+      if (loginBtn)  loginBtn.style.display  = 'none';
+      if (emailEl)   { emailEl.textContent = data.email; emailEl.style.display = ''; }
+      if (logoutBtn) logoutBtn.style.display = '';
+      if (navItem) {
+        navItem.querySelector('.nav-item-label').textContent = data.email;
+        navItem.querySelector('.nav-item-sub').textContent   = 'Odhlásit se';
+        navItem.onclick = () => { closeHamburger(); handleLogout(); };
+      }
+    } else {
+      if (loginBtn)  loginBtn.style.display  = '';
+      if (emailEl)   emailEl.style.display   = 'none';
+      if (logoutBtn) logoutBtn.style.display = 'none';
+      if (navItem) {
+        navItem.querySelector('.nav-item-label').textContent = 'Upgradovat na Pro';
+        navItem.querySelector('.nav-item-sub').textContent   = 'Vyzkoušet zdarma 30 dní →';
+        navItem.onclick = () => { closeHamburger(); openRegistrationModal(); };
+      }
+    }
+  } catch {}
+}
+
+async function handleLogout() {
+  try {
+    await fetch('https://legalid.kuba-houser.workers.dev/auth/logout', { method: 'POST', credentials: 'include' });
+  } catch {}
+  checkSession();
+}
+
+document.addEventListener('DOMContentLoaded', checkSession);
 
 init();
 </script>

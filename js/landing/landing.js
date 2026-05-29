@@ -16,6 +16,7 @@ export function renderLanding() {
         <button class="lnd-btn lnd-btn-primary" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
         <button class="lnd-btn lnd-btn-ghost" onclick="navigate('/dolozka')">Vyzkoušet ověřovací doložku →</button>
       </div>
+      <div class="lnd-hero-ai">AI rozpozná doklad za 3 vteřiny · automatická lustrace v 5 rejstřících</div>
       <div class="lnd-hero-note">Bez karty · 30 dní zdarma · zrušíte kdykoli</div>
     </div>
   </section>
@@ -53,11 +54,11 @@ export function renderLanding() {
       <div class="lnd-section-label">Jak to funguje</div>
       <h2 class="lnd-h2">5 kroků AML kontroly</h2>
       <ol class="lnd-steps">
-        <li class="lnd-step"><span class="lnd-step-num">1</span><div><div class="lnd-step-title">Identifikace klienta</div><div class="lnd-step-text">Naskenujte doklad nebo zadejte údaje. Aplikace vyplní formulář za vás.</div></div></li>
-        <li class="lnd-step"><span class="lnd-step-num">2</span><div><div class="lnd-step-title">Screening seznamů</div><div class="lnd-step-text">Automatická kontrola sankčních seznamů (EU, OSN) a politicky exponovaných osob (PEP).</div></div></li>
-        <li class="lnd-step"><span class="lnd-step-num">3</span><div><div class="lnd-step-title">Hodnocení rizik</div><div class="lnd-step-text">Rizikové skóre klienta a obchodu podle metodiky — nízké, střední, vysoké riziko.</div></div></li>
-        <li class="lnd-step"><span class="lnd-step-num">4</span><div><div class="lnd-step-title">Generování záznamu</div><div class="lnd-step-text">Protokol o AML kontrole připravený k podpisu a archivaci podle zákona.</div></div></li>
-        <li class="lnd-step"><span class="lnd-step-num">5</span><div><div class="lnd-step-title">Archivace</div><div class="lnd-step-text">Záznamy uchovány po zákonnou dobu, kdykoli dohledatelné při kontrole.</div></div></li>
+        <li class="lnd-step"><span class="lnd-step-num">1</span><div><div class="lnd-step-title">Identifikace klienta</div><div class="lnd-step-text">Naskenujte doklad nebo zadejte údaje. Aplikace vyplní formulář za vás.</div><div class="lnd-step-ai">AI rozpozná údaje z dokladu</div></div></li>
+        <li class="lnd-step"><span class="lnd-step-num">2</span><div><div class="lnd-step-title">Screening seznamů</div><div class="lnd-step-text">Automatická kontrola sankčních seznamů (EU, OSN) a politicky exponovaných osob (PEP).</div><div class="lnd-step-ai">fuzzy matching i přes překlepy</div></div></li>
+        <li class="lnd-step"><span class="lnd-step-num">3</span><div><div class="lnd-step-title">Hodnocení rizik</div><div class="lnd-step-text">Rizikové skóre klienta a obchodu podle metodiky — nízké, střední, vysoké riziko.</div><div class="lnd-step-ai">AI přečte podpůrné dokumenty a ověří konzistenci</div></div></li>
+        <li class="lnd-step"><span class="lnd-step-num">4</span><div><div class="lnd-step-title">Generování záznamu</div><div class="lnd-step-text">Protokol o AML kontrole připravený k podpisu a archivaci podle zákona.</div><div class="lnd-step-ai">AI navrhne, vy rozhodnete</div></div></li>
+        <li class="lnd-step"><span class="lnd-step-num">5</span><div><div class="lnd-step-title">Archivace</div><div class="lnd-step-text">Záznamy uchovány po zákonnou dobu, kdykoli dohledatelné při kontrole.</div><div class="lnd-step-ai">generování dokumentů automaticky</div></div></li>
       </ol>
       <div class="lnd-steps-note">Screenshoty a ukázky doplníme brzy.</div>
     </div>
@@ -129,6 +130,14 @@ export function renderLanding() {
           <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Jak se platí?<span class="lnd-faq-icon">+</span></button>
           <div class="lnd-faq-a">Platba kartou online. Na vyžádání vystavíme fakturu na IČO. Při registraci kartu nevyžadujeme — nejdřív 30 dní zdarma.</div>
         </div>
+        <div class="lnd-faq-item">
+          <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Jak Legalid používá AI?<span class="lnd-faq-icon">+</span></button>
+          <div class="lnd-faq-a">Pro rozpoznání údajů z dokladu, fuzzy matching jmen v sankčních seznamech a porovnání podpůrných dokumentů. AI je asistent, ne rozhodovatel — všechna AML rozhodnutí podle zákona činíte vy.</div>
+        </div>
+        <div class="lnd-faq-item">
+          <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Jsou data klientů v bezpečí?<span class="lnd-faq-icon">+</span></button>
+          <div class="lnd-faq-a">Fotky dokladů AI zpracovává v reálném čase a okamžitě je zahazuje, neukládají se. Anthropic (poskytovatel AI) má smluvně sjednáno, že data nepoužívá pro trénování modelů.</div>
+        </div>
       </div>
     </div>
   </section>
@@ -145,6 +154,11 @@ export function renderLanding() {
       <div class="lnd-footer-copy">© 2026 legalid.cz · Zpracování dat dle GDPR</div>
     </div>
   </footer>
+
+  <!-- Sticky CTA (jen mobil) -->
+  <div class="lnd-sticky-cta">
+    <button class="lnd-btn lnd-btn-primary lnd-btn-block" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
+  </div>
 
 </div>`;
 }

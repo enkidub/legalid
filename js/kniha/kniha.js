@@ -70,7 +70,6 @@ export function renderKnihaPage() {
       <h1 class="view-lp-title">Kniha prohlášení</h1>
       <span class="lp-badge" id="knihaBadge"></span>
     </div>
-    <div class="lp-notice" id="knihaNotice"${state.loggedIn ? '' : ' style="display:none"'}>${state.loggedIn ? 'Záznamy jsou uloženy ve vašem účtu.' : ''}</div>
     <div class="lp-list" id="knihaList"></div>
   </div></div>`;
 }

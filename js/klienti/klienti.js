@@ -1,7 +1,6 @@
 // legalid.cz — js/klienti/klienti.js
 // Vygenerováno refaktoringem z původního monolitického index.html.
 
-import { state } from '../core/state.js';
 import { navigate } from '../core/router.js';
 import { updatePreview } from '../dolozka/dolozka.js';
 import { esc, showToast } from '../core/ui.js';
@@ -22,7 +21,6 @@ export function renderKlientiPage() {
       <h1 class="view-lp-title">Klienti</h1>
       <span class="lp-badge" id="klientiBadge"></span>
     </div>
-    <div class="lp-notice" id="klientiNotice"${state.loggedIn ? '' : ' style="display:none"'}>${state.loggedIn ? 'Záznamy jsou uloženy ve vašem účtu.' : ''}</div>
     <input class="lp-search" id="klientiSearch" type="search" placeholder="Hledat jméno, IČO…" oninput="renderKlientiList()">
     <div class="lp-list" id="klientiList"></div>
   </div></div>`;
@@ -117,7 +115,7 @@ export function renderKlientiList() {
   const badge = document.getElementById('klientiBadge');
   if (badge) badge.textContent = getKlienti().length || '';
   if (!data.length) {
-    list.innerHTML = `<div class="lp-empty"><div class="lp-empty-title">${esc(query ? 'Žádný výsledek.' : 'Zatím žádní uložení klienti.')}</div></div>`;
+    list.innerHTML = `<div class="lp-empty"><div class="lp-empty-title">${esc(query ? 'Žádný výsledek.' : 'Zatím nemáte uložené žádné klienty.')}</div></div>`;
     return;
   }
   list.innerHTML = data.map(k => `<div class="lp-item" id="lp-klnt-${k.id}">

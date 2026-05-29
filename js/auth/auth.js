@@ -119,8 +119,6 @@ export async function checkSession() {
     const emailEl    = document.getElementById('headerUserEmail');
     const logoutBtn  = document.getElementById('headerLogoutBtn');
     const navItem    = document.getElementById('navLoginItem');
-    const knihaNotice   = document.getElementById('knihaNotice');
-    const klientiNotice = document.getElementById('klientiNotice');
     if (data.loggedIn) {
       if (loginBtn)  loginBtn.style.display  = 'none';
       if (emailEl)   { emailEl.textContent = data.email; emailEl.style.display = ''; }
@@ -130,8 +128,6 @@ export async function checkSession() {
         navItem.querySelector('.nav-item-sub').textContent   = 'Odhlásit se';
         navItem.onclick = () => { closeHamburger(); handleLogout(); };
       }
-      if (knihaNotice)   { knihaNotice.textContent = 'Záznamy jsou uloženy ve vašem účtu.'; knihaNotice.style.display = ''; }
-      if (klientiNotice) { klientiNotice.textContent = 'Záznamy jsou uloženy ve vašem účtu.'; klientiNotice.style.display = ''; }
     } else {
       if (loginBtn)  loginBtn.style.display  = '';
       if (emailEl)   emailEl.style.display   = 'none';
@@ -141,8 +137,6 @@ export async function checkSession() {
         navItem.querySelector('.nav-item-sub').textContent   = 'Vyzkoušet zdarma 30 dní →';
         navItem.onclick = () => { closeHamburger(); openRegistrationModal(); };
       }
-      if (knihaNotice)   knihaNotice.style.display = 'none';
-      if (klientiNotice) klientiNotice.style.display = 'none';
     }
   } catch {}
   state.loggedIn = loggedIn;

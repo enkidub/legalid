@@ -1,10 +1,24 @@
-const CACHE = 'legalid-v13'; // ← BUMP při každém deployi
+const CACHE = 'legalid-v14'; // ← BUMP při každém deployi
 
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icons/icon.svg',
+  '/css/styles.css',
+  '/js/app.js',
+  '/js/core/state.js',
+  '/js/core/api.js',
+  '/js/core/ui.js',
+  '/js/auth/auth.js',
+  '/js/dolozka/dolozka.js',
+  '/js/dolozka/ocr.js',
+  '/js/dolozka/generate.js',
+  '/js/kniha/kniha.js',
+  '/js/klienti/klienti.js',
+  '/js/landing/landing.js',
+  '/js/aml/aml.js',
+  '/js/archiv/archiv.js',
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap',
   'https://unpkg.com/docx@8.5.0/build/index.umd.js',
   'https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js',

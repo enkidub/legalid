@@ -3,7 +3,7 @@
 
 import { buildDolozkaPreviewContent, printStitky, scalePrintPreview } from './generate.js';
 import { runOcr } from './ocr.js';
-import { FORMAT_DEFAULTS, MM, SCALE, getDolozkaSettings, getSettings, state } from '../core/state.js';
+import { COMBO_PM_DEFAULTS, FORMAT_DEFAULTS, MM, PM_DEFAULTS, SCALE, getDolozkaSettings, getSettings, state } from '../core/state.js';
 import { _closeAllSidePanels, _closePanelToMenu, _openPanelFromMenu, showToast } from '../core/ui.js';
 
 export function updateAdvokat() {

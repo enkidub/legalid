@@ -465,19 +465,10 @@ export function openCfgPanel(section) {
 
 export function closeCfgPanel() {
   state.diagramActive = null;
-  const panel = document.getElementById('cfgPanel');
-  const wasFromMenu = panel.classList.contains('from-menu');
   document.getElementById('cfgOverlay').classList.remove('open');
-  panel.classList.remove('open');
-  panel.classList.remove('from-menu');
-  if (wasFromMenu) {
-    const nav = document.getElementById('navPanel');
-    nav.classList.remove('open');
-    nav.classList.remove('sliding-left');
-    nav.style.transform = '';
-    nav.style.transition = '';
-    document.getElementById('navOverlay').classList.remove('open');
-  }
+  const panel = document.getElementById('cfgPanel');
+  panel.classList.remove('open', 'from-menu');
+  // Hamburger je při otevření panelu zavřený (viz _openPanelFromMenu) — není co uklízet.
 }
 
 

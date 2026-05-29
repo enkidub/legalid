@@ -251,8 +251,8 @@ window.onSettingsInput = onSettingsInput; // <div class="sp-field"><label class=
 window.resetSettings = resetSettings; // <button class="btn-sp-reset" onclick="resetSettings()">Obnovit výchozí</button>
 window.saveSettings = saveSettings; // <button class="btn-sp-save" onclick="saveSettings()">Uložit</button>
 window.saveAndPrint = saveAndPrint; // <button class="btn-sp-print" onclick="saveAndPrint()">Uložit a tisknout</button>
-window.closeKnihaPanel = closeKnihaPanel; // <div class="lp-overlay" id="knihaOverlay" onclick="closeKnihaPanel()"></div>
-window.closeKlientiPanel = closeKlientiPanel; // <div class="lp-overlay" id="klientiOverlay" onclick="closeKlientiPanel()"></div>
+window.closeKnihaPanel = closeKnihaPanel; // navigate('/dolozka') — návrat z plné stránky Kniha (volá se po knihaLoad/reprint)
+window.closeKlientiPanel = closeKlientiPanel; // navigate('/dolozka') — návrat z plné stránky Klienti
 window.renderKlientiList = renderKlientiList; // <input class="lp-search" id="klientiSearch" type="search" placeholder="Hledat jméno, IČO…" oninp
 window.removePhoto = removePhoto; // <button class="photo-chip-x" onclick="removePhoto(${i})" title="Odstranit">×</button>
 window.pmDiagramClick = pmDiagramClick; // `<rect x="${x}" y="${y}" width="${Math.max(w,4)}" height="${Math.max(h,4)}" fill="transparent" r

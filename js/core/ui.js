@@ -29,43 +29,33 @@ export function closePrivacyModal() {
   document.getElementById('privacyOverlay').classList.remove('open');
 }
 
+// Zavři případný otevřený side panel (Nastavení) — volá se před otevřením nového.
+// (Kniha/Klienti jsou dnes plné stránky, žádné drawer panely už neexistují.)
 export function _closeAllSidePanels() {
-  [['cfgPanel','cfgOverlay'],['knihaPanel','knihaOverlay'],['klientiPanel','klientiOverlay']]
-    .forEach(([pid, oid]) => {
-      const p = document.getElementById(pid);
-      const o = document.getElementById(oid);
-      if (p) p.classList.remove('open', 'from-menu');
-      if (o) o.classList.remove('open');
-    });
-  const nav = document.getElementById('navPanel');
-  if (nav) { nav.classList.remove('sliding-left'); nav.style.transform = ''; nav.style.transition = ''; }
+  const p = document.getElementById('cfgPanel');
+  const o = document.getElementById('cfgOverlay');
+  if (p) p.classList.remove('open', 'from-menu');
+  if (o) o.classList.remove('open');
   state.diagramActive = null;
 }
 
 
+// Otevři panel z hamburger menu. Jediná pravdivá vrstva je otevíraný panel + jeho
+// overlay — hamburger se proto ÚPLNĚ zavře. Dřív se nav panel jen "parkoval"
+// (sliding-left + skryté děti), takže jeho bílé pozadí prosvítalo nad bottom-sheetem
+// na mobilu (= ten bílý blok). 'from-menu' je teď už jen marker pro tlačítko Zpět.
 export function _openPanelFromMenu(panel, overlay) {
-  const nav = document.getElementById('navPanel');
-  nav.classList.add('sliding-left');
-  panel.classList.add('from-menu');
+  closeHamburger();
   overlay.classList.add('open');
-  panel.classList.add('open');
+  panel.classList.add('open', 'from-menu');
 }
 
 
+// Zpět z panelu do hamburger menu.
 export function _closePanelToMenu(panel, overlay) {
-  const nav = document.getElementById('navPanel');
-  panel.classList.remove('from-menu');
+  panel.classList.remove('open', 'from-menu');
   overlay.classList.remove('open');
-  panel.classList.remove('open');
-  nav.classList.remove('sliding-left');
-  nav.style.transition = 'none';
-  nav.style.transform = 'translateX(-30%)';
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      nav.style.transition = '';
-      nav.style.transform = '';
-    });
-  });
+  openHamburger();
 }
 
 

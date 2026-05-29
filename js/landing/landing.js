@@ -11,7 +11,7 @@ export function renderLanding() {
     <div class="lnd-wrap">
       <div class="lnd-eyebrow">AML pro advokáty</div>
       <h1 class="lnd-h1">AML kontrola klientů za 3 minuty</h1>
-      <p class="lnd-sub">Pro solo advokáty a malé kanceláře. Splňte povinnosti podle zákona č. 253/2008 Sb. bez tabulek a papírování.</p>
+      <p class="lnd-sub">Splňte AML povinnosti podle zákona č. 253/2008 Sb. — bez tabulek a papírování.</p>
       <div class="lnd-cta-row">
         <button class="lnd-btn lnd-btn-primary" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
         <button class="lnd-btn lnd-btn-ghost" onclick="navigate('/dolozka')">Vyzkoušet ověřovací doložku →</button>

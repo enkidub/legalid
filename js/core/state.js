@@ -57,4 +57,5 @@ export const state = {
   diagramActive: null,
   _waitingSW: null,
   _actionToastOkFn: null,
+  amlCurrentCaseId: null,
 };

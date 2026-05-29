@@ -1349,6 +1349,114 @@ body.logged-in .main-nav { display: flex; }
 .view-placeholder-title { font-family: var(--serif); font-size: 30px; color: var(--navy); margin-bottom: 14px; }
 .view-placeholder-text { color: var(--ink-lt); font-size: 15px; line-height: 1.7; }
 
+/* ════════════════════ AML WIZARD ════════════════════ */
+.aml { max-width: 640px; margin: 0 auto; padding: clamp(16px, 3vw, 28px) var(--pad) 96px; }
+
+/* Indikátor kroků */
+.aml-steps {
+  display: flex; gap: 4px; margin-bottom: 22px;
+  overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+}
+.aml-steps::-webkit-scrollbar { display: none; }
+.aml-step { display: flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 4px 8px; }
+.aml-step-dot {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; background: var(--rule); color: var(--ink-lt);
+}
+.aml-step-label { font-size: 12px; font-weight: 500; color: var(--ink-lt); white-space: nowrap; }
+.aml-step.active .aml-step-dot { background: var(--navy); color: #fff; }
+.aml-step.active .aml-step-label { color: var(--navy); font-weight: 600; }
+.aml-step.done .aml-step-dot { background: var(--gold); color: #fff; }
+.aml-step.done .aml-step-label { color: var(--ink-mid); }
+
+/* Karta kroku */
+.aml-card {
+  background: var(--white); border: 1px solid var(--rule); border-radius: 14px;
+  padding: 22px 20px; box-shadow: var(--sh); display: flex; flex-direction: column; gap: 14px;
+}
+.aml-h { font-family: var(--serif); font-size: 20px; font-weight: 600; color: var(--navy); }
+.aml-sub { font-size: 13px; color: var(--ink-lt); line-height: 1.6; margin-top: -8px; }
+.aml-loading { text-align: center; color: var(--ink-lt); font-size: 14px; padding: 48px 0; }
+
+/* Tlačítka */
+.aml-btn {
+  font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer;
+  padding: 11px 18px; border-radius: var(--rl); border: 1.5px solid var(--rule);
+  background: var(--white); color: var(--navy); transition: all .14s;
+}
+.aml-btn:hover:not([disabled]) { border-color: var(--navy); }
+.aml-btn-primary { background: var(--navy); color: #fff; border-color: var(--navy); }
+.aml-btn-primary:hover:not([disabled]) { background: var(--navy-h); border-color: var(--navy-h); }
+.aml-btn-sm { padding: 7px 12px; font-size: 12px; }
+.aml-btn-block { width: 100%; }
+.aml-btn[disabled] { opacity: .45; cursor: default; }
+
+/* Krok 0 — dlaždice */
+.aml-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.aml-tile {
+  text-align: left; display: flex; flex-direction: column; gap: 4px;
+  padding: 14px; border: 1.5px solid var(--rule); border-radius: 12px;
+  background: var(--white); cursor: pointer; transition: border-color .14s, background .14s;
+  font-family: var(--sans);
+}
+.aml-tile:hover:not(.aml-tile--disabled) { border-color: var(--navy); }
+.aml-tile--selected { border-color: var(--gold); background: var(--gold-p); }
+.aml-tile--disabled { opacity: .55; cursor: default; }
+.aml-tile-title { font-size: 14px; font-weight: 600; color: var(--navy); display: flex; align-items: center; gap: 6px; }
+.aml-tile-desc { font-size: 12px; color: var(--ink-lt); line-height: 1.5; }
+.aml-tile-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--gold-h); background: var(--gold-p); padding: 2px 6px; border-radius: 8px;
+}
+.aml-tile--disabled .aml-tile-badge { background: var(--rule); color: var(--ink-lt); }
+
+/* Krok 1 — upload / foto */
+.aml-upload-btns { display: flex; gap: 10px; }
+.aml-upload-btns .aml-btn { flex: 1; }
+.aml-shot { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.aml-thumb {
+  width: 100%; max-width: 320px; border-radius: 10px; border: 1px solid var(--rule);
+  display: block; object-fit: contain; background: var(--paper-w);
+}
+.aml-ai-loading { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-mid); }
+.aml-spinner {
+  width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid var(--rule); border-top-color: var(--gold); animation: aml-spin .7s linear infinite;
+}
+@keyframes aml-spin { to { transform: rotate(360deg); } }
+.aml-ai-note { font-size: 13px; color: var(--ink-mid); line-height: 1.6; }
+
+/* Editovatelná pole */
+.aml-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.aml-field { display: flex; flex-direction: column; gap: 3px; }
+.aml-field span { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--ink-lt); }
+.aml-field input {
+  padding: 8px 10px; border: 1.5px solid var(--rule); border-radius: var(--r);
+  font-family: var(--sans); font-size: 13px; color: var(--ink); background: var(--white); outline: none; width: 100%;
+}
+.aml-field input:focus { border-color: var(--navy); }
+
+/* Patička */
+.aml-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
+.aml-foot:empty { display: none; }
+.aml-foot .aml-btn { min-width: 110px; }
+.aml-foot .aml-btn[data-act="next"] { margin-left: auto; }
+
+/* Kamera modal (desktop) */
+.aml-cam {
+  position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.8);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.aml-cam-box { display: flex; flex-direction: column; gap: 12px; max-width: 640px; width: 100%; }
+.aml-cam-box video { width: 100%; border-radius: 12px; background: #000; max-height: 70vh; }
+.aml-cam-btns { display: flex; justify-content: center; gap: 10px; }
+
+@media (max-width: 600px) {
+  .aml-tiles { grid-template-columns: 1fr; }
+  .aml-fields { grid-template-columns: 1fr; }
+}
+
 /* ── Plné stránky Klienti / Kniha ── */
 .view-lp { max-width: 720px; margin: 0 auto; padding-top: 6px; }
 .view-lp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }

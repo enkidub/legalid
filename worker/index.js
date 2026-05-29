@@ -15,6 +15,38 @@ const USER_PROMPT = `Z přiložené fotografie nebo fotografií občanského pr�
 }
 Confidence je 0–1, celková jistota extrakce. Do pole_s_nizkou_jistotou uveď klíče polí, která jsou špatně čitelná.`;
 
+// --- AML režim: bohatší extrakce z dokladu totožnosti (OP/pas), zpracuje po stranách ---
+const AML_SYSTEM_PROMPT = `Jsi asistent pro extrakci dat z českých dokladů totožnosti (občanský průkaz, cestovní pas).
+Vrať POUZE validní JSON bez markdown formátování, bez backtick bloků, bez jakéhokoliv preamble.
+Pokud pole není na zpracovávané straně čitelné nebo tam není, nastav hodnotu null. Nehádej.`;
+
+function amlUserPrompt(side) {
+  const which = side === 'back' ? 'ZADNÍ' : 'PŘEDNÍ';
+  const focus = side === 'back'
+    ? `Zpracováváš ZADNÍ stranu českého OP. Na zadní straně bývá adresa trvalého pobytu, datum vydání, datum platnosti a úřad. Zaměř se na tato pole; pole, která jsou jen na přední straně (jméno, datum/místo narození, číslo dokladu), nech null, pokud nejsou na této straně viditelná.`
+    : `Zpracováváš PŘEDNÍ stranu dokladu. Vyplň pole čitelná z přední strany (jméno, příjmení, datum a místo narození, číslo dokladu, pohlaví, státní občanství); pole typicky jen na zadní straně (adresa, vydání, platnost) nech null, pokud nejsou viditelná.`;
+  return `${focus}
+
+Extrahuj tato pole a vrať JSON:
+{
+  "jmeno": "křestní jméno (jen jméno, bez příjmení)",
+  "prijmeni": "příjmení",
+  "datum_narozeni": "DD.MM.YYYY",
+  "misto_narozeni": "město nebo obec",
+  "adresa_trvaleho_pobytu": "ulice č.p., město PSČ jako jeden řetězec",
+  "cislo_dokladu": "číslo dokladu bez mezer",
+  "typ_dokladu": "OP nebo pas",
+  "datum_vydani": "DD.MM.YYYY",
+  "datum_platnosti": "DD.MM.YYYY",
+  "statni_obcanstvi": "státní občanství",
+  "pohlavi": "M nebo Ž",
+  "strana": "${side === 'back' ? 'back' : 'front'}",
+  "confidence": 0.0,
+  "pole_s_nizkou_jistotou": []
+}
+Zpracovávaná strana: ${which}. Confidence je 0–1, celková jistota extrakce. Do pole_s_nizkou_jistotou uveď klíče polí, která jsou špatně čitelná.`;
+}
+
 // --- JWT (HS256) pomocí Web Crypto ---
 function b64url(buf) {
   return btoa(String.fromCharCode(...new Uint8Array(buf)))
@@ -54,6 +86,14 @@ function getSessionToken(request) {
   return m ? m[1] : null;
 }
 
+// Vrátí user_id z platné session, jinak null.
+async function requireUserId(request, env) {
+  const token = getSessionToken(request);
+  if (!token) return null;
+  const payload = await verifyJWT(token, env.JWT_SECRET);
+  return payload ? payload.sub : null;
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
@@ -70,7 +110,7 @@ export default {
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': corsOk ? origin : allowed[0],
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Allow-Credentials': 'true',
     };
@@ -78,6 +118,12 @@ export default {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
+
+    // Krátký helper na JSON odpověď s CORS hlavičkami.
+    const json = (data, status = 200) => new Response(JSON.stringify(data), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
     const url = new URL(request.url);
 
@@ -313,6 +359,96 @@ export default {
       });
     }
 
+    // ════════════════ AML ════════════════
+    if (url.pathname.startsWith('/api/aml/')) {
+      const userId = await requireUserId(request, env);
+      if (!userId) return json({ error: 'unauthorized' }, 401);
+
+      // POST /api/aml/case/create — založí nový případ
+      if (url.pathname === '/api/aml/case/create') {
+        if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+        // Rozdělané případy uzavři jako 'abandoned', ať se nehromadí in_progress.
+        await env.DB.prepare(
+          "UPDATE aml_cases SET status = 'abandoned' WHERE user_id = ? AND status = 'in_progress'"
+        ).bind(userId).run();
+        const r = await env.DB.prepare(
+          "INSERT INTO aml_cases (user_id, status, current_step) VALUES (?, 'in_progress', 0)"
+        ).bind(userId).run();
+        return json({ case_id: r.meta.last_row_id });
+      }
+
+      // GET /api/aml/cases — seznam případů uživatele (pro budoucí Archiv)
+      if (url.pathname === '/api/aml/cases') {
+        if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
+        const { results } = await env.DB.prepare(
+          `SELECT id, status, current_step, identification_method,
+                  client_name, client_surname, final_risk_level, created_at, completed_at
+             FROM aml_cases WHERE user_id = ? ORDER BY created_at DESC`
+        ).bind(userId).all();
+        return json({ cases: results || [] });
+      }
+
+      // /api/aml/case/:id  a  /api/aml/case/:id/document
+      const m = url.pathname.match(/^\/api\/aml\/case\/(\d+)(\/document)?$/);
+      if (m) {
+        const caseId = m[1];
+        const isDoc = !!m[2];
+
+        // jen vlastník
+        const amlCase = await env.DB.prepare(
+          'SELECT * FROM aml_cases WHERE id = ? AND user_id = ?'
+        ).bind(caseId, userId).first();
+        if (!amlCase) return json({ error: 'not_found' }, 404);
+
+        // POST /api/aml/case/:id/document — uložení dokumentu (base64)
+        if (isDoc) {
+          if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+          let b;
+          try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+          const { doc_type, filename, content_base64, ai_extracted_data } = b;
+          if (!doc_type) return json({ error: 'missing_doc_type' }, 400);
+          const size = content_base64 ? Math.floor(content_base64.length * 3 / 4) : 0;
+          const aiData = ai_extracted_data == null ? null
+            : (typeof ai_extracted_data === 'string' ? ai_extracted_data : JSON.stringify(ai_extracted_data));
+          const r = await env.DB.prepare(
+            `INSERT INTO aml_documents (case_id, doc_type, filename, content_base64, content_size_bytes, ai_extracted_data)
+             VALUES (?, ?, ?, ?, ?, ?)`
+          ).bind(caseId, doc_type, filename || null, content_base64 || null, size, aiData).run();
+          return json({ ok: true, document_id: r.meta.last_row_id });
+        }
+
+        // GET /api/aml/case/:id — stav případu
+        if (request.method === 'GET') return json({ case: amlCase });
+
+        // PATCH /api/aml/case/:id — částečný update (whitelist sloupců)
+        if (request.method === 'PATCH') {
+          let b;
+          try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+          const ALLOWED = [
+            'client_id', 'status', 'current_step', 'identification_method',
+            'client_name', 'client_surname', 'client_birth_date', 'client_birth_place',
+            'client_address', 'client_nationality', 'client_doc_type', 'client_doc_number',
+            'client_doc_valid_until', 'client_doc_issued_at', 'client_gender',
+            'business_purpose', 'ai_risk_suggestion',
+            'ai_risk_reasoning', 'final_risk_level', 'risk_decided_at',
+            'final_pdf_generated', 'completed_at', 'next_review_due',
+          ];
+          const keys = Object.keys(b).filter(k => ALLOWED.includes(k));
+          if (keys.length === 0) return json({ ok: true, updated: 0 });
+          const setClause = keys.map(k => `${k} = ?`).join(', ');
+          const values = keys.map(k => b[k]);
+          await env.DB.prepare(
+            `UPDATE aml_cases SET ${setClause} WHERE id = ? AND user_id = ?`
+          ).bind(...values, caseId, userId).run();
+          return json({ ok: true, updated: keys.length });
+        }
+
+        return json({ error: 'method_not_allowed' }, 405);
+      }
+
+      return json({ error: 'not_found' }, 404);
+    }
+
     // --- /ocr a fallback ---
     if (request.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'method_not_allowed' }), {
@@ -338,13 +474,18 @@ export default {
       });
     }
 
-    const { images } = body;
+    const { images, mode, side } = body;
     if (!Array.isArray(images) || images.length === 0) {
       return new Response(JSON.stringify({ error: 'missing_images' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // mode: 'dolozka' (default, beze změny) | 'aml' (bohatší extrakce, po stranách)
+    const isAml = mode === 'aml';
+    const systemPrompt = isAml ? AML_SYSTEM_PROMPT : SYSTEM_PROMPT;
+    const userPrompt = isAml ? amlUserPrompt(side) : USER_PROMPT;
 
     const imageContent = images.map(img => ({
       type: 'image',
@@ -357,14 +498,14 @@ export default {
 
     const anthropicPayload = {
       model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      max_tokens: isAml ? 1500 : 1024,
+      system: systemPrompt,
       messages: [
         {
           role: 'user',
           content: [
             ...imageContent,
-            { type: 'text', text: USER_PROMPT },
+            { type: 'text', text: userPrompt },
           ],
         },
       ],

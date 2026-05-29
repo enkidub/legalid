@@ -1,0 +1,6 @@
+{
+  "// ": "SPA fallback - NESMAZAT. Bez toho reload na /klienti, /aml apod. vrací 404.",
+  "rewrites": [
+    { "source": "/((?!api/|css/|js/|sw\\.js|manifest\\.json|.*\\.(?:png|jpg|jpeg|svg|ico|webp|woff2?|json|xml|txt|map)).*)", "destination": "/index.html" }
+  ]
+}

@@ -4,12 +4,45 @@ import { CONFIG } from './state.js';
 
 const WORKER_URL = CONFIG.workerUrl;
 
-export async function apiOcr(images) {
+// mode: 'dolozka' (default — beze změny, Doložka) | 'aml'. side: 'front' | 'back' (jen pro AML).
+export async function apiOcr(images, mode = 'dolozka', side = null) {
   const res = await fetch(`${WORKER_URL}/ocr`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ images })
+    body: JSON.stringify({ images, mode, side })
   });
   return res.json();
+}
+
+// ── AML (vyžadují session, credentials: 'include') ──
+export async function apiAmlCreateCase() {
+  const r = await fetch(`${WORKER_URL}/api/aml/case/create`, { method: 'POST', credentials: 'include' });
+  return r.json();
+}
+
+export async function apiAmlGetCase(id) {
+  const r = await fetch(`${WORKER_URL}/api/aml/case/${id}`, { credentials: 'include' });
+  return r.json();
+}
+
+export async function apiAmlPatchCase(id, patch) {
+  const r = await fetch(`${WORKER_URL}/api/aml/case/${id}`, {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch)
+  });
+  return r.json();
+}
+
+export async function apiAmlAddDocument(id, doc) {
+  const r = await fetch(`${WORKER_URL}/api/aml/case/${id}/document`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc)
+  });
+  return r.json();
+}
+
+export async function apiAmlListCases() {
+  const r = await fetch(`${WORKER_URL}/api/aml/cases`, { credentials: 'include' });
+  return r.json();
 }
 
 export async function apiSendMagicLink(email) {

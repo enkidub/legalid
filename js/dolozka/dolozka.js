@@ -450,17 +450,8 @@ export function openCfgPanel(section) {
   _closeAllSidePanels();
   syncCfgFromAdvokat();
   syncDolozkaInputs();
-  const s = getSettings();
-  ['H','H1','X','Y','PX','PY','W1','W2','W3','W4'].forEach(f => {
-    const el = document.getElementById('sp_' + f);
-    if (el) el.value = s[f];
-  });
-  document.getElementById('sp_border').checked = s.border !== false;
-  document.getElementById('sp_lines').checked = s.lines !== false;
-  updateSettingsSum();
-  renderDiagram(s);
+  // Globální Nastavení obsahuje už jen Profil advokáta — sekce rozměrů štítků byla odstraněna.
   if (section === 'advokat') openCfgSection('cfgSec1');
-  else if (section === 'stitky') openCfgSection('cfgSec3');
   const panel = document.getElementById('cfgPanel');
   const overlay = document.getElementById('cfgOverlay');
   if (document.getElementById('navPanel').classList.contains('open')) {

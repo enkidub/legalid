@@ -124,6 +124,7 @@
     </div>
     <!-- Sekundární — vždy v hamburgeru -->
     <div class="nav-section nav-section-sep">
+      <!-- Ceník skryt do napojení Stripe — obnovit níže uvedený odkaz, až budou platby live:
       <button class="nav-item" onclick="closeHamburger();openCenikModal()">
         <span class="nav-item-icon"><i class="ti ti-receipt"></i></span>
         <div class="nav-item-text">
@@ -131,11 +132,12 @@
           <span class="nav-item-sub">Plány a funkce</span>
         </div>
       </button>
+      -->
       <button class="nav-item" onclick="openCfgPanel()">
         <span class="nav-item-icon">&#x2699;&#xFE0E;</span>
         <div class="nav-item-text">
           <span class="nav-item-label">Nastavení</span>
-          <span class="nav-item-sub">Profil advokáta a rozměry tisku</span>
+          <span class="nav-item-sub">Profil advokáta</span>
         </div>
       </button>
     </div>
@@ -223,19 +225,23 @@
           <div class="upgrade-plan-name">Pro měsíční</div>
           <div class="upgrade-plan-price">220 <span>Kč/měs</span></div>
           <div class="upgrade-plan-sub">zrušíte kdykoli</div>
-          <button class="btn-upgrade-plan" onclick="selectPlan('monthly')">Vybrat měsíční</button>
+          <!-- odkaz odpojen do napojení Stripe — obnovit onclick="selectPlan('monthly')" -->
+          <button class="btn-upgrade-plan">Vybrat měsíční</button>
         </div>
         <div class="upgrade-plan-card upgrade-plan-card--featured">
           <div class="upgrade-plan-badge">Doporučeno</div>
           <div class="upgrade-plan-name">Pro roční</div>
           <div class="upgrade-plan-price">2 190 <span>Kč/rok</span></div>
           <div class="upgrade-plan-sub"><strong>182 Kč/měs</strong> · 2 měsíce zdarma</div>
-          <button class="btn-upgrade-plan" onclick="selectPlan('annual')">Vybrat roční</button>
+          <!-- odkaz odpojen do napojení Stripe — obnovit onclick="selectPlan('annual')" -->
+          <button class="btn-upgrade-plan">Vybrat roční</button>
         </div>
       </div>
+      <!-- Odkaz na Ceník skryt do napojení Stripe:
       <div style="text-align:center;margin-bottom:4px;">
         <button style="background:none;border:none;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--ink-lt);padding:2px;" onclick="closeUpgradeModal();openCenikModal()">Zobrazit celý ceník →</button>
       </div>
+      -->
     </div>
     <button class="btn-upgrade-pro" id="upgradeLoginBtn" style="display:none" onclick="closeUpgradeModal();openRegistrationModal()">Přihlásit se / Registrovat →</button>
     <button class="btn-upgrade-dismiss" onclick="closeUpgradeModal()">Teď ne</button>
@@ -259,7 +265,8 @@
         <div class="cenik-price">220 <span>Kč/měs</span></div>
         <div class="cenik-price-sub">zrušíte kdykoli</div>
         <div class="cenik-features-compact">Neomezené doložky · skenování pasů · offline provoz · faktura na IČO</div>
-        <button class="btn-cenik-select" onclick="selectPlan('monthly')">Vybrat měsíční</button>
+        <!-- odkaz odpojen do napojení Stripe — obnovit onclick="selectPlan('monthly')" -->
+        <button class="btn-cenik-select">Vybrat měsíční</button>
       </div>
 
       <!-- Pro roční -->
@@ -269,7 +276,8 @@
         <div class="cenik-price">2 190 <span>Kč/rok</span></div>
         <div class="cenik-price-sub"><strong>182 Kč/měs</strong> · ušetříte 450 Kč</div>
         <div class="cenik-features-compact">Neomezené doložky · skenování pasů · offline provoz · faktura na IČO</div>
-        <button class="btn-cenik-select" onclick="selectPlan('annual')">Vybrat roční</button>
+        <!-- odkaz odpojen do napojení Stripe — obnovit onclick="selectPlan('annual')" -->
+        <button class="btn-cenik-select">Vybrat roční</button>
       </div>
     </div>
 
@@ -380,10 +388,6 @@
                 <span class="format-card-name">195 × 37 mm</span>
                 <span class="format-card-desc">Pro etikety s okraji</span>
               </button>
-              <button class="format-card" data-format="custom" onclick="selectCustomFormat()" aria-label="Vlastní rozměry">
-                <span class="format-card-name">Vlastní rozměry</span>
-                <span class="format-card-desc">Nastavím si sám →</span>
-              </button>
             </div>
             <div class="format-panel-footer">
               <button class="btn-panel-close" onclick="closeFormatPanel()" aria-label="Zavřít panel výběru formátu">Zavřít</button>
@@ -427,9 +431,6 @@
         <div class="stitek-preview-section" id="stitkPreview">
           <div class="stitek-preview-lbl-row">
             <span class="stitek-preview-lbl" id="stitkPreviewLbl">Náhled štítku</span>
-            <button class="btn-stitek-settings" onclick="openSettings()" title="Nastavení etiket">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1M8 13.5v1M1.5 8h1M13.5 8h1M3.2 3.2l.7.7M12.1 12.1l.7.7M12.1 3.9l-.7.7M3.9 12.1l-.7.7"/></svg>
-            </button>
           </div>
           <div class="stitek-scale-outer" id="stitkScaleOuter">
             <div class="stitek" id="stitek">
@@ -714,72 +715,9 @@
       </div>
     </div>
 
-    <!-- Doložka — rozměry odkaz na tiskový modal -->
-    <div class="cfg-section" style="border-bottom:1px solid var(--rule);">
-      <button class="cfg-section-head" onclick="closeCfgPanel();openDolozkaPreview()" style="justify-content:space-between;">
-        <span class="cfg-section-title">Doložka — rozměry</span>
-        <span class="cfg-section-arrow" style="transform:none;font-size:12px;color:var(--gold);">Nastavit v náhledu tisku →</span>
-      </button>
-    </div>
-
-    <!-- Sekce 3: Štítky do knihy — rozměry -->
-    <div class="cfg-section" id="cfgSec3">
-      <button class="cfg-section-head" onclick="toggleCfgSection('cfgSec3')">
-        <span class="cfg-section-title">Štítky do knihy — rozměry</span>
-        <span class="cfg-section-arrow">▾</span>
-      </button>
-      <div class="cfg-section-body" style="padding-top:0;">
-        <div style="margin:0 -20px;padding:12px 20px;border-bottom:1px solid var(--rule);margin-bottom:16px;">
-          <svg id="spDiagram" viewBox="0 0 260 140" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;"></svg>
-        </div>
-        <div class="sp-section">
-          <div class="sp-section-title">Rozměry štítku</div>
-          <div class="sp-row">
-            <div class="sp-field"><label class="sp-label" for="sp_H">H — výška</label><input class="sp-input" id="sp_H" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-            <div class="sp-field"><label class="sp-label" for="sp_H1">H1 — horní část</label><input class="sp-input" id="sp_H1" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-          </div>
-        </div>
-        <div class="sp-section">
-          <div class="sp-section-title">Okraje archu</div>
-          <div class="sp-row">
-            <div class="sp-field"><label class="sp-label" for="sp_X">X — vlevo</label><input class="sp-input" id="sp_X" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-            <div class="sp-field"><label class="sp-label" for="sp_Y">Y — nahoře</label><input class="sp-input" id="sp_Y" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-          </div>
-        </div>
-        <div class="sp-section">
-          <div class="sp-section-title">Odsazení textu</div>
-          <div class="sp-row">
-            <div class="sp-field"><label class="sp-label" for="sp_PX">PX — horiz.</label><input class="sp-input" id="sp_PX" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-            <div class="sp-field"><label class="sp-label" for="sp_PY">PY — vertik.</label><input class="sp-input" id="sp_PY" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-          </div>
-        </div>
-        <div class="sp-section">
-          <div class="sp-section-title">Šířky sloupců (mm)</div>
-          <div class="sp-row">
-            <div class="sp-field"><label class="sp-label" for="sp_W1">W1</label><input class="sp-input" id="sp_W1" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-            <div class="sp-field"><label class="sp-label" for="sp_W2">W2</label><input class="sp-input" id="sp_W2" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-            <div class="sp-field"><label class="sp-label" for="sp_W3">W3</label><input class="sp-input" id="sp_W3" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-            <div class="sp-field"><label class="sp-label" for="sp_W4">W4</label><input class="sp-input" id="sp_W4" type="number" min="0" step="0.5" oninput="onSettingsInput()"></div>
-          </div>
-          <div class="sp-sum" id="sp_sum"></div>
-        </div>
-        <div class="sp-section">
-          <label class="sp-checkbox-row">
-            <input type="checkbox" id="sp_border" oninput="onSettingsInput()">
-            Vnější rámeček štítku
-          </label>
-          <label class="sp-checkbox-row" style="margin-top:8px;">
-            <input type="checkbox" id="sp_lines" oninput="onSettingsInput()">
-            Vodicí čáry sloupců
-          </label>
-        </div>
-        <div class="settings-footer" style="padding:14px 0 0;border-top:1px solid var(--rule);margin-top:8px;">
-          <button class="btn-sp-reset" onclick="resetSettings()">Obnovit výchozí</button>
-          <button class="btn-sp-save" onclick="saveSettings()">Uložit</button>
-          <button class="btn-sp-print" onclick="saveAndPrint()">Uložit a tisknout</button>
-        </div>
-      </div>
-    </div>
+    <!-- Sekce „Doložka — rozměry" a „Štítky do knihy — rozměry" odstraněny z globálního
+         Nastavení (modulové nastavení patří do modulu). Doložka — rozměry se nastavuje
+         přímo v náhledu tisku (Doložka). Tuning rozměrů štítků smazán — obnovitelné z gitu. -->
 
   </div>
 </div>

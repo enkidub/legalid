@@ -28,7 +28,7 @@ function dismissInstallBanner() {
   const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
 
   if (isIOS && isSafari && navigator.standalone !== true) {
-    document.getElementById('ib-text').textContent = 'Přidejte legalid na plochu';
+    document.getElementById('ib-text').textContent = 'Přidejte Legalid na plochu';
     document.getElementById('ib-ios-hint').innerHTML =
       'Klepněte na <svg width="13" height="13" viewBox="0 0 24 24" fill="none"' +
       ' stroke="currentColor" stroke-width="2.2" stroke-linecap="round"' +
@@ -44,7 +44,7 @@ function dismissInstallBanner() {
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     state.deferredInstallPrompt = e;
-    document.getElementById('ib-text').textContent = 'Nainstalujte aplikaci legalid';
+    document.getElementById('ib-text').textContent = 'Nainstalujte aplikaci Legalid';
     document.getElementById('installBtn').style.display = '';
     document.getElementById('installBanner').classList.add('visible');
   });

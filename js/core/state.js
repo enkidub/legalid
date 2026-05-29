@@ -45,6 +45,8 @@ export function getSettings() {
 
 // ── Sdílený mutable stav (importuj { state } a měň jeho vlastnosti) ──
 export const state = {
+  loggedIn: false,
+  userEmail: '',
   advokat: { jmeno: '', role: '', ev_cislo: '', cislo_knihy: '', sidlo: '' },
   pmDiagramActive: null,
   comboDiagramActive: null,

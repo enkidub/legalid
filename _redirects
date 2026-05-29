@@ -1,0 +1,3 @@
+# SPA fallback — neexistující cesty (/dolozka, /aml, /klienti, /kniha, /archiv) servíruj jako index.html.
+# Statické soubory (css, js, icons, manifest, sw.js) mají přednost a servírují se přímo.
+/*    /index.html    200

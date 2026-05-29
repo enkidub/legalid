@@ -2,9 +2,10 @@
 // Vygenerováno refaktoringem z původního monolitického index.html.
 
 import { state } from '../core/state.js';
+import { navigate } from '../core/router.js';
 import { openDolozkaPreview, updatePreview } from '../dolozka/dolozka.js';
 import { getKlienti, renderKlientiList, saveKlienti } from '../klienti/klienti.js';
-import { _closeAllSidePanels, _closePanelToMenu, _openPanelFromMenu, esc, showActionToast, showToast } from '../core/ui.js';
+import { esc, showActionToast, showToast } from '../core/ui.js';
 
 export function autoSaveRecord() {
   const v = id => document.getElementById(id)?.value.trim() || '';
@@ -53,29 +54,25 @@ export function autoSaveRecord() {
 
 // ── KNIHA PROHLÁŠENÍ ──────────────────────────────────────────────
 
+// Kniha je plná stránka (route /kniha) — open/close jen přepínají route.
 export function openKnihaPanel() {
-  _closeAllSidePanels();
-  renderKnihaList();
-  const panel = document.getElementById('knihaPanel');
-  const overlay = document.getElementById('knihaOverlay');
-  if (document.getElementById('navPanel').classList.contains('open')) {
-    _openPanelFromMenu(panel, overlay);
-  } else {
-    overlay.classList.add('open');
-    panel.classList.add('open');
-  }
+  navigate('/kniha');
 }
 
-
 export function closeKnihaPanel() {
-  const panel = document.getElementById('knihaPanel');
-  const overlay = document.getElementById('knihaOverlay');
-  if (panel.classList.contains('from-menu')) {
-    _closePanelToMenu(panel, overlay);
-  } else {
-    overlay.classList.remove('open');
-    panel.classList.remove('open');
-  }
+  navigate('/dolozka');
+}
+
+// Shell plné stránky Kniha. Po vložení do DOM zavolej renderKnihaList().
+export function renderKnihaPage() {
+  return `<div class="page"><div class="wrap view-lp">
+    <div class="view-lp-head">
+      <h1 class="view-lp-title">Kniha prohlášení</h1>
+      <span class="lp-badge" id="knihaBadge"></span>
+    </div>
+    <div class="lp-notice" id="knihaNotice"${state.loggedIn ? '' : ' style="display:none"'}>${state.loggedIn ? 'Záznamy jsou uloženy ve vašem účtu.' : ''}</div>
+    <div class="lp-list" id="knihaList"></div>
+  </div></div>`;
 }
 
 

@@ -1,32 +1,31 @@
 // legalid.cz — js/klienti/klienti.js
 // Vygenerováno refaktoringem z původního monolitického index.html.
 
+import { state } from '../core/state.js';
+import { navigate } from '../core/router.js';
 import { updatePreview } from '../dolozka/dolozka.js';
-import { _closeAllSidePanels, _closePanelToMenu, _openPanelFromMenu, esc, showToast } from '../core/ui.js';
+import { esc, showToast } from '../core/ui.js';
 
+// Klienti jsou plná stránka (route /klienti) — open/close jen přepínají route.
 export function openKlientiPanel() {
-  _closeAllSidePanels();
-  renderKlientiList();
-  const panel = document.getElementById('klientiPanel');
-  const overlay = document.getElementById('klientiOverlay');
-  if (document.getElementById('navPanel').classList.contains('open')) {
-    _openPanelFromMenu(panel, overlay);
-  } else {
-    overlay.classList.add('open');
-    panel.classList.add('open');
-  }
+  navigate('/klienti');
 }
 
-
 export function closeKlientiPanel() {
-  const panel = document.getElementById('klientiPanel');
-  const overlay = document.getElementById('klientiOverlay');
-  if (panel.classList.contains('from-menu')) {
-    _closePanelToMenu(panel, overlay);
-  } else {
-    overlay.classList.remove('open');
-    panel.classList.remove('open');
-  }
+  navigate('/dolozka');
+}
+
+// Shell plné stránky Klienti. Po vložení do DOM zavolej renderKlientiList().
+export function renderKlientiPage() {
+  return `<div class="page"><div class="wrap view-lp">
+    <div class="view-lp-head">
+      <h1 class="view-lp-title">Klienti</h1>
+      <span class="lp-badge" id="klientiBadge"></span>
+    </div>
+    <div class="lp-notice" id="klientiNotice"${state.loggedIn ? '' : ' style="display:none"'}>${state.loggedIn ? 'Záznamy jsou uloženy ve vašem účtu.' : ''}</div>
+    <input class="lp-search" id="klientiSearch" type="search" placeholder="Hledat jméno, IČO…" oninput="renderKlientiList()">
+    <div class="lp-list" id="klientiList"></div>
+  </div></div>`;
 }
 
 

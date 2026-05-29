@@ -2,6 +2,7 @@
 // Vygenerováno refaktoringem z původního monolitického index.html.
 
 import { apiCheckSession, apiLogout, apiSendMagicLink, apiTrackUsage } from '../core/api.js';
+import { state } from '../core/state.js';
 import { closeHamburger } from '../core/ui.js';
 
 export function openRegistrationModal() {
@@ -109,8 +110,11 @@ export async function trackUsage() {
 
 
 export async function checkSession() {
+  let loggedIn = false, email = '';
   try {
     const data = await apiCheckSession();
+    loggedIn = !!data.loggedIn;
+    email = data.email || '';
     const loginBtn   = document.getElementById('headerLoginBtn');
     const emailEl    = document.getElementById('headerUserEmail');
     const logoutBtn  = document.getElementById('headerLogoutBtn');
@@ -141,6 +145,9 @@ export async function checkSession() {
       if (klientiNotice) klientiNotice.style.display = 'none';
     }
   } catch {}
+  state.loggedIn = loggedIn;
+  state.userEmail = email;
+  window.dispatchEvent(new CustomEvent('authchange', { detail: { loggedIn, email } }));
 }
 
 

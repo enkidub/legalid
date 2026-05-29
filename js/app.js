@@ -4,9 +4,13 @@
 import { checkSession, closeCenikModal, closeRegistrationModal, closeUpgradeModal, handleLogout, openCenikModal, openRegistrationModal, selectPlan, submitRegEmail } from './auth/auth.js';
 import { activeResetPmSettings, cfgUpdateAdvokat, clearAdvokatStorage, closeCfgPanel, closeCfgPanelToMenu, closeFormatPanel, closePrintModal, closeSplitMenu, diagramClick, handleFiles, hideOcrSuccess, onKomboSettingsInput, onPmSettingsInput, onSettingsInput, openCfgPanel, openDolozkaPreview, openSettings, pmDiagramClick, prefillDates, removePhoto, resetSettings, saveAndPrint, saveSettings, selectCustomFormat, selectFormat, switchPmTab, toggleAdvokat, toggleCfgSection, togglePreview, toggleSplitMenu, triggerUpload, updateAdvokat, updatePreview, zmenFormat } from './dolozka/dolozka.js';
 import { buildDolozkaPreviewContent, closePostPrintToast, downloadDocx, noveOvereni, printDolozka, printStitky, scalePrintPreview } from './dolozka/generate.js';
-import { closeKlientiPanel, klientiDeleteConfirm, klientiDeleteDismiss, klientiDeleteDo, klientiEditCancel, klientiEditSave, klientiEditStart, klientiLoad, openKlientiPanel, renderKlientiList } from './klienti/klienti.js';
-import { closeKnihaPanel, getKniha, knihaDeleteConfirm, knihaDeleteDismiss, knihaDeleteDo, knihaEditCancel, knihaEditSave, knihaEditStart, knihaLoad, knihaReprint, openKnihaPanel } from './kniha/kniha.js';
+import { closeKlientiPanel, klientiDeleteConfirm, klientiDeleteDismiss, klientiDeleteDo, klientiEditCancel, klientiEditSave, klientiEditStart, klientiLoad, openKlientiPanel, renderKlientiList, renderKlientiPage } from './klienti/klienti.js';
+import { closeKnihaPanel, getKniha, knihaDeleteConfirm, knihaDeleteDismiss, knihaDeleteDo, knihaEditCancel, knihaEditSave, knihaEditStart, knihaLoad, knihaReprint, openKnihaPanel, renderKnihaList, renderKnihaPage } from './kniha/kniha.js';
 import { state } from './core/state.js';
+import { initRouter, navigate, currentPath } from './core/router.js';
+import { renderLanding } from './landing/landing.js';
+import { renderAml } from './aml/aml.js';
+import { renderArchiv } from './archiv/archiv.js';
 import { actionToastOk, closeAboutModal, closeActionToast, closeHamburger, closePrivacyModal, openAboutModal, openHamburger, openPrivacyModal, showToast } from './core/ui.js';
 
 
@@ -140,15 +144,55 @@ function init() {
   }
 }
 
-// ── Advokát ───────────────────────────────────────────────────────
+// ── Routing ─────────────────────────────────────────────────────────
+const KNOWN_VIEWS = ['landing', 'dolozka', 'aml', 'klienti', 'kniha', 'archiv'];
 
+function resolveView(path) {
+  let v = (path || '/').replace(/\/+$/, '') || '/';
+  if (v === '/') return state.loggedIn ? 'aml' : 'landing';
+  v = v.slice(1);
+  return KNOWN_VIEWS.includes(v) ? v : (state.loggedIn ? 'aml' : 'landing');
+}
+
+function mountRoute(path) {
+  const view = resolveView(path);
+  const host = document.getElementById('appView');
+  const dolozka = document.getElementById('view-dolozka');
+  if (!host || !dolozka) return;
+  if (view === 'dolozka') {
+    host.style.display = 'none';
+    host.innerHTML = '';
+    dolozka.style.display = '';
+  } else {
+    dolozka.style.display = 'none';
+    if (view === 'landing')      host.innerHTML = renderLanding();
+    else if (view === 'aml')     host.innerHTML = renderAml();
+    else if (view === 'archiv')  host.innerHTML = renderArchiv();
+    else if (view === 'klienti') { host.innerHTML = renderKlientiPage(); renderKlientiList(); }
+    else if (view === 'kniha')   { host.innerHTML = renderKnihaPage(); renderKnihaList(); }
+    host.style.display = '';
+  }
+  document.querySelectorAll('.main-nav-item').forEach(b =>
+    b.classList.toggle('active', b.dataset.route === view));
+  window.scrollTo(0, 0);
+}
+
+// Login/logout: přepni viditelnost hlavního menu a přemountuj aktuální route.
+window.addEventListener('authchange', () => {
+  document.body.classList.toggle('logged-in', state.loggedIn);
+  mountRoute(currentPath());
+});
+
+// ── Bootstrap ────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', checkSession);
 
 init();
+initRouter(mountRoute);
 
 // === Window bridge for inline HTML handlers ===
 // Inline onclick/onchange v index.html (a v generovaných šablonách) volá tyto funkce
 // v globálním scope. ES moduly mají vlastní scope, proto je tu explicitně zveřejníme.
+window.navigate = navigate; // hlavní menu (.main-nav-item) + landing CTA: onclick="navigate('/aml')" apod.
 window.dismissInstallBanner = dismissInstallBanner; // <button class="ib-close" onclick="dismissInstallBanner()">×</button>
 window.applyUpdate = applyUpdate; // <button class="ub-btn" onclick="applyUpdate()">Obnovit</button>
 window.handleLogout = handleLogout; // <button id="headerLogoutBtn" style="display:none;font-size:12px;color:var(--ink-lt);background:n

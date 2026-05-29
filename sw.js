@@ -1,4 +1,4 @@
-const CACHE = 'legalid-v14'; // ← BUMP při každém deployi
+const CACHE = 'legalid-v15'; // ← BUMP při každém deployi
 
 const APP_SHELL = [
   '/',
@@ -10,6 +10,7 @@ const APP_SHELL = [
   '/js/core/state.js',
   '/js/core/api.js',
   '/js/core/ui.js',
+  '/js/core/router.js',
   '/js/auth/auth.js',
   '/js/dolozka/dolozka.js',
   '/js/dolozka/ocr.js',
@@ -50,6 +51,15 @@ self.addEventListener('fetch', event => {
   // OCR API — always network, no cache
   if (url.hostname.includes('workers.dev')) {
     event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // SPA navigace (/, /dolozka, /aml, /klienti, /kniha, /archiv) — network first,
+  // fallback na cached index.html (server musí mít také rewrite na index.html, viz _redirects)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/index.html'))
+    );
     return;
   }
 

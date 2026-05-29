@@ -8,7 +8,7 @@ import { closeKlientiPanel, klientiDeleteConfirm, klientiDeleteDismiss, klientiD
 import { closeKnihaPanel, getKniha, knihaDeleteConfirm, knihaDeleteDismiss, knihaDeleteDo, knihaEditCancel, knihaEditSave, knihaEditStart, knihaLoad, knihaReprint, openKnihaPanel, renderKnihaList, renderKnihaPage } from './kniha/kniha.js';
 import { state } from './core/state.js';
 import { initRouter, navigate, currentPath } from './core/router.js';
-import { renderLanding } from './landing/landing.js';
+import { renderLanding, initLanding } from './landing/landing.js';
 import { renderAml } from './aml/aml.js';
 import { renderArchiv } from './archiv/archiv.js';
 import { actionToastOk, closeAboutModal, closeActionToast, closeHamburger, closePrivacyModal, openAboutModal, openHamburger, openPrivacyModal, showToast } from './core/ui.js';
@@ -165,7 +165,7 @@ function mountRoute(path) {
     dolozka.style.display = '';
   } else {
     dolozka.style.display = 'none';
-    if (view === 'landing')      host.innerHTML = renderLanding();
+    if (view === 'landing')      { host.innerHTML = renderLanding(); initLanding(); }
     else if (view === 'aml')     host.innerHTML = renderAml();
     else if (view === 'archiv')  host.innerHTML = renderArchiv();
     else if (view === 'klienti') { host.innerHTML = renderKlientiPage(); renderKlientiList(); }

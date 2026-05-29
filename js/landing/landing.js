@@ -155,10 +155,25 @@ export function renderLanding() {
     </div>
   </footer>
 
-  <!-- Sticky CTA (jen mobil) -->
+  <!-- Sticky CTA (jen mobil, zobrazí se po odscrollování hero) -->
   <div class="lnd-sticky-cta">
     <button class="lnd-btn lnd-btn-primary lnd-btn-block" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
   </div>
 
 </div>`;
+}
+
+let _stickyIo = null;
+
+// Volá se po mountu landingu (app.js). Sticky CTA se odhalí, až hero opustí viewport.
+export function initLanding() {
+  if (_stickyIo) { _stickyIo.disconnect(); _stickyIo = null; }
+  const hero = document.querySelector('.lnd-hero');
+  const cta = document.querySelector('.lnd-sticky-cta');
+  if (!hero || !cta || typeof IntersectionObserver === 'undefined') return;
+  _stickyIo = new IntersectionObserver(
+    ([entry]) => { cta.classList.toggle('is-visible', !entry.isIntersecting); },
+    { threshold: 0 }
+  );
+  _stickyIo.observe(hero);
 }

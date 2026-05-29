@@ -1560,7 +1560,7 @@ body.logged-in .main-nav { display: flex; }
   }
   .lnd-price-card { padding: 24px 20px; }
 
-  /* Sticky CTA lišta dole — perzistentní primární akce */
+  /* Sticky CTA lišta dole — skrytá nad hero, vyjede až hero opustí viewport */
   .lnd { padding-bottom: 76px; }
   .lnd-sticky-cta {
     display: block;
@@ -1570,6 +1570,13 @@ body.logged-in .main-nav { display: flex; }
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
     border-top: 1px solid var(--rule);
     box-shadow: 0 -4px 20px rgba(11,25,41,.08);
+    transform: translateY(110%);
+    transition: transform .25s ease;
   }
+  .lnd-sticky-cta.is-visible { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lnd-sticky-cta { transition: none; }
 }
 

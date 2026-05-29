@@ -81,7 +81,9 @@ if ('serviceWorker' in navigator) {
 
       const showBar = (sw) => {
         state._waitingSW = sw;
-        document.getElementById('updateBar').classList.add('show');
+        // DEV: update lišta skryta pro fázi vývoje — pro reálné uživatele ODKOMENTUJ řádek níže.
+        // Mechanismus updatu (detekce, tracking waiting SW) běží dál v pozadí, jen se nezobrazuje.
+        // document.getElementById('updateBar').classList.add('show');
       };
 
       // Nový SW právě stahován

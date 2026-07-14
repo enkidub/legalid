@@ -16,7 +16,7 @@ export function renderLanding() {
         <button class="lnd-btn lnd-btn-primary" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
         <button class="lnd-btn lnd-btn-ghost" onclick="navigate('/dolozka')">Vyzkoušet ověřovací doložku →</button>
       </div>
-      <div class="lnd-hero-ai">AI rozpozná doklad za 3 vteřiny · automatická lustrace v 5 rejstřících</div>
+      <div class="lnd-hero-ai">AI rozpozná doklad · lustrace v 5 rejstřících · AML záznam k archivaci</div>
       <div class="lnd-hero-note">Bez karty · 30 dní zdarma · zrušíte kdykoli</div>
     </div>
   </section>
@@ -29,20 +29,20 @@ export function renderLanding() {
         <div class="lnd-card lnd-card--primary">
           <div class="lnd-card-icon"><i class="ti ti-shield-check"></i></div>
           <div class="lnd-card-title">AML kontrola</div>
-          <div class="lnd-card-text">Identifikace a kontrola klienta, screening sankčních a PEP seznamů, hodnocení rizik a archivace záznamů — vše na jednom místě.</div>
+          <div class="lnd-card-text">Identifikace, lustrace sankcí a PEP, hodnocení rizika a záznam.</div>
           <button class="lnd-btn lnd-btn-primary lnd-btn-sm" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
         </div>
         <div class="lnd-card">
           <div class="lnd-card-icon"><i class="ti ti-file-certificate"></i></div>
           <div class="lnd-card-title">Ověřovací doložka</div>
-          <div class="lnd-card-text">Prohlášení o pravosti podpisu s automatickým rozpoznáním údajů z občanského průkazu. Tisk, .docx i PDF.</div>
+          <div class="lnd-card-text">Prohlášení o pravosti podpisu s AI rozpoznáním z OP.</div>
           <button class="lnd-btn lnd-btn-ghost lnd-btn-sm" onclick="navigate('/dolozka')">Otevřít doložku →</button>
         </div>
-        <div class="lnd-card lnd-card--soon">
+        <div class="lnd-card">
           <div class="lnd-card-icon"><i class="ti ti-cloud-lock"></i></div>
-          <div class="lnd-card-title">Cloud archivace <span class="lnd-soon-tag">Brzy</span></div>
-          <div class="lnd-card-text">Bezpečné uložení AML dokumentace a doložek v cloudu s šifrováním a přístupem odkudkoli.</div>
-          <button class="lnd-btn lnd-btn-ghost lnd-btn-sm" disabled>Připravujeme</button>
+          <div class="lnd-card-title">Archivace</div>
+          <div class="lnd-card-text">AML záznamy k dispozici pro pozdější dohledání a export.</div>
+          <button class="lnd-btn lnd-btn-ghost lnd-btn-sm" disabled>Součást AML kontroly</button>
         </div>
       </div>
     </div>
@@ -52,23 +52,38 @@ export function renderLanding() {
   <section class="lnd-section lnd-section--alt">
     <div class="lnd-wrap">
       <div class="lnd-section-label">Jak to funguje</div>
-      <h2 class="lnd-h2">5 kroků AML kontroly</h2>
-      <ol class="lnd-steps">
-        <li class="lnd-step"><span class="lnd-step-num">1</span><div><div class="lnd-step-title">Identifikace klienta</div><div class="lnd-step-text">Naskenujte doklad nebo zadejte údaje. Aplikace vyplní formulář za vás.</div><div class="lnd-step-ai">AI rozpozná údaje z dokladu</div></div></li>
-        <li class="lnd-step"><span class="lnd-step-num">2</span><div><div class="lnd-step-title">Screening seznamů</div><div class="lnd-step-text">Automatická kontrola sankčních seznamů (EU, OSN) a politicky exponovaných osob (PEP).</div><div class="lnd-step-ai">fuzzy matching i přes překlepy</div></div></li>
-        <li class="lnd-step"><span class="lnd-step-num">3</span><div><div class="lnd-step-title">Hodnocení rizik</div><div class="lnd-step-text">Rizikové skóre klienta a obchodu podle metodiky — nízké, střední, vysoké riziko.</div><div class="lnd-step-ai">AI přečte podpůrné dokumenty a ověří konzistenci</div></div></li>
-        <li class="lnd-step"><span class="lnd-step-num">4</span><div><div class="lnd-step-title">Generování záznamu</div><div class="lnd-step-text">Protokol o AML kontrole připravený k podpisu a archivaci podle zákona.</div><div class="lnd-step-ai">AI navrhne, vy rozhodnete</div></div></li>
-        <li class="lnd-step"><span class="lnd-step-num">5</span><div><div class="lnd-step-title">Archivace</div><div class="lnd-step-text">Záznamy uchovány po zákonnou dobu, kdykoli dohledatelné při kontrole.</div><div class="lnd-step-ai">generování dokumentů automaticky</div></div></li>
-      </ol>
-      <div class="lnd-steps-note">Screenshoty a ukázky doplníme brzy.</div>
+      <h2 class="lnd-h2">5 kroků, cca 3 minuty na klienta</h2>
+      <ul class="lnd-steps">
+        <li class="lnd-step"><span class="lnd-step-num">1</span><div><div class="lnd-step-title">Identifikace klienta</div><div class="lnd-step-text">Naskenujte doklad, nahrajte soubor nebo zadejte údaje ručně. Můžete i vybrat klienta z předchozích AML kontrol.</div></div></li>
+        <li class="lnd-step"><span class="lnd-step-num">2</span><div><div class="lnd-step-title">Lustrace v rejstřících</div><div class="lnd-step-text">Automatická kontrola v MVČR, ISIR, ARES, sankčních seznamech EU a v globální PEP databázi (OpenSanctions).</div></div></li>
+        <li class="lnd-step"><span class="lnd-step-num">3</span><div><div class="lnd-step-title">Účel obchodu</div><div class="lnd-step-text">Popíšete, co pro klienta děláte. AI přečte podpůrné dokumenty a ověří konzistenci se zdrojem prostředků.</div></div></li>
+        <li class="lnd-step"><span class="lnd-step-num">4</span><div><div class="lnd-step-title">Hodnocení rizika</div><div class="lnd-step-text">AI navrhne rizikový profil (nízké / střední / vysoké). Vy rozhodujete závazně.</div></div></li>
+        <li class="lnd-step"><span class="lnd-step-num">5</span><div><div class="lnd-step-title">Záznam k archivaci</div><div class="lnd-step-text">Vygenerovaný PDF AML záznam si stáhnete a uložíte do vlastní evidence.</div></div></li>
+      </ul>
     </div>
   </section>
 
-  <!-- PRICING -->
+  <!-- KDE POMÁHÁ AI -->
+  <section class="lnd-section">
+    <div class="lnd-wrap lnd-wrap--narrow">
+      <div class="lnd-section-label">Kde pomáhá AI</div>
+      <ul class="lnd-ai-list">
+        <li>Rozpoznání údajů z dokladu za 3 vteřiny</li>
+        <li>Fuzzy matching jmen v sankčních seznamech (i přes překlepy a přepisy)</li>
+        <li>Analýza podpůrných dokumentů a jejich konzistence s tvrzením klienta</li>
+        <li>Návrh rizikového profilu (finální rozhodnutí je vždy na advokátovi)</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- CENA (pilot) -->
   <section class="lnd-section" id="lnd-pricing">
-    <div class="lnd-wrap">
-      <div class="lnd-section-label">Ceník</div>
-      <h2 class="lnd-h2">Jednoduché ceny, bez závazků</h2>
+    <div class="lnd-wrap lnd-wrap--narrow">
+      <div class="lnd-section-label">Cena</div>
+      <h2 class="lnd-h2">Zdarma pro prvních 10 advokátů</h2>
+      <p class="lnd-sub">Legalid je v pilotní fázi. Napište nám: <a href="mailto:info@legalid.cz">info@legalid.cz</a></p>
+    </div>
+    <!-- Ceníkové karty zakomentovány do spuštění Stripe (nemazat, vrátíme se k nim):
       <div class="lnd-price-cards">
         <div class="lnd-price-card">
           <div class="lnd-price-name">Zdarma</div>
@@ -106,7 +121,7 @@ export function renderLanding() {
         </div>
       </div>
       <div class="lnd-price-note">30 dní zdarma neomezeně po registraci · žádná karta při registraci</div>
-    </div>
+    -->
   </section>
 
   <!-- FAQ -->
@@ -119,24 +134,24 @@ export function renderLanding() {
           <div class="lnd-faq-a">Advokáti jsou povinnými osobami podle zákona č. 253/2008 Sb. u řady úkonů — např. při správě majetku, zakládání společností, transakcích s nemovitostmi. AML kontrola klienta je u těchto úkonů povinná.</div>
         </div>
         <div class="lnd-faq-item">
-          <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Jak chráníte naše data?<span class="lnd-faq-icon">+</span></button>
-          <div class="lnd-faq-a">Údaje z dokladů jsou zpracovány na základě zpracovatelské smlouvy dle čl. 28 GDPR a neukládají se na našich serverech déle, než je nezbytné. Záznamy v Knize a u Klientů jsou uloženy lokálně ve vašem prohlížeči. Detaily v sekci Ochrana dat.</div>
-        </div>
-        <div class="lnd-faq-item">
-          <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Můžu předplatné zrušit?<span class="lnd-faq-icon">+</span></button>
-          <div class="lnd-faq-a">Ano, kdykoli a bez podmínek. U měsíčního plánu stačí neobnovit, u ročního zrušíte v nastavení účtu. Žádné poplatky za zrušení.</div>
-        </div>
-        <div class="lnd-faq-item">
-          <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Jak se platí?<span class="lnd-faq-icon">+</span></button>
-          <div class="lnd-faq-a">Platba kartou online. Na vyžádání vystavíme fakturu na IČO. Při registraci kartu nevyžadujeme — nejdřív 30 dní zdarma.</div>
+          <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Který zákon Legalid řeší?<span class="lnd-faq-icon">+</span></button>
+          <div class="lnd-faq-a">Zákon č. 253/2008 Sb. o AML pro advokáty a AML směrnice EU.</div>
         </div>
         <div class="lnd-faq-item">
           <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Jak Legalid používá AI?<span class="lnd-faq-icon">+</span></button>
           <div class="lnd-faq-a">Pro rozpoznání údajů z dokladu, fuzzy matching jmen v sankčních seznamech a porovnání podpůrných dokumentů. AI je asistent, ne rozhodovatel — všechna AML rozhodnutí podle zákona činíte vy.</div>
         </div>
         <div class="lnd-faq-item">
-          <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Jsou data klientů v bezpečí?<span class="lnd-faq-icon">+</span></button>
-          <div class="lnd-faq-a">Fotky dokladů AI zpracovává v reálném čase a okamžitě je zahazuje, neukládají se. Anthropic (poskytovatel AI) má smluvně sjednáno, že data nepoužívá pro trénování modelů.</div>
+          <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Co když AI něco přehlédne?<span class="lnd-faq-icon">+</span></button>
+          <div class="lnd-faq-a">AI je asistent, ne rozhodovatel. Advokát nese odpovědnost za AML kontrolu. Fuzzy matching a globální PEP databáze snižují riziko, ale nikdy nezaručují 100 %.</div>
+        </div>
+        <div class="lnd-faq-item">
+          <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Jak chráníte data klientů?<span class="lnd-faq-icon">+</span></button>
+          <div class="lnd-faq-a">Fotky dokladů se ukládají zašifrovaně, AI je zpracovává v reálném čase bez trénování modelů. Data hostována v EU (Cloudflare + Vercel).</div>
+        </div>
+        <div class="lnd-faq-item">
+          <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Kdy bude Legalid veřejně dostupný?<span class="lnd-faq-icon">+</span></button>
+          <div class="lnd-faq-a">Pilotní přístup pro prvních 10 advokátů teď. Veřejné spuštění a ceník do konce Q4 2026.</div>
         </div>
       </div>
     </div>

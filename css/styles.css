@@ -1648,6 +1648,14 @@ body.logged-in .main-nav { display: flex; }
 .lnd-step-ai { margin-top: 5px; font-size: 12.5px; font-style: italic; color: var(--gold-h); }
 .lnd-steps-note { margin-top: 22px; font-size: 12px; color: var(--ink-fnt); font-style: italic; }
 
+/* Kde pomáhá AI — odrážkový seznam */
+.lnd-ai-list { list-style: none; display: flex; flex-direction: column; gap: 12px; margin: 4px 0 0; }
+.lnd-ai-list li { position: relative; padding-left: 26px; font-size: 14.5px; color: var(--ink-mid); line-height: 1.55; }
+.lnd-ai-list li::before {
+  content: ''; position: absolute; left: 6px; top: 8px; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--gold);
+}
+
 /* Pricing */
 .lnd-price-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; }
 .lnd-price-card {

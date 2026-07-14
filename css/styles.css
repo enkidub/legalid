@@ -1365,6 +1365,11 @@ body.logged-in .main-nav { display: flex; }
   font-size: 11px; font-weight: 700; background: var(--rule); color: var(--ink-lt);
 }
 .aml-step-label { font-size: 12px; font-weight: 500; color: var(--ink-lt); white-space: nowrap; }
+.aml-step-lbl-short { display: none; }
+@media (max-width: 640px) {
+  .aml-step-lbl-full { display: none; }
+  .aml-step-lbl-short { display: inline; }
+}
 .aml-step.active .aml-step-dot { background: var(--navy); color: #fff; }
 .aml-step.active .aml-step-label { color: var(--navy); font-weight: 600; }
 .aml-step.done .aml-step-dot { background: var(--gold); color: #fff; }
@@ -1447,8 +1452,10 @@ body.logged-in .main-nav { display: flex; }
 /* Krok Údaje klienta — dlaždice cest (4 / 2×2 / 1) */
 .aml-tiles-src { grid-template-columns: repeat(2, 1fr); margin-bottom: 16px; }
 @media (min-width: 1025px) { .aml-tiles-src { grid-template-columns: repeat(4, 1fr); } }
-.aml-tile-src { align-items: center; text-align: center; gap: 6px; padding: 16px 12px; }
-.aml-tile-ico { font-size: 22px; line-height: 1; }
+.aml-tile-src { align-items: center; text-align: center; gap: 8px; padding: 18px 12px; }
+.aml-tile-ico { line-height: 0; color: var(--ink-lt); }
+.aml-tile-ico svg { width: 26px; height: 26px; }
+.aml-tile-src.aml-tile--selected .aml-tile-ico { color: var(--gold-h); }
 
 /* Prostřední část podle dlaždice */
 .aml-src-area:empty { display: none; }
@@ -1465,7 +1472,40 @@ body.logged-in .main-nav { display: flex; }
 }
 .aml-slot-capture:hover, .aml-dropzone:hover { border-color: var(--navy); }
 .aml-dropzone--over { border-color: var(--gold); background: var(--gold-p); }
-.aml-dz-ico { font-size: 22px; }
+.aml-dz-ico { line-height: 0; color: var(--ink-lt); }
+.aml-dz-ico svg { width: 26px; height: 26px; }
+.aml-dz-sub { font-size: 11.5px; color: var(--ink-lt); line-height: 1.5; max-width: 420px; }
+.aml-upload-hint { font-size: 11px; color: var(--ink-fnt); margin-top: 8px; }
+
+/* Miniatura s tlačítkem × */
+.aml-thumb-wrap { position: relative; display: inline-block; width: 100%; max-width: 320px; }
+.aml-thumb-x {
+  position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%;
+  border: none; background: rgba(11,25,41,.72); color: #fff; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center; line-height: 0;
+}
+.aml-thumb-x svg { width: 14px; height: 14px; }
+.aml-thumb-x:hover { background: #c0392b; }
+
+/* Nahrát soubor — náhledy */
+.aml-upload { display: flex; flex-direction: column; gap: 12px; }
+.aml-up-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 600px) { .aml-up-grid { grid-template-columns: repeat(2, 1fr); } }
+.aml-up-item .aml-thumb-wrap { max-width: 100%; }
+.aml-up-item .aml-thumb { max-width: 100%; height: 100px; object-fit: cover; }
+.aml-up-pdf {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  height: 100px; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper-w);
+  font-weight: 700; color: var(--navy); font-size: 13px; padding: 8px;
+}
+.aml-up-name { font-weight: 400; font-size: 10px; color: var(--ink-lt); text-align: center; word-break: break-all; }
+
+/* Začít znovu */
+.aml-restart {
+  display: block; margin: 12px auto 0; background: none; border: none; cursor: pointer;
+  font-family: var(--sans); font-size: 12.5px; color: var(--ink-lt); text-decoration: underline;
+}
+.aml-restart:hover { color: #c0392b; }
 
 /* Formulář */
 .aml-form-wrap { margin-top: 4px; }

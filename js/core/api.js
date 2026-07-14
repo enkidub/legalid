@@ -5,10 +5,11 @@ import { CONFIG } from './state.js';
 const WORKER_URL = CONFIG.workerUrl;
 
 // mode: 'dolozka' (default — beze změny, Doložka) | 'aml'. side: 'front' | 'back' (jen pro AML).
-export async function apiOcr(images, mode = 'dolozka', side = null) {
+// multi: true → všechna média jsou jeden doklad (přední+zadní / více stran / PDF).
+export async function apiOcr(images, mode = 'dolozka', side = null, multi = false) {
   const res = await fetch(`${WORKER_URL}/ocr`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ images, mode, side })
+    body: JSON.stringify({ images, mode, side, multi })
   });
   return res.json();
 }

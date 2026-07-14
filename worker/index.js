@@ -24,11 +24,15 @@ Vrať POUZE validní JSON bez markdown formátování, bez backtick bloků, bez 
 Pokud pole není na zpracovávané straně čitelné nebo tam není, nastav hodnotu null. Nehádej.`;
 
 function amlUserPrompt(side) {
-  const which = side === 'back' ? 'ZADNÍ' : 'PŘEDNÍ';
+  const which = side === 'back' ? 'ZADNÍ' : side === 'multi' ? 'VÍCE STRAN' : 'PŘEDNÍ';
   const focus = side === 'back'
     ? `Zpracováváš ZADNÍ stranu českého OP. Na zadní straně bývá adresa trvalého pobytu, datum vydání, datum platnosti a úřad. Zaměř se na tato pole; pole, která jsou jen na přední straně (jméno, datum/místo narození, číslo dokladu), nech null, pokud nejsou na této straně viditelná.`
+    : side === 'multi'
+    ? `Analyzuj VŠECHNA nahraná média jako JEDEN doklad totožnosti — mohou to být přední a zadní strana občanského průkazu, více stránek cestovního pasu, řidičský průkaz, nebo scan PDF s více stranami. Slouč údaje ze všech stran do jednoho výsledku. Pokud se údaj objevuje na více stranách, použij nejčitelnější hodnotu.`
     : `Zpracováváš PŘEDNÍ stranu dokladu. Vyplň pole čitelná z přední strany (jméno, příjmení, datum a místo narození, číslo dokladu, pohlaví, státní občanství); pole typicky jen na zadní straně (adresa, vydání, platnost) nech null, pokud nejsou viditelná.`;
   return `${focus}
+
+Rozpoznej typ dokladu z obsahu a vrať jako client_doc_type jednu z hodnot: "OP" (občanský průkaz), "Pas" (cestovní pas), "ŘP" (řidičský průkaz) nebo "Jiné".
 
 Extrahuj tato pole a vrať JSON:
 {
@@ -38,12 +42,12 @@ Extrahuj tato pole a vrať JSON:
   "misto_narozeni": "město nebo obec",
   "adresa_trvaleho_pobytu": "ulice č.p., město PSČ jako jeden řetězec",
   "cislo_dokladu": "číslo dokladu bez mezer",
-  "typ_dokladu": "OP nebo pas",
+  "typ_dokladu": "OP / Pas / ŘP / Jiné",
   "datum_vydani": "DD.MM.YYYY",
   "datum_platnosti": "DD.MM.YYYY",
   "statni_obcanstvi": "státní občanství",
   "pohlavi": "M nebo Ž",
-  "strana": "${side === 'back' ? 'back' : 'front'}",
+  "strana": "${side === 'back' ? 'back' : side === 'multi' ? 'multi' : 'front'}",
   "confidence": 0.0,
   "pole_s_nizkou_jistotou": []
 }
@@ -574,7 +578,7 @@ export default {
       });
     }
 
-    const { images, mode, side } = body;
+    const { images, mode, side, multi } = body;
     if (!Array.isArray(images) || images.length === 0) {
       return new Response(JSON.stringify({ error: 'missing_images' }), {
         status: 400,
@@ -582,19 +586,18 @@ export default {
       });
     }
 
-    // mode: 'dolozka' (default, beze změny) | 'aml' (bohatší extrakce, po stranách)
+    // mode: 'dolozka' (default, beze změny) | 'aml' (bohatší extrakce)
+    // multi: true → všechna média jsou jeden doklad (přední+zadní / více stran / PDF)
     const isAml = mode === 'aml';
     const systemPrompt = isAml ? AML_SYSTEM_PROMPT : SYSTEM_PROMPT;
-    const userPrompt = isAml ? amlUserPrompt(side) : USER_PROMPT;
+    const userPrompt = isAml ? amlUserPrompt(multi ? 'multi' : side) : USER_PROMPT;
 
-    const imageContent = images.map(img => ({
-      type: 'image',
-      source: {
-        type: 'base64',
-        media_type: img.media_type || 'image/jpeg',
-        data: img.data,
-      },
-    }));
+    // Obrázky → image block, PDF → document block (Anthropic podporuje base64 PDF).
+    const imageContent = images.map(img => {
+      const mt = img.media_type || 'image/jpeg';
+      const kind = mt === 'application/pdf' ? 'document' : 'image';
+      return { type: kind, source: { type: 'base64', media_type: mt, data: img.data } };
+    });
 
     const anthropicPayload = {
       model: 'claude-sonnet-4-6',

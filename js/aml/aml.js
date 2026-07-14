@@ -8,8 +8,9 @@ import { state } from '../core/state.js';
 import { showToast, esc } from '../core/ui.js';
 import { openRegistrationModal } from '../auth/auth.js';
 
-// Wizard: 5 kroků (0-index), zobrazeno jako 1–5.
-const STEP_LABELS = ['Údaje klienta', 'Lustrace', 'Účel', 'Riziko', 'Hotovo'];
+// Wizard: 5 kroků (0-index), zobrazeno jako 1–5. Krátké labely pro mobil (<640px).
+const STEP_LABELS = ['Údaje klienta', 'Lustrace', 'Účel obchodu', 'Riziko', 'Záznam'];
+const STEP_LABELS_SHORT = ['Údaje', 'Lustrace', 'Účel', 'Riziko', 'Záznam'];
 
 // Mapování OCR: DB sloupec ← klíč z AML OCR. (RČ/IČO OCR nevrací — jen ve formuláři.)
 const FIELD_MAP = [
@@ -27,7 +28,7 @@ const FIELD_MAP = [
 ];
 
 // Sloučený formulář kroku Údaje klienta. req = povinné (*).
-const DOC_TYPES = [['OP', 'Občanský průkaz'], ['Pas', 'Cestovní pas'], ['Jiné', 'Jiné']];
+const DOC_TYPES = [['OP', 'Občanský průkaz'], ['Pas', 'Cestovní pas'], ['ŘP', 'Řidičský průkaz'], ['Jiné', 'Jiné']];
 const GENDERS = [['', '—'], ['M', 'Muž'], ['Ž', 'Žena']];
 const FORM_FIELDS = [
   { col: 'client_name', label: 'Jméno', req: true },
@@ -45,13 +46,25 @@ const FORM_FIELDS = [
 ];
 const REQUIRED_COLS = FORM_FIELDS.filter(f => f.req).map(f => f.col);
 
-// Cesty získání dat (horní dlaždice).
+// Cesty získání dat (horní dlaždice). SVG line ikony ve stylu landingu (stroke, bez fill).
+const SVG = {
+  camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>',
+  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>',
+  manual: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="4"/><path d="M10.3 15H7a4 4 0 0 0-4 4v2"/><circle cx="17" cy="17" r="3"/><path d="m21 21-1.9-1.9"/></svg>',
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+};
 const SOURCES = [
-  { id: 'camera', icon: '📷', title: 'Vyfotit doklad' },
-  { id: 'upload', icon: '🖼️', title: 'Nahrát soubor' },
-  { id: 'manual', icon: '✏️', title: 'Zadat ručně' },
-  { id: 'list', icon: '👤', title: 'Ze seznamu' },
+  { id: 'camera', svg: SVG.camera, title: 'Vyfotit doklad' },
+  { id: 'upload', svg: SVG.upload, title: 'Nahrát soubor' },
+  { id: 'manual', svg: SVG.manual, title: 'Zadat ručně' },
+  { id: 'list', svg: SVG.list, title: 'Ze seznamu' },
 ];
+const LAST_METHOD_KEY = 'legalid_aml_lastMethod';
+function loadLastMethod() {
+  try { const v = localStorage.getItem(LAST_METHOD_KEY); return SOURCES.some(s => s.id === v) ? v : 'camera'; }
+  catch { return 'camera'; }
+}
 
 // Způsoby potvrzení totožnosti (dolní radia). Jen 'personal' aktivní v MVP.
 const METHODS = [
@@ -70,7 +83,8 @@ const wiz = {
   data: {},            // client_* hodnoty
   frontImg: null, backImg: null,
   frontExtracted: null, backExtracted: null,
-  ocrLoading: null,    // null | 'front' | 'back'
+  uploadFiles: [],     // source 'upload': [{ dataUrl, media_type, name }] max 3
+  ocrLoading: null,    // null | 'front' | 'back' | 'multi'
   camStream: null, camSide: 'front',
   clients: null,       // cache uložených klientů (source 'list')
   clientQuery: '',
@@ -115,7 +129,10 @@ function bindRoot(root) {
     handleAction(root, t.dataset.act, t.dataset);
   });
   root.addEventListener('change', (e) => {
-    if (e.target.matches('input[type="file"]')) {
+    if (e.target.id === 'amlUploadInput') {
+      addUploadFiles(root, e.target.files); e.target.value = ''; return;
+    }
+    if (e.target.matches('input[type="file"]')) {   // kamera — jedna strana
       const side = e.target.dataset.side || 'front';
       const f = e.target.files && e.target.files[0];
       if (f) handleFile(root, f, side);
@@ -142,8 +159,8 @@ function bindRoot(root) {
     if (!dz) return;
     e.preventDefault();
     dz.classList.remove('aml-dropzone--over');
-    const f = e.dataTransfer?.files && e.dataTransfer.files[0];
-    if (f) handleFile(root, f, dz.dataset.side || 'front');
+    const files = e.dataTransfer?.files;
+    if (files && files.length) addUploadFiles(root, files);
   });
 }
 
@@ -154,10 +171,12 @@ function handleAction(root, act, ds) {
     case 'login': openRegistrationModal(); break;
     case 'pick-source': pickSource(root, ds.source); break;
     case 'capture': onCapture(root, ds.side); break;
-    case 'upload-pick': $('amlFile_' + (ds.side || 'front'))?.click(); break;
+    case 'add-upload': $('amlUploadInput')?.click(); break;
+    case 'remove-upload': removeUpload(root, +ds.idx); break;
+    case 'remove-side': removeSide(root, ds.side); break;
+    case 'restart-step': restartStep(root); break;
     case 'cam-shoot': shootCamera(root); break;
     case 'cam-cancel': closeCamera(); break;
-    case 'retake': retake(root, ds.side); break;
     case 'pick-client': pickClient(root, ds.key); break;
     case 'continue-lustrace': continueToLustrace(root); break;
     case 'next': goNext(root); break;
@@ -185,10 +204,11 @@ async function createNewCase(root) {
     const r = await apiAmlCreateCase();
     if (!r.case_id) throw new Error(r.error || 'create_failed');
     wiz.caseId = r.case_id; state.amlCurrentCaseId = r.case_id;
-    wiz.step = 0; wiz.source = 'camera'; wiz.method = 'personal'; wiz.data = {};
+    wiz.step = 0; wiz.source = loadLastMethod(); wiz.method = 'personal'; wiz.data = {};
     wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
-    wiz.ocrLoading = null; wiz.clients = null; wiz.clientQuery = '';
+    wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.clients = null; wiz.clientQuery = '';
     wiz.lookups = null; wiz.lookupStatus = 'idle';
+    if (wiz.source === 'list') loadClients(root);
     renderStep(root);
   } catch {
     renderError('Nepodařilo se založit AML případ. Zkuste to prosím znovu.');
@@ -225,6 +245,7 @@ function hasClientData() {
 function pickSource(root, id) {
   if (!SOURCES.some(s => s.id === id)) return;
   wiz.source = id;
+  try { localStorage.setItem(LAST_METHOD_KEY, id); } catch {}
   if (id === 'list' && wiz.clients === null) loadClients(root);
   renderStep(root);
 }
@@ -279,9 +300,20 @@ function onCapture(root, side) {
   openCamera(root);
 }
 
-function retake(root, side) {
+// Smazání jedné strany kamerového snímku (× na miniatuře).
+function removeSide(root, side) {
+  if (!confirm('Opravdu chcete vymazat nahraná data?')) return;
   if (side === 'back') { wiz.backImg = null; wiz.backExtracted = null; }
   else { wiz.frontImg = null; wiz.frontExtracted = null; }
+  renderStep(root);
+}
+
+// Reset celého kroku 1 (upload/foto + formulář + způsob ověření). Nemaže aml_case.
+function restartStep(root) {
+  if (!confirm('Opravdu chcete vymazat nahraná data?')) return;
+  wiz.data = {};
+  wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
+  wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.method = 'personal';
   renderStep(root);
 }
 
@@ -290,6 +322,50 @@ function handleFile(root, file, side) {
   r.onload = () => handleImageDataUrl(root, r.result, side || 'front');
   r.onerror = () => showToast('Soubor se nepodařilo načíst.');
   r.readAsDataURL(file);
+}
+
+const MAX_UPLOAD = 3, MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+// Přidá 1–N souborů do upload zóny (max 3, ≤10 MB, JPG/PNG/PDF) a spustí sloučenou AI extrakci.
+async function addUploadFiles(root, fileList) {
+  const files = Array.from(fileList || []);
+  for (const f of files) {
+    if (wiz.uploadFiles.length >= MAX_UPLOAD) { showToast(`Max. ${MAX_UPLOAD} soubory.`); break; }
+    const isPdf = f.type === 'application/pdf';
+    const isImg = f.type.startsWith('image/');
+    if (!isPdf && !isImg) { showToast('Podporujeme jen JPG, PNG a PDF.'); continue; }
+    if (f.size > MAX_UPLOAD_BYTES) { showToast(`${f.name}: přesahuje 10 MB.`); continue; }
+    const dataUrl = await new Promise((res, rej) => {
+      const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f);
+    }).catch(() => null);
+    if (!dataUrl) { showToast('Soubor se nepodařilo načíst.'); continue; }
+    const small = isPdf ? dataUrl : await downscale(dataUrl);
+    wiz.uploadFiles.push({ dataUrl: small, media_type: isPdf ? 'application/pdf' : 'image/jpeg', name: f.name, isPdf });
+  }
+  renderStep(root);
+  if (wiz.uploadFiles.length) runMultiOcr(root);
+}
+
+function removeUpload(root, idx) {
+  if (!confirm('Opravdu chcete vymazat nahraná data?')) return;
+  wiz.uploadFiles.splice(idx, 1);
+  renderStep(root);
+}
+
+// Pošle všechna nahraná média najednou do /ocr (multi) a sloučí výsledek do formuláře.
+async function runMultiOcr(root) {
+  wiz.ocrLoading = 'multi'; renderStep(root);
+  try {
+    const payload = wiz.uploadFiles.map(u => ({ data: u.dataUrl.split(',')[1], media_type: u.media_type }));
+    const data = await apiOcr(payload, 'aml', null, true);
+    if (data.error) throw new Error(data.message || 'ocr_failed');
+    mergeExtracted(data, false);
+    for (const u of wiz.uploadFiles) saveDoc('doklad_upload', u.dataUrl, u.isPdf ? null : data);
+  } catch {
+    showToast('AI rozpoznání selhalo — vyplňte údaje ručně.');
+  } finally {
+    wiz.ocrLoading = null; renderStep(root);
+  }
 }
 
 function downscale(dataUrl, maxDim = 1400, quality = 0.82) {
@@ -461,7 +537,9 @@ function renderSteps() {
   wrap.innerHTML = STEP_LABELS.map((label, i) => {
     const cls = i < wiz.step ? 'done' : (i === wiz.step ? 'active' : 'future');
     const mark = i < wiz.step ? '✓' : String(i + 1);   // zobrazeno 1–5
-    return `<div class="aml-step ${cls}"><span class="aml-step-dot">${mark}</span><span class="aml-step-label">${label}</span></div>`;
+    return `<div class="aml-step ${cls}"><span class="aml-step-dot">${mark}</span>` +
+      `<span class="aml-step-label"><span class="aml-step-lbl-full">${label}</span>` +
+      `<span class="aml-step-lbl-short">${STEP_LABELS_SHORT[i]}</span></span></div>`;
   }).join('');
 }
 
@@ -478,12 +556,13 @@ function renderClientStep(root) {
   const tiles = SOURCES.map(s => {
     const sel = wiz.source === s.id ? ' aml-tile--selected' : '';
     return `<button class="aml-tile aml-tile-src${sel}" data-act="pick-source" data-source="${s.id}">
-      <span class="aml-tile-ico">${s.icon}</span>
+      <span class="aml-tile-ico">${s.svg}</span>
       <span class="aml-tile-title">${esc(s.title)}</span>
     </button>`;
   }).join('');
 
-  const showForm = wiz.source === 'manual' || hasClientData() || !!wiz.frontImg || !!wiz.backImg;
+  const showForm = wiz.source === 'manual' || hasClientData()
+    || !!wiz.frontImg || !!wiz.backImg || wiz.uploadFiles.length > 0;
   const methods = METHODS.map(m => {
     const checked = wiz.method === m.id ? ' checked' : '';
     const dis = m.enabled ? '' : ' disabled';
@@ -507,20 +586,21 @@ function renderClientStep(root) {
     <button class="aml-btn aml-btn-primary aml-btn-block" id="amlContinue" data-act="continue-lustrace"${formValid() ? '' : ' disabled'}>
       Údaje jsou úplné, pokračovat na lustraci →
     </button>
+    ${showForm || wiz.uploadFiles.length ? `<button class="aml-restart" data-act="restart-step">🔄 Začít znovu s tímto klientem</button>` : ''}
   </div>`;
 }
 
 // Prostřední část podle zvolené dlaždice.
 function sourceAreaHTML() {
-  if (wiz.source === 'camera') return captureSlotsHTML('camera');
-  if (wiz.source === 'upload') return captureSlotsHTML('upload');
+  if (wiz.source === 'camera') return cameraSlotsHTML();
+  if (wiz.source === 'upload') return uploadZoneHTML();
   if (wiz.source === 'manual') return `<div class="aml-src-hint">Vyplňte údaje klienta ručně ve formuláři níže.</div>`;
   if (wiz.source === 'list') return clientListHTML();
   return '';
 }
 
-// Dvě strany dokladu (přední/zadní) — kamera i upload sdílí.
-function captureSlotsHTML(mode) {
+// Kamera — dvoukrokový flow (přední → zadní zvlášť), × na miniatuře.
+function cameraSlotsHTML() {
   return `<div class="aml-slots">${['front', 'back'].map(side => {
     const img = side === 'back' ? wiz.backImg : wiz.frontImg;
     const label = side === 'back' ? 'Zadní strana' : 'Přední strana';
@@ -528,29 +608,45 @@ function captureSlotsHTML(mode) {
     if (img) {
       return `<div class="aml-slot">
         <div class="aml-slot-label">${label}</div>
-        <img class="aml-thumb" src="${img}" alt="${label}">
-        ${loading ? `<div class="aml-ai-loading"><span class="aml-spinner"></span> AI rozpoznává…</div>`
-          : `<button class="aml-btn aml-btn-sm" data-act="retake" data-side="${side}">Nahrát znovu</button>`}
-      </div>`;
-    }
-    if (mode === 'upload') {
-      return `<div class="aml-slot">
-        <div class="aml-slot-label">${label}</div>
-        <div class="aml-dropzone" data-side="${side}" data-act="upload-pick">
-          <span class="aml-dz-ico">⬆</span>
-          <span>Přetáhněte foto nebo PDF sem,<br>nebo klikněte pro výběr</span>
+        <div class="aml-thumb-wrap">
+          <img class="aml-thumb" src="${img}" alt="${label}">
+          <button class="aml-thumb-x" data-act="remove-side" data-side="${side}" aria-label="Odstranit">${SVG.close}</button>
         </div>
-        <input type="file" id="amlFile_${side}" data-side="${side}" accept="image/*,.pdf,.heic" hidden>
+        ${loading ? `<div class="aml-ai-loading"><span class="aml-spinner"></span> AI rozpoznává…</div>` : ''}
       </div>`;
     }
     return `<div class="aml-slot">
       <div class="aml-slot-label">${label}</div>
       <button class="aml-slot-capture" data-act="capture" data-side="${side}">
-        <span class="aml-dz-ico">📷</span><span>Vyfotit ${label.toLowerCase()}</span>
+        <span class="aml-dz-ico">${SVG.camera}</span><span>Vyfotit ${label.toLowerCase()}</span>
       </button>
       <input type="file" id="amlCapture_${side}" data-side="${side}" accept="image/*" capture="environment" hidden>
     </div>`;
   }).join('')}</div>`;
+}
+
+// Nahrát soubor — jedna inteligentní zóna, 1–3 soubory (přední/zadní/další), sloučená AI extrakce.
+function uploadZoneHTML() {
+  const previews = wiz.uploadFiles.map((u, i) => {
+    const thumb = u.isPdf
+      ? `<div class="aml-up-pdf"><span>PDF</span><span class="aml-up-name">${esc(u.name)}</span></div>`
+      : `<img class="aml-thumb" src="${u.dataUrl}" alt="${esc(u.name)}">`;
+    return `<div class="aml-up-item"><div class="aml-thumb-wrap">${thumb}
+      <button class="aml-thumb-x" data-act="remove-upload" data-idx="${i}" aria-label="Odstranit">${SVG.close}</button>
+    </div></div>`;
+  }).join('');
+  const zone = wiz.uploadFiles.length < MAX_UPLOAD
+    ? `<div class="aml-dropzone" data-act="add-upload">
+        <span class="aml-dz-ico">${SVG.upload}</span>
+        <span>Přetáhněte foto nebo PDF sem, nebo klikněte pro výběr</span>
+        <span class="aml-dz-sub">Podporujeme občanku, pas, řidičský průkaz nebo jiný doklad totožnosti. Můžete nahrát jednu stranu i obě strany najednou (JPG, PNG, PDF).</span>
+      </div>
+      <input type="file" id="amlUploadInput" accept="image/*,application/pdf" multiple hidden>
+      <div class="aml-upload-hint">Občanka, pas nebo řidičák · JPG, PNG, PDF · max 10 MB</div>`
+    : '';
+  const loading = wiz.ocrLoading === 'multi'
+    ? `<div class="aml-ai-loading"><span class="aml-spinner"></span> AI rozpoznává údaje ze všech stran…</div>` : '';
+  return `<div class="aml-upload">${previews ? `<div class="aml-up-grid">${previews}</div>` : ''}${zone}${loading}</div>`;
 }
 
 // Formulář klienta (společný pro všechny 4 cesty).

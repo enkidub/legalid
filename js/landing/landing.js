@@ -17,6 +17,16 @@ export function renderLanding() {
         <button class="lnd-btn lnd-btn-ghost" onclick="navigate('/dolozka')">Vyzkoušet ověřovací doložku →</button>
       </div>
       <div class="lnd-hero-ai">AI rozpozná doklad · lustrace v 5 rejstřících · AML záznam k archivaci</div>
+
+      <!-- Product proof — rámeček ve stylu prohlížečového okna.
+           TODO: až bude nahrávka wizardu, vyměň <img> za <video autoplay loop muted playsinline>
+           (CSS pro video variantu je připraveno: .lnd-proof-media video). -->
+      <div class="lnd-proof">
+        <div class="lnd-proof-bar"><span></span><span></span><span></span></div>
+        <div class="lnd-proof-media">
+          <img src="/assets/landing/wizard-demo.png" alt="Ukázka AML wizardu Legalid — krok Údaje klienta a lustrace" loading="lazy" onerror="this.style.display='none'">
+        </div>
+      </div>
     </div>
   </section>
 
@@ -55,10 +65,10 @@ export function renderLanding() {
         <h2 class="lnd-h2">5 kroků, cca 3 minuty na klienta</h2>
         <ul class="lnd-steps">
           <li class="lnd-step"><span class="lnd-step-num">1</span><div><div class="lnd-step-title">Identifikace klienta</div><div class="lnd-step-text">Naskenujte doklad, nahrajte soubor nebo zadejte údaje ručně. Můžete i vybrat klienta z předchozích AML kontrol.</div><div class="lnd-step-ai">✨ AI rozpozná údaje z dokladu za 3 vteřiny</div></div></li>
-          <li class="lnd-step"><span class="lnd-step-num">2</span><div><div class="lnd-step-title">Lustrace v rejstřících</div><div class="lnd-step-text">Automatická kontrola v MVČR, ISIR, ARES, sankčních seznamech EU a v globální PEP databázi (OpenSanctions).</div><div class="lnd-step-ai">✨ Fuzzy matching jmen i přes překlepy a přepisy</div></div></li>
+          <li class="lnd-step"><span class="lnd-step-num">2</span><div><div class="lnd-step-title">Lustrace v rejstřících</div><div class="lnd-step-text">Automatická kontrola v MVČR, ISIR, ARES, sankčních seznamech EU (osoby i společnosti) a v globální PEP databázi (OpenSanctions).</div><div class="lnd-step-ai">✨ Fuzzy matching jmen i přes překlepy a přepisy</div></div></li>
           <li class="lnd-step"><span class="lnd-step-num">3</span><div><div class="lnd-step-title">Účel obchodu</div><div class="lnd-step-text">Popíšete, co pro klienta děláte.</div><div class="lnd-step-ai">✨ AI přečte podpůrné dokumenty a ověří konzistenci se zdrojem prostředků</div></div></li>
           <li class="lnd-step"><span class="lnd-step-num">4</span><div><div class="lnd-step-title">Riziko</div><div class="lnd-step-text">AI navrhne rizikový profil (nízké / střední / vysoké). Vy rozhodujete závazně.</div></div></li>
-          <li class="lnd-step"><span class="lnd-step-num">5</span><div><div class="lnd-step-title">Záznam k archivaci</div><div class="lnd-step-text">Vygenerovaný PDF AML záznam si stáhnete a uložíte do vlastní evidence.</div></div></li>
+          <li class="lnd-step"><span class="lnd-step-num">5</span><div><div class="lnd-step-title">Záznam k archivaci</div><div class="lnd-step-text">Vygenerovaný PDF AML záznam si stáhnete a uložíte do vlastní evidence. PDF záznam s náležitostmi podle § 8 a násl. zákona č. 253/2008 Sb.</div></div></li>
         </ul>
       </div>
     </div>
@@ -140,6 +150,21 @@ export function renderLanding() {
         <div class="lnd-faq-item">
           <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Kdy bude Legalid veřejně dostupný?<span class="lnd-faq-icon">+</span></button>
           <div class="lnd-faq-a">Pilotní přístup pro prvních 10 advokátů teď. Veřejné spuštění a ceník do konce Q4 2026.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KDO ZA LEGALID STOJÍ (TODO: doplnit reálný text a foto) -->
+  <section class="lnd-section lnd-section--alt">
+    <div class="lnd-wrap lnd-wrap--narrow">
+      <div class="lnd-section-label">Kdo za Legalid stojí</div>
+      <div class="lnd-about">
+        <div class="lnd-about-photo" aria-hidden="true"></div>
+        <div class="lnd-about-text">
+          <!-- TODO: nahradit placeholder reálným textem (2–3 věty) a fotem. -->
+          Legalid staví praktikující právník a vývojář — z frustrace z ručního papírování kolem AML.
+          Cílem je nástroj, který advokátovi ušetří čas a přitom drží zákonné náležitosti.
         </div>
       </div>
     </div>

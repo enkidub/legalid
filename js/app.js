@@ -21,13 +21,15 @@ function dismissInstallBanner() {
 }
 
 (function() {
-  if (localStorage.getItem('installBannerDismissed') === '1') return;
+  const dismissed = () => localStorage.getItem('installBannerDismissed') === '1';
 
   const ua = navigator.userAgent;
   const isIOS = /iPad|iPhone|iPod/.test(ua);
   const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
 
-  if (isIOS && isSafari && navigator.standalone !== true) {
+  // Banner ukazujeme JEN přihlášeným uživatelům (na landingu se neobjeví).
+  function showIos() {
+    if (dismissed() || !state.loggedIn || !(isIOS && isSafari && navigator.standalone !== true)) return;
     document.getElementById('ib-text').textContent = 'Přidejte Legalid na plochu';
     document.getElementById('ib-ios-hint').innerHTML =
       'Klepněte na <svg width="13" height="13" viewBox="0 0 24 24" fill="none"' +
@@ -41,12 +43,23 @@ function dismissInstallBanner() {
     return;
   }
 
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    state.deferredInstallPrompt = e;
+  function showInstall() {
+    if (dismissed() || !state.loggedIn || !state.deferredInstallPrompt) return;
     document.getElementById('ib-text').textContent = 'Nainstalujte aplikaci Legalid';
     document.getElementById('installBtn').style.display = '';
     document.getElementById('installBanner').classList.add('visible');
+  }
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    state.deferredInstallPrompt = e;
+    showInstall();
+  });
+
+  // Přepočítej při změně přihlášení: přihlášení → ukázat (pokud lze), odhlášení → skrýt.
+  window.addEventListener('authchange', () => {
+    if (!state.loggedIn) { document.getElementById('installBanner')?.classList.remove('visible'); return; }
+    showIos(); showInstall();
   });
 
   document.getElementById('installBtn').addEventListener('click', async () => {

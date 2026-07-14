@@ -1453,14 +1453,25 @@ body.logged-in .main-nav { display: flex; }
 .aml-field select:focus { border-color: var(--navy); }
 .aml-req { color: #c0392b; }
 
-/* PO — segmentový přepínač typu subjektu */
-.aml-seg-wrap { display: inline-flex; border: 1.5px solid var(--rule); border-radius: 10px; overflow: hidden; margin-bottom: 4px; flex-wrap: wrap; }
+/* Segmentový přepínač typu klienta — shrink-to-fit, vlevo, stejně široké segmenty */
+.aml-seg-field { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; align-self: flex-start; max-width: 100%; margin-bottom: 4px; }
+.aml-seg-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--ink-lt); }
+.aml-seg-wrap {
+  display: inline-grid; grid-template-columns: repeat(3, 1fr);   /* stejně široké dle nejdelšího textu */
+  border: 1.5px solid var(--rule); border-radius: 10px; overflow: hidden;
+}
 .aml-seg {
   background: var(--white); border: none; cursor: pointer; font-family: var(--sans);
   font-size: 13px; color: var(--ink-mid); padding: 8px 14px; border-right: 1px solid var(--rule);
+  white-space: nowrap; text-align: center;
 }
 .aml-seg:last-child { border-right: none; }
 .aml-seg--on { background: var(--gold-p); color: var(--gold-h); font-weight: 600; }
+@media (max-width: 480px) {
+  .aml-seg-field { align-self: stretch; }
+  .aml-seg-wrap { display: grid; width: 100%; }
+  .aml-seg { padding: 8px 6px; font-size: 12px; }
+}
 .aml-sec-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-lt); margin-top: 8px; }
 
 /* PO — blok Společnost */

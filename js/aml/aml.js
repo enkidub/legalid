@@ -69,7 +69,7 @@ function loadLastMethod() {
 }
 
 // Typ subjektu (segmentový přepínač nad dlaždicemi).
-const SUBJECT_TYPES = [['fo', 'Fyzická osoba'], ['fo_podnikatel', 'Podnikající FO'], ['po', 'Právnická osoba']];
+const SUBJECT_TYPES = [['fo', 'Fyzická osoba'], ['fo_podnikatel', 'OSVČ / podnikatel'], ['po', 'Právnická osoba']];
 // Role jednající osoby (jen u PO).
 const ROLE_OPTIONS = [['', '—'], ['jednatel', 'Jednatel'], ['clen_predstavenstva', 'Člen představenstva'], ['zmocnenec', 'Zmocněnec'], ['jine', 'Jiné']];
 
@@ -669,7 +669,10 @@ function renderClientStep(root) {
     ${hasAnything ? `<button class="aml-reset-top" data-act="restart-step">Vymazat vše</button>` : ''}
     <div class="aml-h">Údaje klienta</div>
     <div class="aml-sub">Vyplňte údaje klienta a zvolte, jak byla potvrzena jeho totožnost.</div>
-    <div class="aml-seg-wrap">${seg}</div>
+    <div class="aml-seg-field">
+      <span class="aml-seg-label">Typ klienta</span>
+      <div class="aml-seg-wrap">${seg}</div>
+    </div>
     ${isPo ? companyBlockHTML() : ''}
     ${isPo ? `<div class="aml-sec-title">Jednající osoba</div>` : ''}
     <div class="aml-tiles aml-tiles-src">${tiles}</div>

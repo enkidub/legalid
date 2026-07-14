@@ -1,4 +1,4 @@
-import { lookupMvcr, lookupIsir, lookupAres, lookupSanctions, lookupPep } from './utils/lookups.js';
+import { lookupMvcr, lookupIsir, lookupIsirCompany, lookupAres, fetchAresSubject, lookupSanctions, lookupPep } from './utils/lookups.js';
 import { importEuSanctions } from './utils/sanctions.js';
 
 const SYSTEM_PROMPT = `Jsi asistent pro extrakci dat z českých občanských průkazů.
@@ -115,6 +115,11 @@ async function runAllLookups(env, c) {
     ['sanctions', lookupSanctions(env, name, birth)],
     ['pep', lookupPep(env, name, birth)],
   ];
+  // Právnická osoba: 5 lustrací výše běží na JEDNAJÍCÍ OSOBU; navíc lustrace firmy.
+  if (c.subject_type === 'po') {
+    tasks.push(['isir_po', lookupIsirCompany(c.client_ico)]);
+    // 'sanctions_entity' (na název firmy) se přidá v bloku B
+  }
   return Promise.all(tasks.map(async ([type, p]) => {
     let r;
     try { r = await p; } catch (e) { r = { status: 'error', details: `Neočekávaná chyba: ${e?.message || e}` }; }
@@ -440,6 +445,17 @@ export default {
         return json({ case_id: r.meta.last_row_id });
       }
 
+      // GET /api/aml/ares/:ico — předvyplnění firmy z ARES (subject_type='po')
+      const aresM = url.pathname.match(/^\/api\/aml\/ares\/(\d{1,10})$/);
+      if (aresM) {
+        if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
+        try {
+          return json(await fetchAresSubject(aresM[1]));
+        } catch (e) {
+          return json({ error: 'ares_failed', message: String(e.message || e) }, 502);
+        }
+      }
+
       // GET /api/aml/clients — uložení klienti (distinct z případů uživatele, nejnovější výskyt)
       // Zdroj pro dlaždici „Ze seznamu" v kroku Údaje klienta.
       if (url.pathname === '/api/aml/clients') {
@@ -513,6 +529,8 @@ export default {
             'client_address', 'client_nationality', 'client_doc_type', 'client_doc_number',
             'client_doc_valid_until', 'client_doc_issued_at', 'client_gender',
             'client_rc', 'client_ico',
+            'subject_type', 'company_name', 'company_address',
+            'acting_person_role', 'acting_person_note', 'esm_checked', 'esm_note',
             'business_purpose', 'ai_risk_suggestion',
             'ai_risk_reasoning', 'final_risk_level', 'risk_decided_at',
             'final_pdf_generated', 'completed_at', 'next_review_due',

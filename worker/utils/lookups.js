@@ -191,29 +191,83 @@ export async function lookupIsir(surname, firstName, birthdate) {
   }
 }
 
+// ── 2b) ISIR pro firmu (dotaz podle IČO) — pro subject_type='po' ──
+export async function lookupIsirCompany(ico) {
+  const clean = String(ico || '').replace(/\s/g, '');
+  if (!clean) return { status: 'clean', details: { note: 'IČO nezadáno — přeskočeno.' } };
+  const body =
+    `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:typ="http://isirws.cca.cz/types/">` +
+    `<soapenv:Body><typ:getIsirWsCuzkDataRequest>` +
+    `<ic>${xmlEsc(clean)}</ic>` +
+    `<maxPocetVysledku>20</maxPocetVysledku>` +
+    `<vyhledatBezDiakritiky>T</vyhledatBezDiakritiky>` +
+    `</typ:getIsirWsCuzkDataRequest></soapenv:Body></soapenv:Envelope>`;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    let res;
+    try {
+      res = await fetch(ISIR_CUZK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/xml; charset=utf-8', 'SOAPAction': '""' },
+        body, signal: ctrl.signal,
+      });
+    } finally { clearTimeout(timer); }
+    const text = await res.text();
+    if (/<soap:Fault>|<faultstring>/i.test(text)) {
+      const err = (text.match(/<faultstring>([^<]*)</i) || [])[1] || 'neznámá chyba';
+      return { status: 'error', details: `ISIR dotaz odmítnut (${err.slice(0, 120)}).` };
+    }
+    if (/Prázdný výsledek/i.test(text) || !/<data>/.test(text)) {
+      return { status: 'clean', details: { note: 'Firma není v insolvenčním rejstříku.' } };
+    }
+    const recs = isirRecords(text);
+    if (!recs.length) return { status: 'clean', details: { note: 'Firma není v insolvenčním rejstříku.' } };
+    return {
+      status: 'warning',
+      matched_against: `IČO ${clean}`,
+      details: {
+        note: `Firma (IČO ${clean}) figuruje v ${recs.length} insolvenčních řízeních.`,
+        rizeni: recs.slice(0, 10).map(r => ({
+          spis: r.spis, soud: r.soud, stav: r.stav,
+          zahajeni: r.zahajeni || null, ukonceni: r.ukonceni || null, url: r.url || null,
+        })),
+      },
+    };
+  } catch (e) {
+    const msg = e.name === 'AbortError' ? 'časový limit' : e.message;
+    return { status: 'error', details: `Insolvenční rejstřík byl nedostupný (${msg}).` };
+  }
+}
+
 // ── 3) ARES — ekonomické subjekty ──
+// Sdílené jádro: stáhne a naparsuje subjekt z ARES. { found:false } když 404,
+// jinak { found:true, ico, name, address, active, zanik }. Vyhazuje jen při chybě sítě.
+export async function fetchAresSubject(ico) {
+  const clean = String(ico || '').replace(/\s/g, '');
+  const res = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${clean}`, {
+    headers: { 'Accept': 'application/json' },
+  });
+  if (res.status === 404) return { found: false, ico: clean };
+  if (!res.ok) throw new Error(`http ${res.status}`);
+  const d = await res.json();
+  return {
+    found: true, ico: clean,
+    name: d.obchodniJmeno || null,
+    address: d.sidlo?.textovaAdresa || null,
+    active: !d.datumZaniku,
+    zanik: d.datumZaniku || null,
+  };
+}
+
 export async function lookupAres(ico) {
   if (!ico) return { status: 'clean', details: { note: 'Klient nemá IČO — ARES přeskočeno.' } };
-  const clean = String(ico).replace(/\s/g, '');
   try {
-    const res = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${clean}`, {
-      headers: { 'Accept': 'application/json' },
-    });
-    if (res.status === 404) {
-      return { status: 'warning', details: { note: 'Subjekt s tímto IČO nebyl v ARES nalezen.', ico: clean } };
-    }
-    if (!res.ok) throw new Error(`http ${res.status}`);
-    const d = await res.json();
-    const active = !d.datumZaniku;
+    const s = await fetchAresSubject(ico);
+    if (!s.found) return { status: 'warning', details: { note: 'Subjekt s tímto IČO nebyl v ARES nalezen.', ico: s.ico } };
     return {
-      status: active ? 'clean' : 'warning',
-      details: {
-        ico: clean,
-        name: d.obchodniJmeno || null,
-        address: d.sidlo?.textovaAdresa || null,
-        active,
-        zanik: d.datumZaniku || null,
-      },
+      status: s.active ? 'clean' : 'warning',
+      details: { ico: s.ico, name: s.name, address: s.address, active: s.active, zanik: s.zanik },
     };
   } catch (e) {
     return { status: 'error', details: `ARES byl nedostupný (${e.message}).` };

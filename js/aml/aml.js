@@ -3,7 +3,7 @@
 // Architektura: žádné inline onclick → jeden delegovaný listener na #amlRoot (data-act).
 // Tím odpadá fragilní window-bridge (chybějící bridge byl zdroj minulých ReferenceError).
 
-import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, apiAmlListCases, apiAmlListClients, apiAmlRunLookup, apiOcr } from '../core/api.js';
+import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, apiAmlListCases, apiAmlListClients, apiAmlAres, apiAmlRunLookup, apiOcr } from '../core/api.js';
 import { state } from '../core/state.js';
 import { showToast, esc } from '../core/ui.js';
 import { openRegistrationModal } from '../auth/auth.js';
@@ -68,6 +68,11 @@ function loadLastMethod() {
   catch { return 'camera'; }
 }
 
+// Typ subjektu (segmentový přepínač nad dlaždicemi).
+const SUBJECT_TYPES = [['fo', 'Fyzická osoba'], ['fo_podnikatel', 'Podnikající FO'], ['po', 'Právnická osoba']];
+// Role jednající osoby (jen u PO).
+const ROLE_OPTIONS = [['', '—'], ['jednatel', 'Jednatel'], ['clen_predstavenstva', 'Člen představenstva'], ['zmocnenec', 'Zmocněnec'], ['jine', 'Jiné']];
+
 // Způsoby potvrzení totožnosti (dolní radia). Jen 'personal' aktivní v MVP.
 const METHODS = [
   { id: 'personal', enabled: true, title: 'Osobní setkání' },
@@ -81,7 +86,9 @@ const wiz = {
   caseId: null,
   step: 0,
   source: 'camera',    // krok 0: 'camera' | 'upload' | 'manual' | 'list'
+  subject_type: 'fo',  // 'fo' | 'fo_podnikatel' | 'po'
   method: 'personal',  // identification_method
+  aresLoading: false, aresStatus: null,   // stav načítání firmy z ARES (PO)
   data: {},            // client_* hodnoty
   frontImg: null, backImg: null,
   frontExtracted: null, backExtracted: null,
@@ -94,14 +101,25 @@ const wiz = {
   lookupStatus: 'idle',     // 'idle' | 'running' | 'done'
 };
 
-// Řádky lustrací v kroku 2 (pořadí = pořadí zobrazení).
-const LOOKUP_ROWS = [
-  { type: 'mvcr', label: 'Neplatné doklady (MVČR)' },
-  { type: 'isir', label: 'Insolvenční rejstřík (ISIR)' },
-  { type: 'ares', label: 'ARES (podnikatelský subjekt)' },
-  { type: 'sanctions', label: 'Sankční seznam EU' },
-  { type: 'pep', label: 'PEP databáze' },
-];
+// Popisky lustrací.
+const LOOKUP_LABELS = {
+  mvcr: 'Neplatné doklady (MVČR)',
+  isir: 'Insolvenční rejstřík (ISIR)',
+  ares: 'ARES (podnikatelský subjekt)',
+  sanctions: 'Sankční seznam EU',
+  pep: 'PEP databáze',
+  isir_po: 'Insolvenční rejstřík (firma)',
+  sanctions_entity: 'Sankční seznam EU (firmy)',
+};
+// FO: plochý seznam 5 lustrací. PO: skupiny Společnost / Jednající osoba.
+const FO_LOOKUP_TYPES = ['mvcr', 'isir', 'ares', 'sanctions', 'pep'];
+const PO_GROUP_COMPANY = ['ares', 'isir_po'];        // sanctions_entity přidán v bloku B
+const PO_GROUP_PERSON = ['mvcr', 'isir', 'sanctions', 'pep'];
+function lookupTypeList() {
+  return wiz.subject_type === 'po'
+    ? [...PO_GROUP_COMPANY, ...PO_GROUP_PERSON]
+    : FO_LOOKUP_TYPES;
+}
 
 const $ = (id) => document.getElementById(id);
 
@@ -143,10 +161,12 @@ function bindRoot(root) {
       e.target.value = '';
     }
     if (e.target.matches('input[name="amlMethod"]')) setMethod(e.target.value);
+    // select / checkbox / textarea polí formuláře (typ dokladu, role, ESM, pohlaví)
+    if (e.target.id && e.target.id.startsWith('aml_f_')) { readFieldsFromForm(); refreshContinue(); }
   });
   // Live validace formuláře + průběžné čtení do wiz.data (bez re-renderu → nezahodí fokus).
   root.addEventListener('input', (e) => {
-    if (e.target.closest('#amlClientForm')) { readFieldsFromForm(); refreshContinue(); }
+    if (e.target.id && e.target.id.startsWith('aml_f_')) { readFieldsFromForm(); refreshContinue(); }
     if (e.target.id === 'amlClientSearch') { wiz.clientQuery = e.target.value; renderClientList(); }
   });
   // Drag & drop na dropzóny (source 'upload').
@@ -173,6 +193,8 @@ function handleAction(root, act, ds) {
     case 'resume': resumeCase(root, +ds.id); break;
     case 'new': createNewCase(root); break;
     case 'login': openRegistrationModal(); break;
+    case 'set-subject': setSubjectType(root, ds.subject); break;
+    case 'ares-load': aresLoad(root); break;
     case 'pick-source': pickSource(root, ds.source); break;
     case 'capture': onCapture(root, ds.side); break;
     case 'add-upload': $('amlUploadInput')?.click(); break;
@@ -209,6 +231,7 @@ async function createNewCase(root) {
     if (!r.case_id) throw new Error(r.error || 'create_failed');
     wiz.caseId = r.case_id; state.amlCurrentCaseId = r.case_id;
     wiz.step = 0; wiz.source = loadLastMethod(); wiz.method = 'personal'; wiz.data = {};
+    wiz.subject_type = 'fo'; wiz.aresStatus = null; wiz.aresLoading = false;
     wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
     wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.clients = null; wiz.clientQuery = '';
     wiz.lookups = null; wiz.lookupStatus = 'idle';
@@ -220,7 +243,8 @@ async function createNewCase(root) {
 }
 
 // Všechny datové sloupce klienta (formulář + místo narození z OCR).
-const DATA_COLS = [...FORM_FIELDS.map(f => f.col), 'client_birth_place'];
+const DATA_COLS = [...FORM_FIELDS.map(f => f.col), 'client_birth_place',
+  'company_name', 'company_address', 'acting_person_role', 'acting_person_note', 'esm_checked', 'esm_note'];
 
 async function resumeCase(root, id) {
   renderLoading('Načítám případ…');
@@ -230,8 +254,9 @@ async function resumeCase(root, id) {
     if (!c) throw new Error('not_found');
     wiz.caseId = c.id; state.amlCurrentCaseId = c.id;
     wiz.method = c.identification_method || 'personal';
+    wiz.subject_type = c.subject_type || 'fo';
     wiz.data = {};
-    DATA_COLS.forEach(col => { if (c[col]) wiz.data[col] = c[col]; });
+    DATA_COLS.forEach(col => { if (c[col] != null && c[col] !== '') wiz.data[col] = c[col]; });
     wiz.step = c.current_step || 0;   // DB je již v novém schématu (migrace v4)
     wiz.source = hasClientData() ? 'manual' : 'camera';   // s daty rovnou ukaž formulář
     wiz.lookups = null; wiz.lookupStatus = 'idle';
@@ -252,6 +277,37 @@ function pickSource(root, id) {
   try { localStorage.setItem(LAST_METHOD_KEY, id); } catch {}
   if (id === 'list' && wiz.clients === null) loadClients(root);
   renderStep(root);
+}
+
+// Segmentový přepínač typu subjektu (FO / Podnikající FO / PO).
+function setSubjectType(root, id) {
+  if (!SUBJECT_TYPES.some(([v]) => v === id)) return;
+  readFieldsFromForm();
+  wiz.subject_type = id;
+  patchCase({ subject_type: id });
+  renderStep(root);
+}
+
+// Načtení firmy z ARES podle IČO (subject_type='po').
+async function aresLoad(root) {
+  readFieldsFromForm();
+  const ico = (wiz.data.client_ico || '').replace(/\s/g, '');
+  if (!/^\d{6,8}$/.test(ico)) { showToast('Zadejte platné IČO (6–8 číslic).'); return; }
+  wiz.aresLoading = true; wiz.aresStatus = null; renderStep(root);
+  try {
+    const s = await apiAmlAres(ico);
+    if (s && s.found) {
+      if (s.name) wiz.data.company_name = s.name;
+      if (s.address) wiz.data.company_address = s.address;
+      wiz.aresStatus = { ok: true, active: s.active, text: s.active ? 'Aktivní subjekt' : `Zaniklý subjekt${s.zanik ? ` (${s.zanik})` : ''}` };
+    } else {
+      wiz.aresStatus = { ok: false, text: 'Subjekt s tímto IČO nebyl v ARES nalezen.' };
+    }
+  } catch {
+    wiz.aresStatus = { ok: false, text: 'ARES nedostupný — vyplňte údaje ručně.' };
+  } finally {
+    wiz.aresLoading = false; renderStep(root);
+  }
 }
 
 // ── Navigace ─────────────────────────────────────────────────────────
@@ -283,8 +339,13 @@ async function goBack(root) {
 async function continueToLustrace(root) {
   readFieldsFromForm();
   if (!formValid()) { showToast('Vyplňte prosím všechna povinná pole (*).'); return; }
-  const patch = { current_step: 1, identification_method: wiz.method };
-  DATA_COLS.forEach(col => { patch[col] = wiz.data[col] || null; });
+  // PO: bez ověření skutečných majitelů nelze pokračovat.
+  if (wiz.subject_type === 'po' && !wiz.data.esm_checked) {
+    showToast('U právnické osoby nejdřív ověřte skutečné majitele v ESM a zaškrtněte potvrzení.');
+    return;
+  }
+  const patch = { current_step: 1, identification_method: wiz.method, subject_type: wiz.subject_type };
+  DATA_COLS.forEach(col => { patch[col] = (wiz.data[col] === '' || wiz.data[col] == null) ? null : wiz.data[col]; });
   await patchCase(patch);
   wiz.step = 1;
   wiz.lookupStatus = 'idle'; wiz.lookups = null;   // nová data → čerstvá lustrace
@@ -418,15 +479,18 @@ function mergeExtracted(data, isBack) {
   });
 }
 
+// Přečte všechna pole formuláře (osobní + firma + role + ESM) dle id „aml_f_<col>".
 function readFieldsFromForm() {
-  FORM_FIELDS.forEach(({ col }) => {
-    const i = $('aml_f_' + col);
-    if (i) wiz.data[col] = i.value.trim();
+  document.querySelectorAll('#amlMain [id^="aml_f_"]').forEach(el => {
+    const col = el.id.slice(6);
+    wiz.data[col] = el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value.trim();
   });
 }
 
 function formValid() {
-  return REQUIRED_COLS.every(col => (wiz.data[col] || '').trim());
+  const req = [...REQUIRED_COLS];
+  if (wiz.subject_type === 'fo_podnikatel' || wiz.subject_type === 'po') req.push('client_ico');
+  return req.every(col => String(wiz.data[col] ?? '').trim());
 }
 
 // Přepne stav tlačítka „pokračovat na lustraci" bez re-renderu (nezahodí fokus).
@@ -577,14 +641,25 @@ function renderClientStep(root) {
     </label>`;
   }).join('');
 
-  const hasAnything = showForm || wiz.uploadFiles.length || !!wiz.frontImg || !!wiz.backImg;
+  const isPo = wiz.subject_type === 'po';
+  const seg = SUBJECT_TYPES.map(([id, label]) =>
+    `<button class="aml-seg${wiz.subject_type === id ? ' aml-seg--on' : ''}" data-act="set-subject" data-subject="${id}">${esc(label)}</button>`
+  ).join('');
+
+  const hasAnything = showForm || wiz.uploadFiles.length || !!wiz.frontImg || !!wiz.backImg || isPo;
+  const formShown = showForm || isPo;   // u PO jednající osobu ukazuj vždy
   $('amlMain').innerHTML = `<div class="aml-card">
     ${hasAnything ? `<button class="aml-reset-top" data-act="restart-step">Vymazat vše</button>` : ''}
     <div class="aml-h">Údaje klienta</div>
     <div class="aml-sub">Vyplňte údaje klienta a zvolte, jak byla potvrzena jeho totožnost.</div>
+    <div class="aml-seg-wrap">${seg}</div>
+    ${isPo ? companyBlockHTML() : ''}
+    ${isPo ? `<div class="aml-sec-title">Jednající osoba</div>` : ''}
     <div class="aml-tiles aml-tiles-src">${tiles}</div>
     <div class="aml-src-area">${sourceAreaHTML()}</div>
-    ${showForm ? `<div class="aml-form-wrap" id="amlClientForm">${clientFormHTML()}</div>` : ''}
+    ${formShown ? `<div class="aml-form-wrap" id="amlClientForm">${clientFormHTML()}</div>` : ''}
+    ${isPo ? actingRoleHTML() : ''}
+    ${isPo ? esmBlockHTML() : ''}
     <div class="aml-method">
       <div class="aml-method-title">Jak byla potvrzena totožnost klienta?</div>
       <div class="aml-radios">${methods}</div>
@@ -592,6 +667,49 @@ function renderClientStep(root) {
     <button class="aml-btn aml-btn-primary aml-btn-block" id="amlContinue" data-act="continue-lustrace"${formValid() ? '' : ' disabled'}>
       Údaje jsou úplné, pokračovat na lustraci →
     </button>
+  </div>`;
+}
+
+// Blok Společnost (PO) — IČO + načtení z ARES + název/sídlo.
+function companyBlockHTML() {
+  const st = wiz.aresStatus;
+  const status = wiz.aresLoading
+    ? `<div class="aml-ai-loading"><span class="aml-spinner"></span> Načítám z ARES…</div>`
+    : st ? `<div class="aml-ares-status ${st.ok ? (st.active ? 'is-ok' : 'is-warn') : 'is-warn'}">${esc(st.text)}</div>` : '';
+  return `<div class="aml-company">
+    <div class="aml-sec-title">Společnost</div>
+    <div class="aml-company-ico">
+      <label class="aml-field"><span>IČO <span class="aml-req">*</span></span>
+        <input id="aml_f_client_ico" value="${esc(wiz.data.client_ico || '')}" placeholder="12345678"></label>
+      <button class="aml-btn aml-btn-sm" data-act="ares-load">Načíst z ARES</button>
+    </div>
+    ${status}
+    <div class="aml-fields">
+      <label class="aml-field"><span>Název společnosti</span><input id="aml_f_company_name" value="${esc(wiz.data.company_name || '')}"></label>
+      <label class="aml-field"><span>Sídlo</span><input id="aml_f_company_address" value="${esc(wiz.data.company_address || '')}"></label>
+    </div>
+  </div>`;
+}
+
+// Role jednající osoby + poznámka (PO).
+function actingRoleHTML() {
+  const opts = ROLE_OPTIONS.map(([v, l]) => `<option value="${esc(v)}"${v === (wiz.data.acting_person_role || '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
+  return `<div class="aml-fields">
+    <label class="aml-field"><span>Role jednající osoby</span><select id="aml_f_acting_person_role">${opts}</select></label>
+    <label class="aml-field"><span>Poznámka (nepovinné)</span><input id="aml_f_acting_person_note" value="${esc(wiz.data.acting_person_note || '')}"></label>
+  </div>`;
+}
+
+// Skuteční majitelé (ESM) — gate pro pokračování.
+function esmBlockHTML() {
+  const checked = wiz.data.esm_checked ? ' checked' : '';
+  return `<div class="aml-esm">
+    <div class="aml-sec-title">Skuteční majitelé (ESM)</div>
+    <label class="aml-check"><input type="checkbox" id="aml_f_esm_checked"${checked}>
+      <span>Ověřil jsem skutečné majitele v evidenci skutečných majitelů</span></label>
+    <a class="aml-lk-link" href="https://esm.justice.cz" target="_blank" rel="noopener">Otevřít evidenci skutečných majitelů ↗</a>
+    <label class="aml-field"><span>Poznámka (nepovinné)</span>
+      <textarea id="aml_f_esm_note" rows="2">${esc(wiz.data.esm_note || '')}</textarea></label>
   </div>`;
 }
 
@@ -655,10 +773,13 @@ function uploadZoneHTML() {
 }
 
 // Formulář klienta (společný pro všechny 4 cesty).
+// U PO se IČO vynechá (je v bloku Společnost). U podnikající FO je IČO povinné.
 function clientFormHTML() {
-  return `<div class="aml-fields">` + FORM_FIELDS.map(f => {
+  const fields = FORM_FIELDS.filter(f => !(f.col === 'client_ico' && wiz.subject_type === 'po'));
+  return `<div class="aml-fields">` + fields.map(f => {
     const val = wiz.data[f.col] || '';
-    const star = f.req ? ' <span class="aml-req">*</span>' : '';
+    const req = f.req || (f.col === 'client_ico' && wiz.subject_type === 'fo_podnikatel');
+    const star = req ? ' <span class="aml-req">*</span>' : '';
     let input;
     if (f.type === 'select') {
       const opts = f.opts.map(([v, l]) => `<option value="${esc(v)}"${v === val ? ' selected' : ''}>${esc(l)}</option>`).join('');
@@ -836,15 +957,15 @@ function isirDetailHTML(lk) {
     return `<div class="aml-lk-rizeni"><div class="aml-lk-spis">${spis} ${badge}</div><div class="aml-lk-rmeta">${esc(meta)}</div></div>`;
   }).join('');
   const more = list.length > 10 ? `<div class="aml-lk-rmeta">… a dalších ${list.length - 10} řízení</div>` : '';
-  return `<div class="aml-lk-detail" id="aml-lk-det-isir" hidden>` +
+  return `<div class="aml-lk-detail" id="aml-lk-det-${lk.lookup_type}" hidden>` +
     (d.note ? `<div class="aml-lk-rnote">${esc(d.note)}</div>` : '') + rows + more + `</div>`;
 }
 
 function lookupDetailHTML(lk) {
   // PEP z OpenSanctions má vlastní srozumitelný render.
   if (lk.lookup_type === 'pep' && lk.source === 'opensanctions') return pepDetailHTML(lk);
-  // ISIR nalezená řízení mají vlastní render.
-  if (lk.lookup_type === 'isir' && lk.details && lk.details.rizeni) return isirDetailHTML(lk);
+  // ISIR (osoba i firma) nalezená řízení mají vlastní render.
+  if ((lk.lookup_type === 'isir' || lk.lookup_type === 'isir_po') && lk.details && lk.details.rizeni) return isirDetailHTML(lk);
 
   const d = lk.details;
   // ISIR / obecný ruční fallback — odkaz na ověření.
@@ -868,28 +989,38 @@ function lookupDetailHTML(lk) {
   return `<div class="aml-lk-detail" id="aml-lk-det-${lk.lookup_type}" hidden>${matched}${inner}</div>`;
 }
 
-function lookupRowHTML(meta) {
-  const lk = wiz.lookups?.find(x => x.lookup_type === meta.type) || null;
+function lookupRowHTML(type) {
+  const lk = wiz.lookups?.find(x => x.lookup_type === type) || null;
   const v = lookupView(lk);
   const expandable = lk && ['warning', 'match', 'error', 'manual'].includes(lk.status);
-  const act = expandable ? ` data-act="toggle-detail" data-type="${meta.type}" role="button" tabindex="0"` : '';
+  const act = expandable ? ` data-act="toggle-detail" data-type="${type}" role="button" tabindex="0"` : '';
   const row = `<div class="aml-lk-row aml-lk-${v.cls}"${act}>
       <span class="aml-lk-ico">${v.icon}</span>
-      <span class="aml-lk-label">${esc(meta.label)}</span>
+      <span class="aml-lk-label">${esc(LOOKUP_LABELS[type] || type)}</span>
       <span class="aml-lk-status">${esc(v.text)}${expandable ? ' <span class="aml-lk-caret">▾</span>' : ''}</span>
     </div>`;
   return row + (expandable ? lookupDetailHTML(lk) : '');
 }
 
 function renderLustrace(root) {
-  const rows = LOOKUP_ROWS.map(lookupRowHTML).join('');
+  let inner;
+  if (wiz.subject_type === 'po') {
+    // Dvě skupiny: Společnost / Jednající osoba.
+    inner =
+      `<div class="aml-lk-group-title">Společnost</div>` +
+      `<div class="aml-lookups">${PO_GROUP_COMPANY.map(lookupRowHTML).join('')}</div>` +
+      `<div class="aml-lk-group-title">Jednající osoba</div>` +
+      `<div class="aml-lookups">${PO_GROUP_PERSON.map(lookupRowHTML).join('')}</div>`;
+  } else {
+    inner = `<div class="aml-lookups">${FO_LOOKUP_TYPES.map(lookupRowHTML).join('')}</div>`;
+  }
   const rerun = wiz.lookupStatus === 'done'
     ? `<button class="aml-btn aml-btn-sm" data-act="rerun-lookups">Spustit lustraci znovu</button>`
     : '';
   $('amlMain').innerHTML = `<div class="aml-card">
     <div class="aml-h">Automatická lustrace</div>
     <div class="aml-sub">Prověřujeme klienta ve veřejných rejstřících a sankčních seznamech.</div>
-    <div class="aml-lookups">${rows}</div>
+    ${inner}
     <div class="aml-lk-note">Sankční kontrola: EU (OFAC/OSN připravujeme).</div>
     ${rerun}
   </div>`;
@@ -897,22 +1028,23 @@ function renderLustrace(root) {
 }
 
 async function runLookups(root) {
+  const types = lookupTypeList();
   wiz.lookupStatus = 'running';
   wiz.lookups = [];
-  renderLustrace(root);       // 5 řádků ve stavu „probíhá"
+  renderLustrace(root);       // řádky ve stavu „probíhá"
   renderFoot();               // Další zůstává disabled
   let res;
   try {
     const r = await apiAmlRunLookup(wiz.caseId);
     res = r.results || [];
   } catch {
-    res = LOOKUP_ROWS.map(m => ({ lookup_type: m.type, status: 'error', details: 'Lustrace se nezdařila.' }));
+    res = types.map(t => ({ lookup_type: t, status: 'error', details: 'Lustrace se nezdařila.' }));
   }
   if (wiz.step !== 1) { wiz.lookupStatus = 'done'; return; }   // uživatel mezitím odešel
   // staggered reveal — řádky naskakují postupně
-  for (const meta of LOOKUP_ROWS) {
-    const found = res.find(x => x.lookup_type === meta.type)
-      || { lookup_type: meta.type, status: 'error', details: 'Bez odpovědi.' };
+  for (const t of types) {
+    const found = res.find(x => x.lookup_type === t)
+      || { lookup_type: t, status: 'error', details: 'Bez odpovědi.' };
     wiz.lookups.push(found);
     await new Promise(r => setTimeout(r, 220));
     if (wiz.step === 1) renderLustrace(root);

@@ -1450,6 +1450,39 @@ body.logged-in .main-nav { display: flex; }
 .aml-field select:focus { border-color: var(--navy); }
 .aml-req { color: #c0392b; }
 
+/* PO — segmentový přepínač typu subjektu */
+.aml-seg-wrap { display: inline-flex; border: 1.5px solid var(--rule); border-radius: 10px; overflow: hidden; margin-bottom: 4px; flex-wrap: wrap; }
+.aml-seg {
+  background: var(--white); border: none; cursor: pointer; font-family: var(--sans);
+  font-size: 13px; color: var(--ink-mid); padding: 8px 14px; border-right: 1px solid var(--rule);
+}
+.aml-seg:last-child { border-right: none; }
+.aml-seg--on { background: var(--gold-p); color: var(--gold-h); font-weight: 600; }
+.aml-sec-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-lt); margin-top: 8px; }
+
+/* PO — blok Společnost */
+.aml-company { display: flex; flex-direction: column; gap: 10px; }
+.aml-company-ico { display: flex; gap: 10px; align-items: flex-end; }
+.aml-company-ico .aml-field { flex: 1; }
+.aml-company-ico .aml-btn { white-space: nowrap; }
+.aml-ares-status { font-size: 12px; font-weight: 600; }
+.aml-ares-status.is-ok { color: #1a8a4a; }
+.aml-ares-status.is-warn { color: #b8791a; }
+
+/* PO — ESM */
+.aml-esm { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
+.aml-check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--ink); cursor: pointer; }
+.aml-check input { accent-color: var(--gold-h); width: 16px; height: 16px; margin-top: 1px; flex-shrink: 0; }
+.aml-esm textarea, .aml-field textarea {
+  padding: 8px 10px; border: 1.5px solid var(--rule); border-radius: var(--r);
+  font-family: var(--sans); font-size: 13px; color: var(--ink); background: var(--white);
+  outline: none; width: 100%; resize: vertical;
+}
+.aml-esm textarea:focus, .aml-field textarea:focus { border-color: var(--navy); }
+
+/* Lustrace — nadpis skupiny (PO) */
+.aml-lk-group-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-lt); margin: 10px 0 2px; }
+
 /* Krok Údaje klienta — dlaždice cest (4 / 2×2 / 1) */
 .aml-tiles-src { grid-template-columns: repeat(2, 1fr); margin-bottom: 16px; }
 @media (min-width: 1025px) { .aml-tiles-src { grid-template-columns: repeat(4, 1fr); } }

@@ -52,6 +52,12 @@ export async function apiAmlListClients() {
   return r.json();
 }
 
+// Předvyplnění firmy z ARES podle IČO (subject_type='po').
+export async function apiAmlAres(ico) {
+  const r = await fetch(`${WORKER_URL}/api/aml/ares/${encodeURIComponent(ico)}`, { credentials: 'include' });
+  return r.json();
+}
+
 // Spustí všech 5 lustrací nad případem, vrátí { results: [...] } a uloží je do aml_lookups.
 export async function apiAmlRunLookup(caseId) {
   const r = await fetch(`${WORKER_URL}/api/aml/lookup/run`, {

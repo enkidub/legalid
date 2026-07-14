@@ -58,6 +58,12 @@ export async function apiAmlAres(ico) {
   return r.json();
 }
 
+// Uložené výsledky lustrací (bez nového běhu) — pro návrat na krok Lustrace.
+export async function apiAmlGetLookups(caseId) {
+  const r = await fetch(`${WORKER_URL}/api/aml/case/${caseId}/lookups`, { credentials: 'include' });
+  return r.json();
+}
+
 // Spustí všech 5 lustrací nad případem, vrátí { results: [...] } a uloží je do aml_lookups.
 export async function apiAmlRunLookup(caseId) {
   const r = await fetch(`${WORKER_URL}/api/aml/lookup/run`, {

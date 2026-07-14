@@ -120,15 +120,16 @@ async function runAllLookups(env, c) {
     tasks.push(['isir_po', lookupIsirCompany(c.client_ico)]);
     tasks.push(['sanctions_entity', lookupSanctionsEntity(env, c.company_name)]);
   }
+  const checkedAt = new Date().toISOString();
   return Promise.all(tasks.map(async ([type, p]) => {
     let r;
     try { r = await p; } catch (e) { r = { status: 'error', details: `Neočekávaná chyba: ${e?.message || e}` }; }
     const details = typeof r.details === 'string' ? r.details : JSON.stringify(r.details ?? null);
     try {
       await env.DB.prepare(
-        `INSERT INTO aml_lookups (case_id, lookup_type, result_status, result_details, matched_against, match_score)
-         VALUES (?, ?, ?, ?, ?, ?)`
-      ).bind(c.id, type, r.status, details, r.matched_against || null, r.match_score ?? null).run();
+        `INSERT INTO aml_lookups (case_id, lookup_type, result_status, result_details, matched_against, match_score, checked_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).bind(c.id, type, r.status, details, r.matched_against || null, r.match_score ?? null, checkedAt).run();
     } catch { /* log fail nesmí shodit odpověď */ }
     return {
       lookup_type: type, status: r.status,
@@ -136,6 +137,7 @@ async function runAllLookups(env, c) {
       matched_against: r.matched_against || null,
       match_score: r.match_score ?? null,
       source: r.source || null,
+      checked_at: checkedAt,
     };
   }));
 }
@@ -468,6 +470,32 @@ export default {
         } catch (e) {
           return json({ error: 'ares_failed', message: String(e.message || e) }, 502);
         }
+      }
+
+      // GET /api/aml/case/:id/lookups — uložené výsledky lustrací (poslední na typ) vč. checked_at.
+      const lkM = url.pathname.match(/^\/api\/aml\/case\/(\d+)\/lookups$/);
+      if (lkM) {
+        if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
+        const caseId = lkM[1];
+        const owner = await env.DB.prepare('SELECT id FROM aml_cases WHERE id = ? AND user_id = ?').bind(caseId, userId).first();
+        if (!owner) return json({ error: 'not_found' }, 404);
+        const { results } = await env.DB.prepare(
+          `SELECT lookup_type, result_status, result_details, matched_against, match_score, checked_at
+             FROM aml_lookups WHERE case_id = ? ORDER BY id`
+        ).bind(caseId).all();
+        // poslední záznam na typ (novější id přepíše starší)
+        const byType = new Map();
+        for (const r of (results || [])) {
+          let details = r.result_details;
+          try { details = JSON.parse(r.result_details); } catch { /* ponech string */ }
+          byType.set(r.lookup_type, {
+            lookup_type: r.lookup_type, status: r.result_status, details,
+            matched_against: r.matched_against || null, match_score: r.match_score ?? null,
+            source: null,   // source se do aml_lookups neukládá; PEP detail se na reloadu vykreslí obecně
+            checked_at: r.checked_at || null,
+          });
+        }
+        return json({ results: [...byType.values()] });
       }
 
       // GET /api/aml/clients — uložení klienti (distinct z případů uživatele, nejnovější výskyt)

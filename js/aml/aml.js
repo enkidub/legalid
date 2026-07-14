@@ -3,7 +3,7 @@
 // Architektura: žádné inline onclick → jeden delegovaný listener na #amlRoot (data-act).
 // Tím odpadá fragilní window-bridge (chybějící bridge byl zdroj minulých ReferenceError).
 
-import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, apiAmlListCases, apiAmlListClients, apiAmlAres, apiAmlRunLookup, apiOcr } from '../core/api.js';
+import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, apiAmlListCases, apiAmlListClients, apiAmlAres, apiAmlGetLookups, apiAmlRunLookup, apiOcr } from '../core/api.js';
 import { state } from '../core/state.js';
 import { showToast, esc } from '../core/ui.js';
 import { openRegistrationModal } from '../auth/auth.js';
@@ -98,7 +98,9 @@ const wiz = {
   clients: null,       // cache uložených klientů (source 'list')
   clientQuery: '',
   lookups: null,            // pole výsledků lustrací (krok Lustrace), null = ještě neběželo
-  lookupStatus: 'idle',     // 'idle' | 'running' | 'done'
+  lookupStatus: 'idle',     // 'idle' | 'running' | 'loading' | 'done'
+  maxStep: 0,               // nejdál dosažený krok (pro klikatelnost indikátoru)
+  forceRun: false,          // true = na kroku Lustrace spustit nově (ne načíst uložené)
 };
 
 // Popisky lustrací.
@@ -207,6 +209,7 @@ function handleAction(root, act, ds) {
     case 'continue-lustrace': continueToLustrace(root); break;
     case 'next': goNext(root); break;
     case 'back': goBack(root); break;
+    case 'goto-step': goToStep(root, +ds.idx); break;
     case 'toggle-detail': toggleLookupDetail(ds.type); break;
     case 'rerun-lookups': wiz.lookupStatus = 'idle'; wiz.lookups = null; renderLustrace(root); break;
     default: break;
@@ -234,7 +237,7 @@ async function createNewCase(root) {
     wiz.subject_type = 'fo'; wiz.aresStatus = null; wiz.aresLoading = false;
     wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
     wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.clients = null; wiz.clientQuery = '';
-    wiz.lookups = null; wiz.lookupStatus = 'idle';
+    wiz.lookups = null; wiz.lookupStatus = 'idle'; wiz.maxStep = 0; wiz.forceRun = false;
     if (wiz.source === 'list') loadClients(root);
     renderStep(root);
   } catch {
@@ -258,6 +261,7 @@ async function resumeCase(root, id) {
     wiz.data = {};
     DATA_COLS.forEach(col => { if (c[col] != null && c[col] !== '') wiz.data[col] = c[col]; });
     wiz.step = c.current_step || 0;   // DB je již v novém schématu (migrace v4)
+    wiz.maxStep = wiz.step; wiz.forceRun = false;
     wiz.source = hasClientData() ? 'manual' : 'camera';   // s daty rovnou ukaž formulář
     wiz.lookups = null; wiz.lookupStatus = 'idle';
     renderStep(root);
@@ -321,21 +325,30 @@ async function patchCase(fields) {
 async function goNext(root) {
   if (wiz.step >= 1 && wiz.step <= 3) {
     wiz.step += 1;
-    await patchCase({ current_step: wiz.step });
+    wiz.maxStep = Math.max(wiz.maxStep, wiz.step);
+    await patchCase({ current_step: wiz.maxStep });
   }
   renderStep(root);
 }
 
 async function goBack(root) {
   if (wiz.step > 0) {
-    wiz.step -= 1;
-    await patchCase({ current_step: wiz.step });
+    wiz.step -= 1;   // pohyb zpět nezmenšuje dosažený pokrok (maxStep drží klikatelnost)
     if (wiz.step === 0) wiz.source = hasClientData() ? 'manual' : 'camera';
   }
   renderStep(root);
 }
 
-// Uloží data klienta a přejde na Lustraci (krok 0 → 1).
+// Klik na dokončený krok v indikátoru — návrat bez ztráty dat (data se čtou z case).
+async function goToStep(root, idx) {
+  if (idx === wiz.step || idx > wiz.maxStep) return;
+  wiz.step = idx;
+  if (idx === 0) wiz.source = hasClientData() ? 'manual' : 'camera';
+  if (idx === 1) { wiz.lookupStatus = 'idle'; wiz.forceRun = false; }   // Lustrace → načti uložené
+  renderStep(root);
+}
+
+// Uloží data klienta a přejde na Lustraci (krok 0 → 1). Vždy čerstvý běh lustrace.
 async function continueToLustrace(root) {
   readFieldsFromForm();
   if (!formValid()) { showToast('Vyplňte prosím všechna povinná pole (*).'); return; }
@@ -347,8 +360,8 @@ async function continueToLustrace(root) {
   const patch = { current_step: 1, identification_method: wiz.method, subject_type: wiz.subject_type };
   DATA_COLS.forEach(col => { patch[col] = (wiz.data[col] === '' || wiz.data[col] == null) ? null : wiz.data[col]; });
   await patchCase(patch);
-  wiz.step = 1;
-  wiz.lookupStatus = 'idle'; wiz.lookups = null;   // nová data → čerstvá lustrace
+  wiz.step = 1; wiz.maxStep = Math.max(wiz.maxStep, 1);
+  wiz.lookupStatus = 'idle'; wiz.lookups = null; wiz.forceRun = true;   // nová data → čerstvá lustrace
   renderStep(root);
 }
 
@@ -604,9 +617,13 @@ function renderSteps() {
   const short = matchMedia('(max-width: 640px)').matches;
   const labels = short ? STEP_LABELS_SHORT : STEP_LABELS;
   wrap.innerHTML = STEP_LABELS.map((_, i) => {
-    const cls = i < wiz.step ? 'done' : (i === wiz.step ? 'active' : 'future');
+    const reachable = i <= wiz.maxStep;
+    const cls = i === wiz.step ? 'active' : (reachable ? 'done' : 'future');
+    const clickable = i !== wiz.step && reachable;   // dokončené/navštívené kroky jsou klikatelné
     const mark = i < wiz.step ? '✓' : String(i + 1);   // zobrazeno 1–5
-    return `<div class="aml-step ${cls}"><span class="aml-step-dot">${mark}</span>` +
+    const act = clickable ? ` data-act="goto-step" data-idx="${i}" role="button" tabindex="0"` : '';
+    return `<div class="aml-step ${cls}${clickable ? ' aml-step--click' : ''}"${act}>` +
+      `<span class="aml-step-dot">${mark}</span>` +
       `<span class="aml-step-label">${labels[i]}</span></div>`;
   }).join('');
 }
@@ -968,6 +985,20 @@ function lookupDetailHTML(lk) {
   if ((lk.lookup_type === 'isir' || lk.lookup_type === 'isir_po') && lk.details && lk.details.rizeni) return isirDetailHTML(lk);
 
   const d = lk.details;
+  // Nedostupný rejstřík — jasná výzva k ruční kontrole + přímý odkaz.
+  if (lk.status === 'error') {
+    const links = {
+      mvcr: 'https://aplikace.mv.gov.cz/neplatne-doklady/',
+      isir: 'https://isir.justice.cz', isir_po: 'https://isir.justice.cz',
+      ares: 'https://ares.gov.cz',
+    };
+    const url = links[lk.lookup_type];
+    const msg = typeof d === 'string' ? d : (d && d.note) || '';
+    return `<div class="aml-lk-detail" id="aml-lk-det-${lk.lookup_type}" hidden>` +
+      (msg ? `<div>${esc(msg)}</div>` : '') +
+      `<div>Rejstřík nedostupný — ověřte ručně${url ? `: <a class="aml-lk-link" href="${esc(url)}" target="_blank" rel="noopener">otevřít rejstřík ↗</a>` : '.'}</div>` +
+      `</div>`;
+  }
   // ISIR / obecný ruční fallback — odkaz na ověření.
   if (lk.status === 'manual') {
     const url = d && d.url;
@@ -989,14 +1020,26 @@ function lookupDetailHTML(lk) {
   return `<div class="aml-lk-detail" id="aml-lk-det-${lk.lookup_type}" hidden>${matched}${inner}</div>`;
 }
 
+// "2026-07-14T09:32:00Z" → "ověřeno 14. 7. 2026 v 9:32" (cs-CZ, Europe/Prague)
+function fmtCheckedAt(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  try {
+    const s = d.toLocaleString('cs-CZ', { timeZone: 'Europe/Prague', day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return `ověřeno ${s.replace(', ', ' v ')}`;
+  } catch { return ''; }
+}
+
 function lookupRowHTML(type) {
   const lk = wiz.lookups?.find(x => x.lookup_type === type) || null;
   const v = lookupView(lk);
   const expandable = lk && ['warning', 'match', 'error', 'manual'].includes(lk.status);
   const act = expandable ? ` data-act="toggle-detail" data-type="${type}" role="button" tabindex="0"` : '';
+  const when = lk && lk.checked_at ? `<span class="aml-lk-when">${esc(fmtCheckedAt(lk.checked_at))}</span>` : '';
   const row = `<div class="aml-lk-row aml-lk-${v.cls}"${act}>
       <span class="aml-lk-ico">${v.icon}</span>
-      <span class="aml-lk-label">${esc(LOOKUP_LABELS[type] || type)}</span>
+      <span class="aml-lk-label">${esc(LOOKUP_LABELS[type] || type)}${when}</span>
       <span class="aml-lk-status">${esc(v.text)}${expandable ? ' <span class="aml-lk-caret">▾</span>' : ''}</span>
     </div>`;
   return row + (expandable ? lookupDetailHTML(lk) : '');
@@ -1024,7 +1067,30 @@ function renderLustrace(root) {
     <div class="aml-lk-note">Sankční kontrola: EU (OFAC/OSN připravujeme).</div>
     ${rerun}
   </div>`;
-  if (wiz.lookupStatus === 'idle') runLookups(root);
+  if (wiz.lookupStatus === 'idle') initLustrace(root);
+}
+
+// Vstup na krok Lustrace: čerstvý běh (po zadání dat) NEBO načtení uložených výsledků.
+async function initLustrace(root) {
+  if (wiz.forceRun) { wiz.forceRun = false; return runLookups(root); }
+  wiz.lookupStatus = 'loading';
+  const ok = await loadStoredLookups(root);
+  if (!ok) return runLookups(root);
+}
+
+// Načte uložené výsledky lustrací (GET /lookups) bez nového běhu. Vrací true, když jsou.
+async function loadStoredLookups(root) {
+  const types = lookupTypeList();
+  try {
+    const r = await apiAmlGetLookups(wiz.caseId);
+    const res = r.results || [];
+    if (!types.some(t => res.find(x => x.lookup_type === t))) { wiz.lookupStatus = 'idle'; return false; }
+    wiz.lookups = types.map(t => res.find(x => x.lookup_type === t)
+      || { lookup_type: t, status: 'error', details: 'Bez odpovědi.' });
+    wiz.lookupStatus = 'done';
+    if (wiz.step === 1) { renderLustrace(root); renderFoot(); }
+    return true;
+  } catch { wiz.lookupStatus = 'idle'; return false; }
 }
 
 async function runLookups(root) {

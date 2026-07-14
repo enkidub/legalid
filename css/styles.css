@@ -1370,6 +1370,9 @@ body.logged-in .main-nav { display: flex; }
   font-size: 11px; font-weight: 700; background: var(--rule); color: var(--ink-lt);
 }
 .aml-step-label { font-size: 12px; font-weight: 500; color: var(--ink-lt); white-space: nowrap; }
+.aml-step--click { cursor: pointer; }
+.aml-step--click:hover .aml-step-label { color: var(--navy); text-decoration: underline; }
+.aml-step--click:hover .aml-step-dot { filter: brightness(0.92); }
 .aml-step.active .aml-step-dot { background: var(--navy); color: #fff; }
 .aml-step.active .aml-step-label { color: var(--navy); font-weight: 600; }
 .aml-step.done .aml-step-dot { background: var(--gold); color: #fff; }
@@ -1591,6 +1594,7 @@ body.logged-in .main-nav { display: flex; }
 .aml-lk-row[data-act]:hover { border-color: var(--ink-lt); }
 .aml-lk-ico { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
 .aml-lk-label { font-size: 13px; color: var(--ink); font-weight: 500; }
+.aml-lk-when { display: block; font-size: 10.5px; color: var(--ink-fnt); font-weight: 400; margin-top: 1px; }
 .aml-lk-status { margin-left: auto; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .aml-lk-caret { font-size: 10px; opacity: .6; }
 .aml-lk-pending { opacity: .7; }

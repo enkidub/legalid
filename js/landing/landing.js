@@ -47,30 +47,19 @@ export function renderLanding() {
     </div>
   </section>
 
-  <!-- JAK TO FUNGUJE + KDE POMÁHÁ AI (dvousloupec na desktopu) -->
+  <!-- JAK TO FUNGUJE (jeden centrovaný sloupec, AI features integrované do kroků) -->
   <section class="lnd-section lnd-section--alt">
     <div class="lnd-wrap">
-      <div class="lnd-two-col">
-        <div>
-          <div class="lnd-section-label">Jak to funguje</div>
-          <h2 class="lnd-h2">5 kroků, cca 3 minuty na klienta</h2>
-          <ul class="lnd-steps">
-            <li class="lnd-step"><span class="lnd-step-num">1</span><div><div class="lnd-step-title">Identifikace klienta</div><div class="lnd-step-text">Naskenujte doklad, nahrajte soubor nebo zadejte údaje ručně. Můžete i vybrat klienta z předchozích AML kontrol.</div></div></li>
-            <li class="lnd-step"><span class="lnd-step-num">2</span><div><div class="lnd-step-title">Lustrace v rejstřících</div><div class="lnd-step-text">Automatická kontrola v MVČR, ISIR, ARES, sankčních seznamech EU a v globální PEP databázi (OpenSanctions).</div></div></li>
-            <li class="lnd-step"><span class="lnd-step-num">3</span><div><div class="lnd-step-title">Účel obchodu</div><div class="lnd-step-text">Popíšete, co pro klienta děláte. AI přečte podpůrné dokumenty a ověří konzistenci se zdrojem prostředků.</div></div></li>
-            <li class="lnd-step"><span class="lnd-step-num">4</span><div><div class="lnd-step-title">Hodnocení rizika</div><div class="lnd-step-text">AI navrhne rizikový profil (nízké / střední / vysoké). Vy rozhodujete závazně.</div></div></li>
-            <li class="lnd-step"><span class="lnd-step-num">5</span><div><div class="lnd-step-title">Záznam k archivaci</div><div class="lnd-step-text">Vygenerovaný PDF AML záznam si stáhnete a uložíte do vlastní evidence.</div></div></li>
-          </ul>
-        </div>
-        <div>
-          <div class="lnd-section-label">Kde pomáhá AI</div>
-          <ul class="lnd-ai-list">
-            <li>Rozpoznání údajů z dokladu za 3 vteřiny</li>
-            <li>Fuzzy matching jmen v sankčních seznamech (i přes překlepy a přepisy)</li>
-            <li>Analýza podpůrných dokumentů a jejich konzistence s tvrzením klienta</li>
-            <li>Návrh rizikového profilu (finální rozhodnutí je vždy na advokátovi)</li>
-          </ul>
-        </div>
+      <div class="lnd-howto">
+        <div class="lnd-section-label">Jak to funguje</div>
+        <h2 class="lnd-h2">5 kroků, cca 3 minuty na klienta</h2>
+        <ul class="lnd-steps">
+          <li class="lnd-step"><span class="lnd-step-num">1</span><div><div class="lnd-step-title">Identifikace klienta</div><div class="lnd-step-text">Naskenujte doklad, nahrajte soubor nebo zadejte údaje ručně. Můžete i vybrat klienta z předchozích AML kontrol.</div><div class="lnd-step-ai">✨ AI rozpozná údaje z dokladu za 3 vteřiny</div></div></li>
+          <li class="lnd-step"><span class="lnd-step-num">2</span><div><div class="lnd-step-title">Lustrace v rejstřících</div><div class="lnd-step-text">Automatická kontrola v MVČR, ISIR, ARES, sankčních seznamech EU a v globální PEP databázi (OpenSanctions).</div><div class="lnd-step-ai">✨ Fuzzy matching jmen i přes překlepy a přepisy</div></div></li>
+          <li class="lnd-step"><span class="lnd-step-num">3</span><div><div class="lnd-step-title">Účel obchodu</div><div class="lnd-step-text">Popíšete, co pro klienta děláte.</div><div class="lnd-step-ai">✨ AI přečte podpůrné dokumenty a ověří konzistenci se zdrojem prostředků</div></div></li>
+          <li class="lnd-step"><span class="lnd-step-num">4</span><div><div class="lnd-step-title">Riziko</div><div class="lnd-step-text">AI navrhne rizikový profil (nízké / střední / vysoké). Vy rozhodujete závazně.</div></div></li>
+          <li class="lnd-step"><span class="lnd-step-num">5</span><div><div class="lnd-step-title">Záznam k archivaci</div><div class="lnd-step-text">Vygenerovaný PDF AML záznam si stáhnete a uložíte do vlastní evidence.</div></div></li>
+        </ul>
       </div>
     </div>
   </section>

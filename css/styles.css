@@ -1615,9 +1615,8 @@ body.logged-in .main-nav { display: flex; }
 }
 .lnd-h2 { font-family: var(--serif); font-size: clamp(26px, 4vw, 36px); font-weight: 700; color: var(--navy); margin-bottom: 20px; }
 
-/* Dvousloupcový layout (Jak to funguje + Kde pomáhá AI) */
-.lnd-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: start; }
-@media (max-width: 768px) { .lnd-two-col { grid-template-columns: 1fr; gap: 28px; } }
+/* Jak to funguje — jeden centrovaný sloupec */
+.lnd-howto { max-width: 680px; margin: 0 auto; }
 
 /* Hero */
 .lnd-hero {
@@ -1686,16 +1685,8 @@ body.logged-in .main-nav { display: flex; }
 }
 .lnd-step-title { font-weight: 600; color: var(--navy); font-size: 16px; margin-bottom: 3px; }
 .lnd-step-text { font-size: 14px; color: var(--ink-lt); line-height: 1.6; }
-.lnd-step-ai { margin-top: 5px; font-size: 12.5px; font-style: italic; color: var(--gold-h); }
+.lnd-step-ai { margin-top: 5px; font-size: 13px; color: var(--gold-h); line-height: 1.4; }
 .lnd-steps-note { margin-top: 22px; font-size: 12px; color: var(--ink-fnt); font-style: italic; }
-
-/* Kde pomáhá AI — odrážkový seznam */
-.lnd-ai-list { list-style: none; display: flex; flex-direction: column; gap: 12px; margin: 4px 0 0; }
-.lnd-ai-list li { position: relative; padding-left: 26px; font-size: 14.5px; color: var(--ink-mid); line-height: 1.4; }
-.lnd-ai-list li::before {
-  content: ''; position: absolute; left: 6px; top: 8px; width: 7px; height: 7px;
-  border-radius: 50%; background: var(--gold);
-}
 
 /* Pricing */
 .lnd-price-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; }

@@ -273,6 +273,7 @@ ${Array(7).fill(one).join('')}
   if (!w) { showToast('Povolte popup v adresním řádku.'); return; }
   w.document.write(html);
   w.document.close();
+  autoSaveRecord();
 }
 
 // ── DOLOZKA SETTINGS ──────────────────────────────────────────────

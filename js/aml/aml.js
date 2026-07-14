@@ -47,12 +47,14 @@ const FORM_FIELDS = [
 const REQUIRED_COLS = FORM_FIELDS.filter(f => f.req).map(f => f.col);
 
 // Cesty získání dat (horní dlaždice). SVG line ikony ve stylu landingu (stroke, bez fill).
+// Rozměry i barva přímo v atributech → ikony se zobrazí i bez CSS (odolné vůči staré cachi).
+const ICO = 'width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"';
 const SVG = {
-  camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>',
-  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>',
-  manual: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
-  list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="4"/><path d="M10.3 15H7a4 4 0 0 0-4 4v2"/><circle cx="17" cy="17" r="3"/><path d="m21 21-1.9-1.9"/></svg>',
-  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  camera: `<svg ${ICO}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`,
+  upload: `<svg ${ICO}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>`,
+  manual: `<svg ${ICO}><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
+  list: `<svg ${ICO}><circle cx="10" cy="7" r="4"/><path d="M10.3 15H7a4 4 0 0 0-4 4v2"/><circle cx="17" cy="17" r="3"/><path d="m21 21-1.9-1.9"/></svg>`,
+  close: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
 };
 const SOURCES = [
   { id: 'camera', svg: SVG.camera, title: 'Vyfotit doklad' },
@@ -113,10 +115,12 @@ export function renderAml() {
 }
 
 // Volá se po mountu /aml (z app.js). Naváže delegaci a rozjede wizard.
+let _resizeBound = false;
 export function initAml() {
   const root = $('amlRoot');
   if (!root) return;
   bindRoot(root);
+  if (!_resizeBound) { _resizeBound = true; window.addEventListener('resize', () => renderSteps()); }
   if (!state.loggedIn) { renderLoginRequired(); return; }
   startAml(root);
 }
@@ -300,9 +304,8 @@ function onCapture(root, side) {
   openCamera(root);
 }
 
-// Smazání jedné strany kamerového snímku (× na miniatuře).
+// Smazání jedné strany kamerového snímku (× na miniatuře) — bez potvrzení (malý zásah).
 function removeSide(root, side) {
-  if (!confirm('Opravdu chcete vymazat nahraná data?')) return;
   if (side === 'back') { wiz.backImg = null; wiz.backExtracted = null; }
   else { wiz.frontImg = null; wiz.frontExtracted = null; }
   renderStep(root);
@@ -310,7 +313,7 @@ function removeSide(root, side) {
 
 // Reset celého kroku 1 (upload/foto + formulář + způsob ověření). Nemaže aml_case.
 function restartStep(root) {
-  if (!confirm('Opravdu chcete vymazat nahraná data?')) return;
+  if (!confirm('Opravdu vymazat všechna nahraná data a údaje?')) return;
   wiz.data = {};
   wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
   wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.method = 'personal';
@@ -347,8 +350,7 @@ async function addUploadFiles(root, fileList) {
 }
 
 function removeUpload(root, idx) {
-  if (!confirm('Opravdu chcete vymazat nahraná data?')) return;
-  wiz.uploadFiles.splice(idx, 1);
+  wiz.uploadFiles.splice(idx, 1);   // × maže jeden soubor bez potvrzení (malý zásah)
   renderStep(root);
 }
 
@@ -534,12 +536,14 @@ function renderResume(root, c) {
 function renderSteps() {
   const wrap = $('amlSteps');
   if (!wrap) return;
-  wrap.innerHTML = STEP_LABELS.map((label, i) => {
+  // Jeden label podle šířky (bez CSS toggle → nemůže vzniknout duplicita).
+  const short = matchMedia('(max-width: 640px)').matches;
+  const labels = short ? STEP_LABELS_SHORT : STEP_LABELS;
+  wrap.innerHTML = STEP_LABELS.map((_, i) => {
     const cls = i < wiz.step ? 'done' : (i === wiz.step ? 'active' : 'future');
     const mark = i < wiz.step ? '✓' : String(i + 1);   // zobrazeno 1–5
     return `<div class="aml-step ${cls}"><span class="aml-step-dot">${mark}</span>` +
-      `<span class="aml-step-label"><span class="aml-step-lbl-full">${label}</span>` +
-      `<span class="aml-step-lbl-short">${STEP_LABELS_SHORT[i]}</span></span></div>`;
+      `<span class="aml-step-label">${labels[i]}</span></div>`;
   }).join('');
 }
 
@@ -573,7 +577,9 @@ function renderClientStep(root) {
     </label>`;
   }).join('');
 
+  const hasAnything = showForm || wiz.uploadFiles.length || !!wiz.frontImg || !!wiz.backImg;
   $('amlMain').innerHTML = `<div class="aml-card">
+    ${hasAnything ? `<button class="aml-reset-top" data-act="restart-step">Vymazat vše</button>` : ''}
     <div class="aml-h">Údaje klienta</div>
     <div class="aml-sub">Vyplňte údaje klienta a zvolte, jak byla potvrzena jeho totožnost.</div>
     <div class="aml-tiles aml-tiles-src">${tiles}</div>
@@ -586,7 +592,6 @@ function renderClientStep(root) {
     <button class="aml-btn aml-btn-primary aml-btn-block" id="amlContinue" data-act="continue-lustrace"${formValid() ? '' : ' disabled'}>
       Údaje jsou úplné, pokračovat na lustraci →
     </button>
-    ${showForm || wiz.uploadFiles.length ? `<button class="aml-restart" data-act="restart-step">🔄 Začít znovu s tímto klientem</button>` : ''}
   </div>`;
 }
 

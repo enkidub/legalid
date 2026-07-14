@@ -170,11 +170,14 @@ export async function lookupIsir(surname, firstName, birthdate) {
     }
     if (!recs.length) return { status: 'clean', details: { note: 'Žádný odpovídající záznam v insolvenčním rejstříku.' } };
     const who = [firstName, surname].filter(Boolean).join(' ');
+    const note = bd
+      ? `Klient (${who}, nar. ${bd}) figuruje v ${recs.length} insolvenčních řízeních.`
+      : `Nalezeno ${recs.length} řízení osob jménem ${who}. Bez data narození nelze odlišit jmenovce — porovnejte datum narození u jednotlivých záznamů níže.`;
     return {
       status: 'warning',
       matched_against: bd ? `${who}, nar. ${bd}` : who,
       details: {
-        note: `Nalezeno insolvenčních řízení: ${recs.length}. Ověřte, zda jde o klienta.`,
+        note,
         rizeni: recs.slice(0, 10).map(r => ({
           spis: r.spis, soud: r.soud, stav: r.stav,
           zahajeni: r.zahajeni || null, ukonceni: r.ukonceni || null,

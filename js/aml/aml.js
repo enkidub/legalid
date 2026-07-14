@@ -484,15 +484,17 @@ function lookupView(lk) {
 
 // Překladové slovníky pro OpenSanctions kódy → český popis.
 const OS_DATASETS = {
-  us_cia_world_leaders: 'CIA World Leaders', wikidata: 'Wikidata', wd_peps: 'Wikidata PEP index',
-  fr_hatvp_declarations: 'HATVP (francouzský registr veřejných funkcionářů)',
+  us_cia_world_leaders: 'CIA World Leaders', wikidata: 'Wikidata', wd_peps: 'Wikidata (PEP index)',
+  fr_hatvp_declarations: 'HATVP (FR registr funkcionářů)',
   un_ga_protocol: 'OSN – protokol Valného shromáždění', everypolitician: 'EveryPolitician',
   eu_meps: 'Europarlament (poslanci)', gb_hmt_sanctions: 'HM Treasury (UK)',
 };
+// Interní/technické datasety OpenSanctions — pro advokáta bez hodnoty, skryjeme.
+const OS_DATASET_NOISE = new Set(['wd_categories', 'ann_pep_positions', 'wd_positions', 'ext_wikidata', 'wikidata_categories']);
 const OS_TOPICS = {
-  'role.pep': 'politicky exponovaná osoba', 'role.pol': 'politický funkcionář',
+  'role.pep': 'politicky exponovaná osoba', 'role.pol': 'politik',
   'role.rca': 'osoba blízká funkcionáři', 'gov.national': 'státní správa',
-  'role.judge': 'soudce', 'role.diplo': 'diplomat',
+  'role.judge': 'soudce', 'role.diplo': 'diplomat', 'gov.muni': 'komunální politika',
 };
 const COUNTRY_CS = {
   fr: 'Francie', cz: 'Česko', sk: 'Slovensko', de: 'Německo', us: 'USA', gb: 'Spojené království',
@@ -503,22 +505,50 @@ const arr = v => Array.isArray(v) ? v : (v == null ? [] : [v]);
 const transList = (v, map) => arr(v).map(x => map[x] || map[String(x).toLowerCase()] || x);
 const transCountry = v => arr(v).map(c => COUNTRY_CS[String(c).toLowerCase()] || String(c).toUpperCase());
 
+// "1979-05-18(Z)" → "18. 5. 1979"
+function fmtDate(s) {
+  const m = String(s || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${+m[3]}. ${+m[2]}. ${m[1]}` : String(s || '');
+}
+// "(2018-)" → "(od 2018)", "(2010-2018)" → "(2010–2018)"
+const normYears = s => s.replace(/\((\d{4})-\)/g, '(od $1)').replace(/\((\d{4})-(\d{4})\)/g, '($1–$2)');
+// Časté anglické názvy funkcí z OpenSanctions → česky (jinak ponech originál).
+const POS_PATTERNS = [
+  [/deputy mayor of a place in the czech republic/i, 'místostarosta obce (ČR)'],
+  [/mayor of a place in the czech republic/i, 'starosta obce (ČR)'],
+  [/member of a czech municipal council/i, 'člen obecního zastupitelstva (ČR)'],
+  [/member of the chamber of deputies/i, 'poslanec Poslanecké sněmovny'],
+  [/member of the senate/i, 'senátor'],
+  [/president of the czech republic/i, 'prezident ČR'],
+  [/prime minister/i, 'předseda vlády'],
+  [/minister/i, 'ministr'], [/senator/i, 'senátor'], [/governor/i, 'guvernér'],
+  [/president/i, 'prezident'], [/ambassador/i, 'velvyslanec'],
+];
+function translatePosition(p) {
+  const yr = (String(p).match(/\([^)]*\)\s*$/) || [''])[0];
+  const base = yr ? String(p).slice(0, p.length - yr.length).trim() : String(p);
+  for (const [re, cs] of POS_PATTERNS) if (re.test(base)) return normYears(`${cs} ${yr}`.trim());
+  return normYears(String(p));
+}
+
 // Speciální, advokátovi srozumitelný detail PEP shody z OpenSanctions.
 function pepDetailHTML(lk) {
   const d = lk.details || {};
   const row = (label, val) => val && val.length
-    ? `<div><span class="aml-lk-dk">${label}:</span> ${esc(Array.isArray(val) ? val.join(', ') : String(val))}</div>` : '';
+    ? `<div><span class="aml-lk-dk">${label}:</span> ${esc(Array.isArray(val) ? val.join('; ') : String(val))}</div>` : '';
   const countries = transCountry(d.countries);
-  const positions = arr(d.positions);
-  const datasets = transList(d.datasets, OS_DATASETS);
+  const positions = arr(d.positions).map(translatePosition);
+  const datasets = [...new Set(arr(d.datasets).filter(x => !OS_DATASET_NOISE.has(x)).map(x => OS_DATASETS[x] || x))];
   const topics = transList(d.topics, OS_TOPICS);
+  const bd = arr(d.birth_date).map(fmtDate);
   return `<div class="aml-lk-detail" id="aml-lk-det-pep" hidden>` +
     row('Shoda s', lk.matched_against || d.caption) +
     `<div><span class="aml-lk-dk">Zdroj:</span> OpenSanctions (globální PEP databáze)</div>` +
+    row('Datum narození', bd) +
     row('Země', countries) +
     row('Funkce', positions) +
-    row('Zdrojové databáze', datasets) +
     row('Typ', topics) +
+    row('Zdrojové databáze', datasets) +
     `</div>`;
 }
 
@@ -530,20 +560,40 @@ const CS_KEYS = {
   client_birth_date: 'Datum narození klienta', checked: 'Prověřeno záznamů',
 };
 
-// ISIR — seznam nalezených insolvenčních řízení.
+// Stav insolvenčního řízení (druhStavKonkursu) → česky.
+const ISIR_STAV = {
+  ODSKRTNUTA: 'skončeno (vyškrtnuto z evidence)', PROHLASENY: 'konkurs prohlášen',
+  POVOLENE_ODDLUZENI: 'povolené oddlužení', POVOLENA_REORGANIZACE: 'povolená reorganizace',
+  ZRUSENY: 'zrušeno', UKONCENA: 'ukončeno', MORATORIUM: 'moratorium', UPADEK: 'úpadek',
+};
+const isirStav = s => s ? (ISIR_STAV[s] || String(s).toLowerCase().replace(/_/g, ' ')) : '';
+
+// ISIR — seznam nalezených insolvenčních řízení, hodnotný pro advokáta:
+// probíhající řízení nahoře + zvýrazněná, český stav, formátovaná data.
 function isirDetailHTML(lk) {
   const d = lk.details || {};
-  const rows = (d.rizeni || []).map(r => {
-    const meta = [r.soud, r.stav && `stav: ${r.stav}`,
-      r.zahajeni && `zahájení ${r.zahajeni}`, r.ukonceni && `ukončení ${r.ukonceni}`,
-      r.nar && `nar. ${r.nar}`].filter(Boolean).join(' · ');
+  const list = (d.rizeni || []).slice()
+    .sort((a, b) => (a.ukonceni ? 1 : 0) - (b.ukonceni ? 1 : 0)
+      || String(b.zahajeni || '').localeCompare(String(a.zahajeni || '')));
+  const rows = list.slice(0, 10).map(r => {
+    const aktivni = !r.ukonceni;
+    const badge = aktivni
+      ? `<span class="aml-lk-badge aml-lk-badge-live">PROBÍHÁ</span>`
+      : `<span class="aml-lk-badge">skončeno ${esc(fmtDate(r.ukonceni))}</span>`;
+    const meta = [
+      r.soud,
+      r.nar && `nar. ${fmtDate(r.nar)}`,
+      r.zahajeni && `zahájeno ${fmtDate(r.zahajeni)}`,
+      isirStav(r.stav) && `stav: ${isirStav(r.stav)}`,
+    ].filter(Boolean).join(' · ');
     const spis = r.url
       ? `<a class="aml-lk-link" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.spis || 'řízení')} ↗</a>`
       : esc(r.spis || 'řízení');
-    return `<div class="aml-lk-rizeni"><div class="aml-lk-spis">${spis}</div><div class="aml-lk-rmeta">${esc(meta)}</div></div>`;
+    return `<div class="aml-lk-rizeni"><div class="aml-lk-spis">${spis} ${badge}</div><div class="aml-lk-rmeta">${esc(meta)}</div></div>`;
   }).join('');
+  const more = list.length > 10 ? `<div class="aml-lk-rmeta">… a dalších ${list.length - 10} řízení</div>` : '';
   return `<div class="aml-lk-detail" id="aml-lk-det-isir" hidden>` +
-    (d.note ? `<div>${esc(d.note)}</div>` : '') + rows + `</div>`;
+    (d.note ? `<div class="aml-lk-rnote">${esc(d.note)}</div>` : '') + rows + more + `</div>`;
 }
 
 function lookupDetailHTML(lk) {

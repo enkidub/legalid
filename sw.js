@@ -1,4 +1,4 @@
-const CACHE = 'legalid-v29'; // ← BUMP při každém deployi
+const CACHE = 'legalid-v30'; // ← BUMP při každém deployi
 
 const APP_SHELL = [
   '/',
@@ -29,7 +29,10 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE).then(cache => cache.addAll(APP_SHELL))
   );
-  // Nevolá skipWaiting — čeká na souhlas uživatele přes message
+  // DEV: auto-update — nový SW se aktivuje sám, stačí jeden reload (update lišta je
+  // pro fázi vývoje skrytá, viz app.js). PRO PRODUKCI: zakomentuj řádek níže, ať se
+  // aktualizace řídí souhlasem uživatele přes update lištu (SKIP_WAITING message).
+  self.skipWaiting();
 });
 
 self.addEventListener('message', event => {

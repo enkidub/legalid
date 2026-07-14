@@ -1468,10 +1468,16 @@ body.logged-in .main-nav { display: flex; }
 .aml-lk-manual { background: #f2f6fc; border-color: #cfdcef; }
 .aml-lk-link { color: #3d6bb3; font-weight: 600; text-decoration: none; }
 .aml-lk-link:hover { text-decoration: underline; }
+.aml-lk-rnote { font-size: 12px; color: var(--ink-mid); margin-bottom: 6px; }
 .aml-lk-rizeni { padding: 6px 0; border-top: 1px solid var(--rule); }
 .aml-lk-rizeni:first-of-type { border-top: none; }
-.aml-lk-spis { font-weight: 600; font-size: 12px; }
+.aml-lk-spis { font-weight: 600; font-size: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .aml-lk-rmeta { font-size: 11px; color: var(--ink-lt); margin-top: 1px; }
+.aml-lk-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: .3px; padding: 1px 7px; border-radius: 20px;
+  background: var(--rule); color: var(--ink-lt); text-transform: none;
+}
+.aml-lk-badge-live { background: #fdeeec; color: #c0392b; }
 .aml-lk-detail {
   font-size: 12px; color: var(--ink-mid); line-height: 1.6;
   padding: 8px 13px 10px 43px; margin-top: -4px;

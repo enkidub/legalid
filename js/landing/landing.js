@@ -24,14 +24,9 @@ export function renderLanding() {
       <div class="lnd-proof">
         <div class="lnd-proof-bar"><span></span><span></span><span></span></div>
         <div class="lnd-proof-media">
-          <!-- Placeholder obrázek. Až dodáš nahrávku (assets/landing/wizard-demo.mp4),
-               ODKOMENTUJ <video> níže a smaž tento <img>. CSS je připravené (.lnd-proof-media video). -->
-          <img src="/assets/landing/wizard-demo.png" alt="Ukázka AML wizardu Legalid — krok Údaje klienta a lustrace" loading="lazy" onerror="this.style.display='none'">
-          <!--
           <video src="/assets/landing/wizard-demo.mp4" autoplay loop muted playsinline preload="metadata"
                  poster="/assets/landing/wizard-demo.png"
                  aria-label="Ukázka AML wizardu Legalid — vyplnění údajů klienta a lustrace v rejstřících"></video>
-          -->
         </div>
       </div>
     </div>

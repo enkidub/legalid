@@ -12,3 +12,6 @@ dist/
 
 # vygenerovaná importní SQL (odvozená, regenerovatelná ze skriptů)
 worker/scripts/*.generated.sql
+
+# nahraná demo videa (Playwright)
+scripts/output/

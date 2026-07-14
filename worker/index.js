@@ -1,4 +1,4 @@
-import { lookupMvcr, lookupIsir, lookupIsirCompany, lookupAres, fetchAresSubject, lookupSanctions, lookupPep } from './utils/lookups.js';
+import { lookupMvcr, lookupIsir, lookupIsirCompany, lookupAres, fetchAresSubject, lookupSanctions, lookupSanctionsEntity, lookupPep } from './utils/lookups.js';
 import { importEuSanctions } from './utils/sanctions.js';
 
 const SYSTEM_PROMPT = `Jsi asistent pro extrakci dat z českých občanských průkazů.
@@ -118,7 +118,7 @@ async function runAllLookups(env, c) {
   // Právnická osoba: 5 lustrací výše běží na JEDNAJÍCÍ OSOBU; navíc lustrace firmy.
   if (c.subject_type === 'po') {
     tasks.push(['isir_po', lookupIsirCompany(c.client_ico)]);
-    // 'sanctions_entity' (na název firmy) se přidá v bloku B
+    tasks.push(['sanctions_entity', lookupSanctionsEntity(env, c.company_name)]);
   }
   return Promise.all(tasks.map(async ([type, p]) => {
     let r;
@@ -351,6 +351,20 @@ export default {
           'Set-Cookie': 'session=; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=0',
         },
       });
+    }
+
+    // --- POST /api/admin/sanctions/reimport (jen správce) ---
+    if (url.pathname === '/api/admin/sanctions/reimport') {
+      if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+      const token = getSessionToken(request);
+      const payload = token ? await verifyJWT(token, env.JWT_SECRET) : null;
+      if (!payload || payload.email !== 'kuba.houser@gmail.com') return json({ error: 'forbidden' }, 403);
+      try {
+        const r = await importEuSanctions(env);   // { persons, entities }
+        return json({ ok: true, ...r });
+      } catch (e) {
+        return json({ error: 'import_failed', message: String(e.message || e) }, 502);
+      }
     }
 
     // --- POST /api/track ---

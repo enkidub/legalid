@@ -274,6 +274,53 @@ export async function lookupAres(ico) {
   }
 }
 
+// Odstraní právní formy (s.r.o., a.s., GmbH, Ltd…) jako samostatné tokeny,
+// aby fuzzy porovnání firem neselhalo na koncovce. Vrací normalizovaný název.
+const LEGAL_PATTERNS = [
+  /\bspol s r o\b/g, /\bs r o\b/g, /\ba s\b/g, /\bk s\b/g, /\bv o s\b/g, /\bz s\b/g, /\bo p s\b/g,
+  /\bgmbh\b/g, /\bag\b/g, /\bltd\b/g, /\bllc\b/g, /\binc\b/g, /\bcorp\b/g,
+  /\bs a\b/g, /\bb v\b/g, /\booo\b/g, /\bzao\b/g, /\bpao\b/g, /\bao\b/g, /\bse\b/g,
+];
+export function stripLegalForms(name) {
+  let n = normalizeName(name);   // lowercase, bez diakritiky a interpunkce
+  for (const p of LEGAL_PATTERNS) n = n.replace(p, ' ');
+  return n.replace(/\s+/g, ' ').trim();
+}
+
+// ── 4b) Sankční entity (firmy) — D1 sanctions_entities ──
+export async function lookupSanctionsEntity(env, companyName) {
+  if (!companyName) return { status: 'clean', details: { note: 'Název firmy nezadán — přeskočeno.' } };
+  try {
+    const needle = stripLegalForms(companyName);
+    const tokens = needle.split(' ').filter(t => t.length >= 3);
+    const likeVals = (tokens.length ? tokens : [needle]).map(t => `%${t}%`);
+    const where = likeVals.map(() => 'name_normalized LIKE ?').join(' OR ');
+    const { results } = await env.DB.prepare(
+      `SELECT * FROM sanctions_entities WHERE ${where} LIMIT 500`
+    ).bind(...likeVals).all();
+    const rows = results || [];
+    const cands = [];
+    for (const r of rows) {
+      cands.push({ row: r, cand_name: r.full_name, name_normalized: stripLegalForms(r.full_name) });
+      if (r.aliases) {
+        try { for (const a of JSON.parse(r.aliases)) if (a) cands.push({ row: r, cand_name: a, name_normalized: stripLegalForms(a) }); }
+        catch { /* ignore */ }
+      }
+    }
+    const { match, score } = findBestMatch(needle, cands, 0.85);
+    if (match) {
+      const r = match.row;
+      return {
+        status: 'match', matched_against: match.cand_name, match_score: Number(score.toFixed(3)),
+        details: { source: r.source, full_name: r.full_name, nationality: r.nationality, reason: r.reason },
+      };
+    }
+    return { status: 'clean', details: { note: 'Žádná shoda se sankčním seznamem firem (EU).', checked: rows.length } };
+  } catch (e) {
+    return { status: 'error', details: `Sankční kontrola firem selhala (${e.message}).` };
+  }
+}
+
 // ── 4) Sankce (D1) ──
 export async function lookupSanctions(env, name, birthDate) {
   if (!name) return { status: 'clean', details: { note: 'Jméno nezadáno — přeskočeno.' } };

@@ -113,7 +113,7 @@ const LOOKUP_LABELS = {
 };
 // FO: plochý seznam 5 lustrací. PO: skupiny Společnost / Jednající osoba.
 const FO_LOOKUP_TYPES = ['mvcr', 'isir', 'ares', 'sanctions', 'pep'];
-const PO_GROUP_COMPANY = ['ares', 'isir_po'];        // sanctions_entity přidán v bloku B
+const PO_GROUP_COMPANY = ['ares', 'isir_po', 'sanctions_entity'];
 const PO_GROUP_PERSON = ['mvcr', 'isir', 'sanctions', 'pep'];
 function lookupTypeList() {
   return wiz.subject_type === 'po'

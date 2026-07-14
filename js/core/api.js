@@ -61,12 +61,13 @@ export async function apiAmlRunLookup(caseId) {
   return r.json();
 }
 
-export async function apiSendMagicLink(email) {
+// remember: true → dlouhá session (90 dní), jinak 7 dní.
+export async function apiSendMagicLink(email, remember = false) {
   const r = await fetch(`${WORKER_URL}/auth/send`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email })
+    body: JSON.stringify({ email, remember })
   });
   return { ok: r.ok, data: await r.json() };
 }

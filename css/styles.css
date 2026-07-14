@@ -804,6 +804,11 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   transition: border-color .14s;
 }
 .reg-email-input:focus { border-color: var(--gold); }
+.reg-remember {
+  display: flex; align-items: center; gap: 8px; margin: 2px 0 14px;
+  font-size: 13px; color: var(--ink-mid); cursor: pointer;
+}
+.reg-remember input { accent-color: var(--gold-h); width: 15px; height: 15px; cursor: pointer; }
 .btn-reg-submit {
   display: block; width: 100%; padding: 10px; border: none; border-radius: var(--r);
   background: var(--gold); color: #fff; font-family: var(--sans); font-size: 14px;

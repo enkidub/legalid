@@ -187,7 +187,7 @@ export default {
         });
       }
 
-      const { email } = body;
+      const { email, remember } = body;
       if (!isValidEmail(email)) {
         return new Response(JSON.stringify({ error: 'invalid_email' }), {
           status: 400,
@@ -195,13 +195,15 @@ export default {
         });
       }
 
+      // Magic link platí 15 min (bezpečnost). Délku SESSION zvolí uživatel přes remember.
       const token = crypto.randomUUID();
       const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
       await env.DB.prepare(
         'INSERT INTO auth_tokens (token, user_id, expires_at, used) VALUES (?, NULL, ?, 0)'
       ).bind(token, expires).run();
 
-      const link = `https://legalid.kuba-houser.workers.dev/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
+      const rememberParam = remember ? '&remember=1' : '';
+      const link = `https://legalid.kuba-houser.workers.dev/auth/verify?token=${token}&email=${encodeURIComponent(email)}${rememberParam}`;
 
       const resendRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -272,8 +274,13 @@ export default {
         ).bind(email).first();
       }
 
+      // Délka session: remember=1 → 90 dní, jinak 7 dní (default, bezpečnější).
+      // SameSite=None je POVINNÉ — frontend (legalid.cz) a API (workers.dev) jsou různé
+      // domény, cookie je cross-site a bez None by se u API volání vůbec neposílala.
+      const sessionDays = url.searchParams.get('remember') === '1' ? 90 : 7;
+      const maxAge = sessionDays * 24 * 3600;
       const jwt = await signJWT(
-        { sub: user.id, email: user.email, exp: Math.floor(Date.now() / 1000) + 7 * 24 * 3600 },
+        { sub: user.id, email: user.email, exp: Math.floor(Date.now() / 1000) + maxAge },
         env.JWT_SECRET
       );
 
@@ -282,7 +289,7 @@ export default {
         headers: {
           ...corsHeaders,
           'Location': 'https://legalid.cz/',
-          'Set-Cookie': `session=${jwt}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${7 * 24 * 3600}`,
+          'Set-Cookie': `session=${jwt}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${maxAge}`,
         },
       });
     }

@@ -10,6 +10,8 @@ export function openRegistrationModal() {
   document.getElementById('regSuccessView').style.display = 'none';
   const emailEl = document.getElementById('regEmail');
   if (emailEl) emailEl.value = '';
+  const remEl = document.getElementById('regRemember');
+  if (remEl) remEl.checked = false;   // default 7 dní (bezpečnější)
   const btn = document.getElementById('regSubmitBtn');
   if (btn) { btn.disabled = false; btn.textContent = 'Odeslat'; }
   document.getElementById('regEmailError').style.display = 'none';
@@ -34,8 +36,9 @@ export async function submitRegEmail() {
   sendErrEl.style.display = 'none';
   btn.disabled = true;
   btn.textContent = 'Odesílám…';
+  const remember = !!document.getElementById('regRemember')?.checked;
   try {
-    const { ok, data } = await apiSendMagicLink(email);
+    const { ok, data } = await apiSendMagicLink(email, remember);
     if (!ok || !data.ok) throw new Error('failed');
     document.getElementById('regSuccessMsg').textContent =
       `Na ${email} jsme poslali přihlašovací odkaz. Zkontrolujte schránku (i spam), platí 15 minut.`;

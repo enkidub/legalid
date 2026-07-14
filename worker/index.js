@@ -429,6 +429,26 @@ export default {
         return json({ case_id: r.meta.last_row_id });
       }
 
+      // GET /api/aml/clients — uložení klienti (distinct z případů uživatele, nejnovější výskyt)
+      // Zdroj pro dlaždici „Ze seznamu" v kroku Údaje klienta.
+      if (url.pathname === '/api/aml/clients') {
+        if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
+        // Klíč klienta = číslo dokladu, jinak jméno+příjmení+nar. Bereme nejnovější případ na klíč.
+        const { results } = await env.DB.prepare(
+          `SELECT client_name, client_surname, client_birth_date, client_birth_place,
+                  client_address, client_nationality, client_doc_type, client_doc_number,
+                  client_doc_issued_at, client_doc_valid_until, client_gender, client_rc, client_ico,
+                  MAX(created_at) AS last_seen
+             FROM aml_cases
+            WHERE user_id = ? AND (client_name IS NOT NULL OR client_surname IS NOT NULL)
+            GROUP BY COALESCE(NULLIF(client_doc_number,''),
+                              client_name || '|' || client_surname || '|' || COALESCE(client_birth_date,''))
+            ORDER BY last_seen DESC
+            LIMIT 200`
+        ).bind(userId).all();
+        return json({ clients: results || [] });
+      }
+
       // GET /api/aml/cases — seznam případů uživatele (pro budoucí Archiv)
       if (url.pathname === '/api/aml/cases') {
         if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
@@ -481,6 +501,7 @@ export default {
             'client_name', 'client_surname', 'client_birth_date', 'client_birth_place',
             'client_address', 'client_nationality', 'client_doc_type', 'client_doc_number',
             'client_doc_valid_until', 'client_doc_issued_at', 'client_gender',
+            'client_rc', 'client_ico',
             'business_purpose', 'ai_risk_suggestion',
             'ai_risk_reasoning', 'final_risk_level', 'risk_decided_at',
             'final_pdf_generated', 'completed_at', 'next_review_due',

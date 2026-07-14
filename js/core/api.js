@@ -45,6 +45,12 @@ export async function apiAmlListCases() {
   return r.json();
 }
 
+// Uložení klienti (distinct z případů uživatele) — zdroj pro „Ze seznamu".
+export async function apiAmlListClients() {
+  const r = await fetch(`${WORKER_URL}/api/aml/clients`, { credentials: 'include' });
+  return r.json();
+}
+
 // Spustí všech 5 lustrací nad případem, vrátí { results: [...] } a uloží je do aml_lookups.
 export async function apiAmlRunLookup(caseId) {
   const r = await fetch(`${WORKER_URL}/api/aml/lookup/run`, {

@@ -358,7 +358,7 @@ function renderSteps() {
   wrap.innerHTML = STEP_LABELS.map((label, i) => {
     const cls = i < wiz.step ? 'done' : (i === wiz.step ? 'active' : 'future');
     const mark = i < wiz.step ? '✓' : String(i);
-    return `<div class="aml-step ${cls}"><span class="aml-step-dot">${mark}</span><span class="aml-step-label">${i} — ${label}</span></div>`;
+    return `<div class="aml-step ${cls}"><span class="aml-step-dot">${mark}</span><span class="aml-step-label">${label}</span></div>`;
   }).join('');
 }
 

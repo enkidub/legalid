@@ -476,30 +476,90 @@ function lookupView(lk) {
     case 'clean':   return { icon: '✓', cls: 'ok',    text: 'v pořádku' };
     case 'warning': return { icon: '⚠', cls: 'warn',  text: pct ? `možná shoda ${pct}` : 'ke kontrole' };
     case 'match':   return { icon: '⚠', cls: 'match', text: pct ? `SHODA ${pct}` : 'SHODA' };
+    case 'manual':  return { icon: '↗', cls: 'manual', text: 'ověřte ručně' };
     case 'error':   return { icon: '✕', cls: 'err',   text: 'nedostupné' };
     default:        return { icon: '⏳', cls: 'pending', text: 'probíhá…' };
   }
 }
 
+// Překladové slovníky pro OpenSanctions kódy → český popis.
+const OS_DATASETS = {
+  us_cia_world_leaders: 'CIA World Leaders', wikidata: 'Wikidata', wd_peps: 'Wikidata PEP index',
+  fr_hatvp_declarations: 'HATVP (francouzský registr veřejných funkcionářů)',
+  un_ga_protocol: 'OSN – protokol Valného shromáždění', everypolitician: 'EveryPolitician',
+  eu_meps: 'Europarlament (poslanci)', gb_hmt_sanctions: 'HM Treasury (UK)',
+};
+const OS_TOPICS = {
+  'role.pep': 'politicky exponovaná osoba', 'role.pol': 'politický funkcionář',
+  'role.rca': 'osoba blízká funkcionáři', 'gov.national': 'státní správa',
+  'role.judge': 'soudce', 'role.diplo': 'diplomat',
+};
+const COUNTRY_CS = {
+  fr: 'Francie', cz: 'Česko', sk: 'Slovensko', de: 'Německo', us: 'USA', gb: 'Spojené království',
+  ru: 'Rusko', ua: 'Ukrajina', pl: 'Polsko', at: 'Rakousko', it: 'Itálie', es: 'Španělsko',
+  hu: 'Maďarsko', be: 'Belgie', nl: 'Nizozemsko', cn: 'Čína',
+};
+const arr = v => Array.isArray(v) ? v : (v == null ? [] : [v]);
+const transList = (v, map) => arr(v).map(x => map[x] || map[String(x).toLowerCase()] || x);
+const transCountry = v => arr(v).map(c => COUNTRY_CS[String(c).toLowerCase()] || String(c).toUpperCase());
+
+// Speciální, advokátovi srozumitelný detail PEP shody z OpenSanctions.
+function pepDetailHTML(lk) {
+  const d = lk.details || {};
+  const row = (label, val) => val && val.length
+    ? `<div><span class="aml-lk-dk">${label}:</span> ${esc(Array.isArray(val) ? val.join(', ') : String(val))}</div>` : '';
+  const countries = transCountry(d.countries);
+  const positions = arr(d.positions);
+  const datasets = transList(d.datasets, OS_DATASETS);
+  const topics = transList(d.topics, OS_TOPICS);
+  return `<div class="aml-lk-detail" id="aml-lk-det-pep" hidden>` +
+    row('Shoda s', lk.matched_against || d.caption) +
+    `<div><span class="aml-lk-dk">Zdroj:</span> OpenSanctions (globální PEP databáze)</div>` +
+    row('Země', countries) +
+    row('Funkce', positions) +
+    row('Zdrojové databáze', datasets) +
+    row('Typ', topics) +
+    `</div>`;
+}
+
+const CS_KEYS = {
+  note: 'Poznámka', doc_number: 'Číslo dokladu', name: 'Jméno', birthdate: 'Datum narození',
+  birth_date: 'Datum narození', source: 'Zdroj', full_name: 'Celé jméno', nationality: 'Národnost',
+  reason: 'Důvod', position: 'Funkce', organization: 'Organizace', active_since: 'Ve funkci od',
+  active_until: 'Ve funkci do', ico: 'IČO', address: 'Adresa', vysledek: 'Výsledek',
+  client_birth_date: 'Datum narození klienta', checked: 'Prověřeno záznamů',
+};
+
 function lookupDetailHTML(lk) {
+  // PEP z OpenSanctions má vlastní srozumitelný render.
+  if (lk.lookup_type === 'pep' && lk.source === 'opensanctions') return pepDetailHTML(lk);
+
   const d = lk.details;
+  // ISIR ruční kontrola — odkaz s předvyplněným jménem.
+  if (lk.status === 'manual') {
+    const url = d && d.url;
+    return `<div class="aml-lk-detail" id="aml-lk-det-${lk.lookup_type}" hidden>` +
+      `<div>${esc(d?.note || 'Ověřte ručně.')}</div>` +
+      (url ? `<div><a class="aml-lk-link" href="${esc(url)}" target="_blank" rel="noopener">Otevřít insolvenční rejstřík ↗</a></div>` : '') +
+      `</div>`;
+  }
+
   let inner = '';
   if (typeof d === 'string') inner = esc(d);
   else if (d && typeof d === 'object') {
     inner = Object.entries(d)
       .filter(([, v]) => v != null && v !== '')
-      .map(([k, v]) => `<div><span class="aml-lk-dk">${esc(k)}:</span> ${esc(String(typeof v === 'object' ? JSON.stringify(v) : v))}</div>`)
+      .map(([k, v]) => `<div><span class="aml-lk-dk">${esc(CS_KEYS[k] || k)}:</span> ${esc(String(typeof v === 'object' ? JSON.stringify(v) : v))}</div>`)
       .join('');
   }
-  const matched = lk.matched_against ? `<div><span class="aml-lk-dk">shoda s:</span> ${esc(lk.matched_against)}</div>` : '';
-  const src = lk.source ? `<div><span class="aml-lk-dk">zdroj:</span> ${esc(lk.source)}</div>` : '';
-  return `<div class="aml-lk-detail" id="aml-lk-det-${lk.lookup_type}" hidden>${matched}${src}${inner}</div>`;
+  const matched = lk.matched_against ? `<div><span class="aml-lk-dk">Shoda s:</span> ${esc(lk.matched_against)}</div>` : '';
+  return `<div class="aml-lk-detail" id="aml-lk-det-${lk.lookup_type}" hidden>${matched}${inner}</div>`;
 }
 
 function lookupRowHTML(meta) {
   const lk = wiz.lookups?.find(x => x.lookup_type === meta.type) || null;
   const v = lookupView(lk);
-  const expandable = lk && (lk.status === 'warning' || lk.status === 'match' || lk.status === 'error');
+  const expandable = lk && ['warning', 'match', 'error', 'manual'].includes(lk.status);
   const act = expandable ? ` data-act="toggle-detail" data-type="${meta.type}" role="button" tabindex="0"` : '';
   const row = `<div class="aml-lk-row aml-lk-${v.cls}"${act}>
       <span class="aml-lk-ico">${v.icon}</span>

@@ -39,40 +39,54 @@ function expandAliases(rows) {
 }
 
 // ── 1) MVČR — neplatné doklady ──
-// ASP.NET WebForms (aplikace.mv.gov.cz), stavový VIEWSTATE round-trip → křehké.
-// Konzervativně: jen pokud výsledek jednoznačně říká "neplatný", vrátíme 'match';
-// jinak 'error' s pokynem na ruční kontrolu (nikdy nehlásíme falešné 'clean').
-export async function lookupMvcr(docNumber) {
+// ASP.NET WebForms (aplikace.mv.gov.cz), stavový VIEWSTATE round-trip + session cookie.
+// Pole formuláře (ověřeno 07/2026): ctl00$Application$txtCisloDokladu, ...$ddlTypDokladu
+// (1=OP, 2=cestovní pas, 5=evropský zbrojní pas), ...$cmdZobraz.
+// Výsledková věta: "Doklad s číslem X nebyl nalezen v databázi neplatných dokladů" = clean.
+const MVCR_URL = 'https://aplikace.mv.gov.cz/neplatne-doklady/';
+function mvcrDocType(clientDocType) {
+  const t = (clientDocType || '').toLowerCase();
+  if (t.includes('pas')) return '2';
+  if (t.includes('zbroj')) return '5';
+  return '1';   // default: občanský průkaz
+}
+export async function lookupMvcr(docNumber, docType) {
   if (!docNumber) return { status: 'clean', details: { note: 'Číslo dokladu nezadáno — přeskočeno.' } };
-  const BASE = 'https://aplikace.mv.gov.cz/neplatne-doklady/';
   try {
-    const pageRes = await fetch(BASE, { headers: { 'User-Agent': 'legalid-aml/1.0' } });
+    const pageRes = await fetch(MVCR_URL, { headers: { 'User-Agent': 'legalid-aml/1.0' } });
     if (!pageRes.ok) throw new Error(`page ${pageRes.status}`);
+    const cookie = (pageRes.headers.get('set-cookie') || '').split(',').map(c => c.split(';')[0].trim()).filter(Boolean).join('; ');
     const html = await pageRes.text();
     const hidden = name => (html.match(new RegExp(`id="${name}"[^>]*value="([^"]*)"`)) || [])[1] || '';
     const viewstate = hidden('__VIEWSTATE');
-    const eventval = hidden('__EVENTVALIDATION');
-    const vsgen = hidden('__VIEWSTATEGENERATOR');
     if (!viewstate) throw new Error('no viewstate');
 
-    // Pozn.: přesné názvy polí formuláře je nutné doladit proti reálné odpovědi po deployi.
     const form = new URLSearchParams({
       __VIEWSTATE: viewstate,
-      __VIEWSTATEGENERATOR: vsgen,
-      __EVENTVALIDATION: eventval,
-      cislo: String(docNumber),
+      __VIEWSTATEGENERATOR: hidden('__VIEWSTATEGENERATOR'),
+      __EVENTVALIDATION: hidden('__EVENTVALIDATION'),
+      'ctl00$Application$ddlTypDokladu': mvcrDocType(docType),
+      'ctl00$Application$txtCisloDokladu': String(docNumber),
+      'ctl00$Application$cmdZobraz': 'Ověřit',
     });
-    const res = await fetch(BASE, {
+    const res = await fetch(MVCR_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'legalid-aml/1.0' },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'legalid-aml/1.0',
+        ...(cookie ? { 'Cookie': cookie } : {}),
+      },
       body: form.toString(),
     });
-    const body = (await res.text()).toLowerCase();
-    if (/neplatn/.test(body) && new RegExp(String(docNumber).toLowerCase()).test(body)) {
-      return { status: 'match', details: { note: 'Doklad nalezen v evidenci neplatných dokladů MVČR.', doc_number: docNumber } };
+    // Číslo i výsledek jsou obalené HTML tagy (<b>, <strong>) → před detekcí tagy odstranit.
+    const body = (await res.text()).replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+    // Výsledková věta o konkrétním čísle dokladu.
+    const sentence = (body.match(new RegExp(`Doklad s číslem\\s*${String(docNumber)}[^.]*`, 'i')) || [])[0] || '';
+    if (/nebyl\s+nalezen/i.test(sentence)) {
+      return { status: 'clean', details: { note: 'Doklad není v evidenci neplatných dokladů MVČR.', doc_number: docNumber } };
     }
-    if (/nebyl.*nalezen|nenalezen|žádn.*záznam|0 záznam/i.test(body)) {
-      return { status: 'clean', details: { note: 'Doklad není v evidenci neplatných dokladů MVČR.' } };
+    if (sentence && /(neplatn|evidov|veden|nalezen)/i.test(sentence)) {
+      return { status: 'match', details: { note: 'Doklad nalezen v evidenci neplatných dokladů MVČR.', doc_number: docNumber, vysledek: sentence.trim().slice(0, 200) } };
     }
     return { status: 'error', details: 'Automatické ověření MVČR nebylo jednoznačné — zkontrolujte ručně na aplikace.mv.gov.cz/neplatne-doklady.' };
   } catch (e) {
@@ -81,28 +95,20 @@ export async function lookupMvcr(docNumber) {
 }
 
 // ── 2) ISIR — insolvenční rejstřík ──
-// Veřejná evidence úpadců (isir.justice.cz). Scraping HTML výsledků → křehké.
+// Veřejné vyhledávání (vysledek_lustrace.do) vyžaduje CAPTCHA (ccaCaptcha) → serverovou
+// lustraci po osobě NELZE automatizovat. Vracíme status 'manual' s předvyplněným odkazem;
+// advokát ověří ručně (captchu vyřeší). Cílový plný fix = mirror ISIR dat do D1 (viz backlog).
 export async function lookupIsir(name, birthdate) {
   if (!name) return { status: 'clean', details: { note: 'Jméno nezadáno — přeskočeno.' } };
-  try {
-    const url = 'https://isir.justice.cz/isir/ueu/evidence_upadcu_result.do?'
-      + new URLSearchParams({ nazevOsoby: name, upadce: 'true', resitel: 'false', zverejnit: 'true' }).toString();
-    const res = await fetch(url, { headers: { 'User-Agent': 'legalid-aml/1.0' } });
-    if (!res.ok) throw new Error(`http ${res.status}`);
-    const html = await res.text();
-    // Výsledková tabulka má řádky s třídou/odkazem na detail řízení; hrubá detekce.
-    const hasRows = /detail_upadce|osobaId=|spisová značka|spisova znacka/i.test(html);
-    const noRows = /nebyl.*nalezen|nenalezen|žádn|0 nalezených|no results/i.test(html);
-    if (hasRows && !noRows) {
-      return { status: 'warning', details: { note: 'Nalezen možný záznam v insolvenčním rejstříku — ověřte ručně.', name, birthdate: birthdate || null } };
-    }
-    if (noRows) {
-      return { status: 'clean', details: { note: 'Žádný záznam v insolvenčním rejstříku.' } };
-    }
-    return { status: 'error', details: 'Automatické ověření ISIR nebylo jednoznačné — zkontrolujte ručně na isir.justice.cz.' };
-  } catch (e) {
-    return { status: 'error', details: `Rejstřík ISIR byl nedostupný (${e.message}).` };
-  }
+  const link = 'https://isir.justice.cz/isir/common/index.do?nazev_osoby=' + encodeURIComponent(name);
+  return {
+    status: 'manual',
+    details: {
+      note: 'Insolvenční rejstřík vyžaduje ověření CAPTCHA — automatická lustrace není možná. Ověřte ručně.',
+      name, birthdate: birthdate || null,
+      url: link,
+    },
+  };
 }
 
 // ── 3) ARES — ekonomické subjekty ──
@@ -190,10 +196,18 @@ export async function lookupPep(env, name, birthDate) {
     const data = await osRes.json();
     const top = data?.responses?.q1?.results?.[0];
     if (top && top.score >= 0.70) {
+      const props = top.properties || {};
       return {
         status: 'warning', source: 'opensanctions',
         matched_against: top.caption, match_score: Number(top.score.toFixed(3)),
-        details: { datasets: top.datasets, topics: top.properties?.topics || null },
+        details: {
+          caption: top.caption || null,
+          countries: props.country || top.countries || null,   // ISO kódy zemí
+          positions: props.position || null,                    // názvy funkcí
+          topics: props.topics || null,                         // role.pep, role.pol …
+          datasets: top.datasets || null,                       // zdrojové databáze
+          birth_date: props.birthDate || null,
+        },
       };
     }
     return { status: 'clean', source: 'opensanctions', details: { note: 'Žádná shoda v OpenSanctions PEP.' } };

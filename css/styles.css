@@ -1464,6 +1464,10 @@ body.logged-in .main-nav { display: flex; }
 .aml-lk-match .aml-lk-ico, .aml-lk-match .aml-lk-status { color: #c0392b; }
 .aml-lk-match { background: #fdeeec; border-color: #f0c0b8; }
 .aml-lk-err   .aml-lk-ico, .aml-lk-err   .aml-lk-status { color: var(--ink-lt); }
+.aml-lk-manual .aml-lk-ico, .aml-lk-manual .aml-lk-status { color: #3d6bb3; }
+.aml-lk-manual { background: #f2f6fc; border-color: #cfdcef; }
+.aml-lk-link { color: #3d6bb3; font-weight: 600; text-decoration: none; }
+.aml-lk-link:hover { text-decoration: underline; }
 .aml-lk-detail {
   font-size: 12px; color: var(--ink-mid); line-height: 1.6;
   padding: 8px 13px 10px 43px; margin-top: -4px;

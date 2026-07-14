@@ -95,20 +95,97 @@ export async function lookupMvcr(docNumber, docType) {
 }
 
 // ── 2) ISIR — insolvenční rejstřík ──
-// Veřejné vyhledávání (vysledek_lustrace.do) vyžaduje CAPTCHA (ccaCaptcha) → serverovou
-// lustraci po osobě NELZE automatizovat. Vracíme status 'manual' s předvyplněným odkazem;
-// advokát ověří ručně (captchu vyřeší). Cílový plný fix = mirror ISIR dat do D1 (viz backlog).
-export async function lookupIsir(name, birthdate) {
-  if (!name) return { status: 'clean', details: { note: 'Jméno nezadáno — přeskočeno.' } };
-  const link = 'https://isir.justice.cz/isir/common/index.do?nazev_osoby=' + encodeURIComponent(name);
-  return {
-    status: 'manual',
-    details: {
-      note: 'Insolvenční rejstřík vyžaduje ověření CAPTCHA — automatická lustrace není možná. Ověřte ručně.',
-      name, birthdate: birthdate || null,
-      url: link,
-    },
-  };
+// Živý dotaz na oficiální veřejnou SOAP službu ISIRWSCUZK (anonymní, zdarma) —
+// getIsirWsCuzkData. Web UI vyžaduje CAPTCHA, ale tato služba ne. Vrací strukturovaná
+// data dlužníků (spisová značka, soud, stav, data úpadku) → filtrujeme dle data narození.
+const ISIR_CUZK_URL = 'https://isir.justice.cz:8443/isir_cuzk_ws/IsirWsCuzkService';
+
+const xmlEsc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// "DD.MM.YYYY" | "YYYY-MM-DD" | "YYYY-MM-DDZ" → "YYYY-MM-DD" (jinak '')
+function normDate(d) {
+  if (!d) return '';
+  const s = String(d).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return '';
+}
+function isirRecords(xml) {
+  const out = [];
+  const blocks = xml.split('<data>').slice(1);
+  for (const b of blocks) {
+    const seg = b.split('</data>')[0];
+    const g = t => { const m = seg.match(new RegExp(`<${t}>([^<]*)</${t}>`)); return m ? m[1].trim() : ''; };
+    out.push({
+      jmeno: g('jmeno'), nazevOsoby: g('nazevOsoby'), ic: g('ic'),
+      datumNarozeni: g('datumNarozeni').replace(/Z$/, ''),
+      spis: [g('druhVec'), g('bcVec') && `${g('bcVec')}/${g('rocnik')}`].filter(Boolean).join(' '),
+      soud: g('nazevOrganizace'), stav: g('druhStavKonkursu'),
+      zahajeni: g('datumPmZahajeniUpadku').replace(/Z$/, ''),
+      ukonceni: g('datumPmUkonceniUpadku').replace(/Z$/, ''),
+      url: g('urlDetailRizeni'),
+    });
+  }
+  return out;
+}
+
+export async function lookupIsir(surname, firstName, birthdate) {
+  if (!surname && !firstName) return { status: 'clean', details: { note: 'Jméno nezadáno — přeskočeno.' } };
+  const bd = normDate(birthdate);
+  const body =
+    `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:typ="http://isirws.cca.cz/types/">` +
+    `<soapenv:Body><typ:getIsirWsCuzkDataRequest>` +
+    (surname ? `<nazevOsoby>${xmlEsc(surname)}</nazevOsoby>` : '') +
+    (firstName ? `<jmeno>${xmlEsc(firstName)}</jmeno>` : '') +
+    (bd ? `<datumNarozeni>${bd}</datumNarozeni>` : '') +
+    `<maxPocetVysledku>20</maxPocetVysledku>` +
+    `<vyhledatBezDiakritiky>T</vyhledatBezDiakritiky>` +
+    `</typ:getIsirWsCuzkDataRequest></soapenv:Body></soapenv:Envelope>`;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    let res;
+    try {
+      res = await fetch(ISIR_CUZK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/xml; charset=utf-8', 'SOAPAction': '""' },
+        body, signal: ctrl.signal,
+      });
+    } finally { clearTimeout(timer); }
+    const text = await res.text();
+    if (/<soap:Fault>|<faultstring>/i.test(text)) {
+      const err = (text.match(/<faultstring>([^<]*)</i) || [])[1] || 'neznámá chyba';
+      return { status: 'error', details: `ISIR dotaz odmítnut (${err.slice(0, 120)}).` };
+    }
+    if (/Prázdný výsledek/i.test(text) || !/<data>/.test(text)) {
+      return { status: 'clean', details: { note: 'Žádný záznam v insolvenčním rejstříku.' } };
+    }
+    let recs = isirRecords(text);
+    // Když známe datum narození, ponech jen odpovídající osoby (stejné příjmení, jiná osoba → clean).
+    if (bd) {
+      const matched = recs.filter(r => normDate(r.datumNarozeni) === bd);
+      if (matched.length) recs = matched;
+      else return { status: 'clean', details: { note: 'Osoba shodného jména v insolvenci nalezena, ale s jiným datem narození — nejde o klienta.' } };
+    }
+    if (!recs.length) return { status: 'clean', details: { note: 'Žádný odpovídající záznam v insolvenčním rejstříku.' } };
+    const who = [firstName, surname].filter(Boolean).join(' ');
+    return {
+      status: 'warning',
+      matched_against: bd ? `${who}, nar. ${bd}` : who,
+      details: {
+        note: `Nalezeno insolvenčních řízení: ${recs.length}. Ověřte, zda jde o klienta.`,
+        rizeni: recs.slice(0, 10).map(r => ({
+          spis: r.spis, soud: r.soud, stav: r.stav,
+          zahajeni: r.zahajeni || null, ukonceni: r.ukonceni || null,
+          nar: r.datumNarozeni || null, url: r.url || null,
+        })),
+      },
+    };
+  } catch (e) {
+    const msg = e.name === 'AbortError' ? 'časový limit' : e.message;
+    return { status: 'error', details: `Insolvenční rejstřík byl nedostupný (${msg}).` };
+  }
 }
 
 // ── 3) ARES — ekonomické subjekty ──

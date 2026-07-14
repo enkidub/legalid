@@ -106,7 +106,7 @@ async function runAllLookups(env, c) {
   // Pozn.: aml_cases zatím nemá IČO klienta → ARES se přeskočí (klient je fyzická osoba).
   const tasks = [
     ['mvcr', lookupMvcr(c.client_doc_number, c.client_doc_type)],
-    ['isir', lookupIsir(name, birth)],
+    ['isir', lookupIsir(c.client_surname, c.client_name, birth)],
     ['ares', lookupAres(c.client_ico || null)],
     ['sanctions', lookupSanctions(env, name, birth)],
     ['pep', lookupPep(env, name, birth)],
@@ -512,7 +512,7 @@ export default {
         return json(await lookupMvcr(q.get('doc_number'), q.get('doc_type')));
       }
       if (p === '/api/lookup/isir' && request.method === 'GET') {
-        return json(await lookupIsir(q.get('name'), q.get('birthdate')));
+        return json(await lookupIsir(q.get('surname') || q.get('name'), q.get('jmeno'), q.get('birthdate')));
       }
       if (p === '/api/lookup/ares' && request.method === 'GET') {
         return json(await lookupAres(q.get('ico')));

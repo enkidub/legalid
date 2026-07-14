@@ -530,12 +530,30 @@ const CS_KEYS = {
   client_birth_date: 'Datum narození klienta', checked: 'Prověřeno záznamů',
 };
 
+// ISIR — seznam nalezených insolvenčních řízení.
+function isirDetailHTML(lk) {
+  const d = lk.details || {};
+  const rows = (d.rizeni || []).map(r => {
+    const meta = [r.soud, r.stav && `stav: ${r.stav}`,
+      r.zahajeni && `zahájení ${r.zahajeni}`, r.ukonceni && `ukončení ${r.ukonceni}`,
+      r.nar && `nar. ${r.nar}`].filter(Boolean).join(' · ');
+    const spis = r.url
+      ? `<a class="aml-lk-link" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.spis || 'řízení')} ↗</a>`
+      : esc(r.spis || 'řízení');
+    return `<div class="aml-lk-rizeni"><div class="aml-lk-spis">${spis}</div><div class="aml-lk-rmeta">${esc(meta)}</div></div>`;
+  }).join('');
+  return `<div class="aml-lk-detail" id="aml-lk-det-isir" hidden>` +
+    (d.note ? `<div>${esc(d.note)}</div>` : '') + rows + `</div>`;
+}
+
 function lookupDetailHTML(lk) {
   // PEP z OpenSanctions má vlastní srozumitelný render.
   if (lk.lookup_type === 'pep' && lk.source === 'opensanctions') return pepDetailHTML(lk);
+  // ISIR nalezená řízení mají vlastní render.
+  if (lk.lookup_type === 'isir' && lk.details && lk.details.rizeni) return isirDetailHTML(lk);
 
   const d = lk.details;
-  // ISIR ruční kontrola — odkaz s předvyplněným jménem.
+  // ISIR / obecný ruční fallback — odkaz na ověření.
   if (lk.status === 'manual') {
     const url = d && d.url;
     return `<div class="aml-lk-detail" id="aml-lk-det-${lk.lookup_type}" hidden>` +

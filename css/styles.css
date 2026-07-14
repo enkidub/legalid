@@ -1443,6 +1443,34 @@ body.logged-in .main-nav { display: flex; }
 .aml-foot .aml-btn { min-width: 110px; }
 .aml-foot .aml-btn[data-act="next"] { margin-left: auto; }
 
+/* ── Krok 2: lustrace ── */
+.aml-lookups { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.aml-lk-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 13px; border: 1px solid var(--rule); border-radius: 10px;
+  background: var(--paper-w); transition: border-color .14s, background .14s;
+}
+.aml-lk-row[data-act] { cursor: pointer; }
+.aml-lk-row[data-act]:hover { border-color: var(--ink-lt); }
+.aml-lk-ico { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+.aml-lk-label { font-size: 13px; color: var(--ink); font-weight: 500; }
+.aml-lk-status { margin-left: auto; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.aml-lk-caret { font-size: 10px; opacity: .6; }
+.aml-lk-pending { opacity: .7; }
+.aml-lk-pending .aml-lk-status { color: var(--ink-lt); font-weight: 500; }
+.aml-lk-ok    .aml-lk-ico, .aml-lk-ok    .aml-lk-status { color: #1a8a4a; }
+.aml-lk-warn  .aml-lk-ico, .aml-lk-warn  .aml-lk-status { color: #b8791a; }
+.aml-lk-warn  { background: #fff8ec; border-color: #f0dcae; }
+.aml-lk-match .aml-lk-ico, .aml-lk-match .aml-lk-status { color: #c0392b; }
+.aml-lk-match { background: #fdeeec; border-color: #f0c0b8; }
+.aml-lk-err   .aml-lk-ico, .aml-lk-err   .aml-lk-status { color: var(--ink-lt); }
+.aml-lk-detail {
+  font-size: 12px; color: var(--ink-mid); line-height: 1.6;
+  padding: 8px 13px 10px 43px; margin-top: -4px;
+}
+.aml-lk-detail .aml-lk-dk { color: var(--ink-lt); font-weight: 600; }
+.aml-lk-note { font-size: 11px; color: var(--ink-fnt); margin-top: 12px; }
+
 /* Kamera modal (desktop) */
 .aml-cam {
   position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.8);

@@ -45,6 +45,15 @@ export async function apiAmlListCases() {
   return r.json();
 }
 
+// Spustí všech 5 lustrací nad případem, vrátí { results: [...] } a uloží je do aml_lookups.
+export async function apiAmlRunLookup(caseId) {
+  const r = await fetch(`${WORKER_URL}/api/aml/lookup/run`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ case_id: caseId })
+  });
+  return r.json();
+}
+
 export async function apiSendMagicLink(email) {
   const r = await fetch(`${WORKER_URL}/auth/send`, {
     method: 'POST',

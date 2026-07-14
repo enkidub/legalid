@@ -5,6 +5,9 @@ compatibility_date = "2024-01-01"
 [vars]
 ALLOWED_ORIGINS = "https://legalid.cz,http://localhost:8080"
 
+[triggers]
+crons = ["0 3 * * *"]  # denně 3:00 UTC — přepis EU sankcí v D1
+
 [[d1_databases]]
 binding = "DB"
 database_name = "legalid-db"

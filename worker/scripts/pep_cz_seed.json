@@ -1,0 +1,50 @@
+[
+  { "full_name": "Petr Pavel", "position": "prezident", "organization": "Kancelář prezidenta republiky", "active_since": "2023-03-09" },
+  { "full_name": "Miloš Zeman", "position": "prezident (bývalý)", "organization": "Kancelář prezidenta republiky", "active_since": "2013-03-08", "active_until": "2023-03-09" },
+
+  { "full_name": "Petr Fiala", "position": "premier", "organization": "Vláda ČR", "active_since": "2021-12-17", "notes": "Ověřit po volbách 2025 — mohl skončit." },
+  { "full_name": "Andrej Babiš", "position": "premier / předseda hnutí ANO", "organization": "Vláda ČR / ANO", "active_since": "2017-12-13", "notes": "Vítěz voleb 2025 — ověřit aktuální funkci." },
+
+  { "full_name": "Jan Lipavský", "position": "ministr zahraničních věcí", "organization": "Vláda ČR", "active_since": "2021-12-17", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Zbyněk Stanjura", "position": "ministr financí", "organization": "Vláda ČR", "active_since": "2021-12-17", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Vít Rakušan", "position": "ministr vnitra / předseda STAN", "organization": "Vláda ČR / STAN", "active_since": "2021-12-17", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Vlastimil Válek", "position": "ministr zdravotnictví", "organization": "Vláda ČR", "active_since": "2021-12-17", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Marian Jurečka", "position": "ministr práce a soc. věcí / předseda KDU-ČSL", "organization": "Vláda ČR / KDU-ČSL", "active_since": "2021-12-17", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Jozef Síkela", "position": "ministr průmyslu a obchodu", "organization": "Vláda ČR", "active_since": "2021-12-17", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Martin Kupka", "position": "ministr dopravy", "organization": "Vláda ČR", "active_since": "2021-12-17", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Jana Černochová", "position": "ministryně obrany", "organization": "Vláda ČR", "active_since": "2021-12-17", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Pavel Blažek", "position": "ministr spravedlnosti", "organization": "Vláda ČR", "active_since": "2021-12-17", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Mikuláš Bek", "position": "ministr školství", "organization": "Vláda ČR", "active_since": "2022-06-29", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Marek Výborný", "position": "ministr zemědělství", "organization": "Vláda ČR", "active_since": "2023-06-01", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Petr Hladík", "position": "ministr životního prostředí", "organization": "Vláda ČR", "active_since": "2023-01-01", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Martin Baxa", "position": "ministr kultury", "organization": "Vláda ČR", "active_since": "2021-12-17", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Ivan Bartoš", "position": "ministr pro místní rozvoj / předseda Pirátů", "organization": "Vláda ČR / Piráti", "active_since": "2021-12-17", "active_until": "2024-09-27", "notes": "Odvolán 2024; předseda Pirátů — ověřit." },
+
+  { "full_name": "Markéta Pekarová Adamová", "position": "předsedkyně Poslanecké sněmovny / předsedkyně TOP 09", "organization": "PSP ČR / TOP 09", "active_since": "2021-11-10", "notes": "Ověřit po volbách 2025." },
+  { "full_name": "Miloš Vystrčil", "position": "předseda Senátu", "organization": "Senát ČR", "active_since": "2020-02-19", "notes": "Ověřit aktuální mandát." },
+  { "full_name": "Tomio Okamura", "position": "předseda hnutí SPD, poslanec", "organization": "PSP ČR / SPD", "active_since": "2015-05-16" },
+  { "full_name": "Karel Havlíček", "position": "místopředseda hnutí ANO, poslanec", "organization": "PSP ČR / ANO", "active_since": "2019-04-30" },
+  { "full_name": "Alena Schillerová", "position": "místopředsedkyně hnutí ANO, poslankyně", "organization": "PSP ČR / ANO", "active_since": "2017-12-13" },
+
+  { "full_name": "Aleš Michl", "position": "guverner_cnb", "organization": "Česká národní banka", "active_since": "2022-07-01" },
+  { "full_name": "Eva Zamrazilová", "position": "viceguvernérka ČNB", "organization": "Česká národní banka", "active_since": "2022-07-01" },
+  { "full_name": "Jan Frait", "position": "viceguvernér ČNB", "organization": "Česká národní banka", "active_since": "2022-07-01" },
+
+  { "full_name": "Stanislav Křeček", "position": "veřejný ochránce práv (ombudsman)", "organization": "Kancelář veřejného ochránce práv", "active_since": "2020-02-19", "active_until": "2025-02-19", "notes": "Nástupce po únoru 2025 — ověřit." },
+  { "full_name": "Pavel Rychetský", "position": "předseda Ústavního soudu (bývalý)", "organization": "Ústavní soud ČR", "active_since": "2003-08-06", "active_until": "2023-08-05", "notes": "Ověřit nástupce." },
+  { "full_name": "Josef Baxa", "position": "předseda Ústavního soudu", "organization": "Ústavní soud ČR", "active_since": "2023-08-07" },
+  { "full_name": "Petr Angyalossy", "position": "předseda Nejvyššího soudu", "organization": "Nejvyšší soud ČR", "active_since": "2020-06-22" },
+  { "full_name": "Igor Stříž", "position": "nejvyšší státní zástupce", "organization": "Nejvyšší státní zastupitelství", "active_since": "2021-07-28" },
+
+  { "full_name": "Danuše Nerudová", "position": "poslankyně Evropského parlamentu, ekonomka", "organization": "Evropský parlament / STAN", "active_since": "2024-07-16" },
+  { "full_name": "Alexandr Vondra", "position": "poslanec Evropského parlamentu", "organization": "Evropský parlament / ODS", "active_since": "2019-07-02" },
+  { "full_name": "Klára Dostálová", "position": "poslankyně Evropského parlamentu (ANO)", "organization": "Evropský parlament / ANO", "active_since": "2024-07-16" },
+
+  { "full_name": "Bohuslav Sobotka", "position": "premiér (bývalý)", "organization": "Vláda ČR", "active_since": "2014-01-29", "active_until": "2017-12-13" },
+  { "full_name": "Mirek Topolánek", "position": "premiér (bývalý)", "organization": "Vláda ČR", "active_since": "2006-09-04", "active_until": "2009-05-08" },
+  { "full_name": "Václav Klaus", "position": "prezident (bývalý)", "organization": "Kancelář prezidenta republiky", "active_since": "2003-03-07", "active_until": "2013-03-07" },
+
+  { "full_name": "Radek Vondráček", "position": "místopředseda PSP, poslanec (ANO)", "organization": "PSP ČR / ANO", "active_since": "2017-11-22" },
+  { "full_name": "Olga Richterová", "position": "místopředsedkyně PSP, poslankyně (Piráti)", "organization": "PSP ČR / Piráti", "active_since": "2021-11-10" },
+  { "full_name": "Jan Skopeček", "position": "místopředseda PSP, poslanec (ODS)", "organization": "PSP ČR / ODS", "active_since": "2021-11-10" }
+]

@@ -7,3 +7,8 @@ dist/
 
 # refactor backups
 *.orig.bak
+
+.vercel
+
+# vygenerovaná importní SQL (odvozená, regenerovatelná ze skriptů)
+worker/scripts/*.generated.sql

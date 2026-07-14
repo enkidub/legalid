@@ -3,7 +3,7 @@
 // Architektura: žádné inline onclick → jeden delegovaný listener na #amlRoot (data-act).
 // Tím odpadá fragilní window-bridge (chybějící bridge byl zdroj minulých ReferenceError).
 
-import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, apiAmlListCases, apiOcr } from '../core/api.js';
+import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, apiAmlListCases, apiAmlRunLookup, apiOcr } from '../core/api.js';
 import { state } from '../core/state.js';
 import { showToast, esc } from '../core/ui.js';
 import { openRegistrationModal } from '../auth/auth.js';
@@ -43,7 +43,18 @@ const wiz = {
   frontExtracted: null, backExtracted: null,
   ocrLoading: false,
   camStream: null,
+  lookups: null,            // pole výsledků lustrací (krok 2), null = ještě neběželo
+  lookupStatus: 'idle',     // 'idle' | 'running' | 'done'
 };
+
+// Řádky lustrací v kroku 2 (pořadí = pořadí zobrazení).
+const LOOKUP_ROWS = [
+  { type: 'mvcr', label: 'Neplatné doklady (MVČR)' },
+  { type: 'isir', label: 'Insolvenční rejstřík (ISIR)' },
+  { type: 'ares', label: 'ARES (podnikatelský subjekt)' },
+  { type: 'sanctions', label: 'Sankční seznam EU' },
+  { type: 'pep', label: 'PEP databáze' },
+];
 
 const $ = (id) => document.getElementById(id);
 
@@ -97,6 +108,8 @@ function handleAction(root, act, ds) {
     case 'confirm-front': confirmFront(root); break;
     case 'confirm-back': confirmBack(root); break;
     case 'confirm-review': confirmReview(root); break;
+    case 'toggle-detail': toggleLookupDetail(ds.type); break;
+    case 'rerun-lookups': wiz.lookupStatus = 'idle'; wiz.lookups = null; renderStep2(root); break;
     default: break;
   }
 }
@@ -120,6 +133,7 @@ async function createNewCase(root) {
     wiz.caseId = r.case_id; state.amlCurrentCaseId = r.case_id;
     wiz.step = 0; wiz.sub = 'a'; wiz.method = 'personal'; wiz.data = {};
     wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
+    wiz.lookups = null; wiz.lookupStatus = 'idle';
     renderStep(root);
   } catch {
     renderError('Nepodařilo se založit AML případ. Zkuste to prosím znovu.');
@@ -283,7 +297,9 @@ async function confirmReview(root) {
   const patch = { current_step: 2 };
   FIELD_MAP.forEach(([col]) => { patch[col] = wiz.data[col] || null; });
   await patchCase(patch);
-  wiz.step = 2; renderStep(root);
+  wiz.step = 2;
+  wiz.lookupStatus = 'idle'; wiz.lookups = null;   // nová data → čerstvá lustrace
+  renderStep(root);
 }
 
 // ── Kamera (desktop, getUserMedia) ───────────────────────────────────
@@ -366,6 +382,7 @@ function renderStep(root) {
   renderSteps();
   if (wiz.step === 0) renderStep0();
   else if (wiz.step === 1) renderStep1();
+  else if (wiz.step === 2) renderStep2(root);
   else renderPlaceholder();
   renderFoot();
 }
@@ -450,6 +467,93 @@ function renderPlaceholder() {
   </div>`;
 }
 
+// ── Krok 2 — automatická lustrace ────────────────────────────────────
+// Ikona + třída + text podle stavu jedné lustrace.
+function lookupView(lk) {
+  if (!lk) return { icon: '⏳', cls: 'pending', text: 'probíhá…' };
+  const pct = lk.match_score ? `${Math.round(lk.match_score * 100)} %` : '';
+  switch (lk.status) {
+    case 'clean':   return { icon: '✓', cls: 'ok',    text: 'v pořádku' };
+    case 'warning': return { icon: '⚠', cls: 'warn',  text: pct ? `možná shoda ${pct}` : 'ke kontrole' };
+    case 'match':   return { icon: '⚠', cls: 'match', text: pct ? `SHODA ${pct}` : 'SHODA' };
+    case 'error':   return { icon: '✕', cls: 'err',   text: 'nedostupné' };
+    default:        return { icon: '⏳', cls: 'pending', text: 'probíhá…' };
+  }
+}
+
+function lookupDetailHTML(lk) {
+  const d = lk.details;
+  let inner = '';
+  if (typeof d === 'string') inner = esc(d);
+  else if (d && typeof d === 'object') {
+    inner = Object.entries(d)
+      .filter(([, v]) => v != null && v !== '')
+      .map(([k, v]) => `<div><span class="aml-lk-dk">${esc(k)}:</span> ${esc(String(typeof v === 'object' ? JSON.stringify(v) : v))}</div>`)
+      .join('');
+  }
+  const matched = lk.matched_against ? `<div><span class="aml-lk-dk">shoda s:</span> ${esc(lk.matched_against)}</div>` : '';
+  const src = lk.source ? `<div><span class="aml-lk-dk">zdroj:</span> ${esc(lk.source)}</div>` : '';
+  return `<div class="aml-lk-detail" id="aml-lk-det-${lk.lookup_type}" hidden>${matched}${src}${inner}</div>`;
+}
+
+function lookupRowHTML(meta) {
+  const lk = wiz.lookups?.find(x => x.lookup_type === meta.type) || null;
+  const v = lookupView(lk);
+  const expandable = lk && (lk.status === 'warning' || lk.status === 'match' || lk.status === 'error');
+  const act = expandable ? ` data-act="toggle-detail" data-type="${meta.type}" role="button" tabindex="0"` : '';
+  const row = `<div class="aml-lk-row aml-lk-${v.cls}"${act}>
+      <span class="aml-lk-ico">${v.icon}</span>
+      <span class="aml-lk-label">${esc(meta.label)}</span>
+      <span class="aml-lk-status">${esc(v.text)}${expandable ? ' <span class="aml-lk-caret">▾</span>' : ''}</span>
+    </div>`;
+  return row + (expandable ? lookupDetailHTML(lk) : '');
+}
+
+function renderStep2(root) {
+  const rows = LOOKUP_ROWS.map(lookupRowHTML).join('');
+  const rerun = wiz.lookupStatus === 'done'
+    ? `<button class="aml-btn aml-btn-sm" data-act="rerun-lookups">Spustit lustraci znovu</button>`
+    : '';
+  $('amlMain').innerHTML = `<div class="aml-card">
+    <div class="aml-h">Automatická lustrace</div>
+    <div class="aml-sub">Prověřujeme klienta ve veřejných rejstřících a sankčních seznamech.</div>
+    <div class="aml-lookups">${rows}</div>
+    <div class="aml-lk-note">Sankční kontrola: EU (OFAC/OSN připravujeme).</div>
+    ${rerun}
+  </div>`;
+  if (wiz.lookupStatus === 'idle') runLookups(root);
+}
+
+async function runLookups(root) {
+  wiz.lookupStatus = 'running';
+  wiz.lookups = [];
+  renderStep2(root);          // 5 řádků ve stavu „probíhá"
+  renderFoot();               // Další zůstává disabled
+  let res;
+  try {
+    const r = await apiAmlRunLookup(wiz.caseId);
+    res = r.results || [];
+  } catch {
+    res = LOOKUP_ROWS.map(m => ({ lookup_type: m.type, status: 'error', details: 'Lustrace se nezdařila.' }));
+  }
+  if (wiz.step !== 2) { wiz.lookupStatus = 'done'; return; }   // uživatel mezitím odešel
+  // staggered reveal — řádky naskakují postupně
+  for (const meta of LOOKUP_ROWS) {
+    const found = res.find(x => x.lookup_type === meta.type)
+      || { lookup_type: meta.type, status: 'error', details: 'Bez odpovědi.' };
+    wiz.lookups.push(found);
+    await new Promise(r => setTimeout(r, 220));
+    if (wiz.step === 2) renderStep2(root);
+  }
+  wiz.lookupStatus = 'done';
+  if (wiz.step === 2) { renderStep2(root); renderFoot(); }
+}
+
+function toggleLookupDetail(type) {
+  const el = document.getElementById(`aml-lk-det-${type}`);
+  if (el) el.hidden = !el.hidden;
+}
+
 function renderFoot() {
   const foot = $('amlFoot');
   if (!foot) return;
@@ -460,8 +564,10 @@ function renderFoot() {
   } else if (wiz.step === 1) {
     html = `<button class="aml-btn" data-act="back">Zpět</button>`;   // dopředu vedou potvrzovací tlačítka v kroku
   } else if (wiz.step >= 2 && wiz.step <= 4) {
+    // Krok 2: Další je aktivní až po dokončení všech 5 lustrací.
+    const dis = (wiz.step === 2 && wiz.lookupStatus !== 'done') ? ' disabled' : '';
     html = `<button class="aml-btn" data-act="back">Zpět</button>
-            <button class="aml-btn aml-btn-primary" data-act="next">Další</button>`;
+            <button class="aml-btn aml-btn-primary" data-act="next"${dis}>Další</button>`;
   } else { // krok 5
     html = `<button class="aml-btn" data-act="back">Zpět</button>`;
   }

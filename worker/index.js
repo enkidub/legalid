@@ -1,3 +1,6 @@
+import { lookupMvcr, lookupIsir, lookupAres, lookupSanctions, lookupPep } from './utils/lookups.js';
+import { importEuSanctions } from './utils/sanctions.js';
+
 const SYSTEM_PROMPT = `Jsi asistent pro extrakci dat z českých občanských průkazů.
 Vrať POUZE validní JSON bez markdown formátování, bez backtick bloků, bez jakéhokoliv preamble.
 Pokud pole není čitelné nebo chybí, nastav hodnotu null.`;
@@ -92,6 +95,40 @@ async function requireUserId(request, env) {
   if (!token) return null;
   const payload = await verifyJWT(token, env.JWT_SECRET);
   return payload ? payload.sub : null;
+}
+
+// Spustí všech 5 lustrací paralelně nad daty případu, uloží každou do aml_lookups
+// a vrátí pole výsledků. Každá lustrace je odolná (interní try/catch → status 'error'),
+// takže selhání jedné nikdy nebrání ostatním.
+async function runAllLookups(env, c) {
+  const name = [c.client_name, c.client_surname].filter(Boolean).join(' ').trim();
+  const birth = c.client_birth_date || null;
+  // Pozn.: aml_cases zatím nemá IČO klienta → ARES se přeskočí (klient je fyzická osoba).
+  const tasks = [
+    ['mvcr', lookupMvcr(c.client_doc_number)],
+    ['isir', lookupIsir(name, birth)],
+    ['ares', lookupAres(c.client_ico || null)],
+    ['sanctions', lookupSanctions(env, name, birth)],
+    ['pep', lookupPep(env, name, birth)],
+  ];
+  return Promise.all(tasks.map(async ([type, p]) => {
+    let r;
+    try { r = await p; } catch (e) { r = { status: 'error', details: `Neočekávaná chyba: ${e?.message || e}` }; }
+    const details = typeof r.details === 'string' ? r.details : JSON.stringify(r.details ?? null);
+    try {
+      await env.DB.prepare(
+        `INSERT INTO aml_lookups (case_id, lookup_type, result_status, result_details, matched_against, match_score)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      ).bind(c.id, type, r.status, details, r.matched_against || null, r.match_score ?? null).run();
+    } catch { /* log fail nesmí shodit odpověď */ }
+    return {
+      lookup_type: type, status: r.status,
+      details: r.details ?? null,
+      matched_against: r.matched_against || null,
+      match_score: r.match_score ?? null,
+      source: r.source || null,
+    };
+  }));
 }
 
 export default {
@@ -364,6 +401,21 @@ export default {
       const userId = await requireUserId(request, env);
       if (!userId) return json({ error: 'unauthorized' }, 401);
 
+      // POST /api/aml/lookup/run — spustí všech 5 lustrací nad případem vlastníka
+      if (url.pathname === '/api/aml/lookup/run') {
+        if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+        let b;
+        try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+        const caseId = b.case_id;
+        if (!caseId) return json({ error: 'missing_case_id' }, 400);
+        const amlCase = await env.DB.prepare(
+          'SELECT * FROM aml_cases WHERE id = ? AND user_id = ?'
+        ).bind(caseId, userId).first();
+        if (!amlCase) return json({ error: 'not_found' }, 404);
+        const results = await runAllLookups(env, amlCase);
+        return json({ results });
+      }
+
       // POST /api/aml/case/create — založí nový případ
       if (url.pathname === '/api/aml/case/create') {
         if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
@@ -446,6 +498,33 @@ export default {
         return json({ error: 'method_not_allowed' }, 405);
       }
 
+      return json({ error: 'not_found' }, 404);
+    }
+
+    // ════════════════ Jednotlivé lustrace (vyžadují session) ════════════════
+    if (url.pathname.startsWith('/api/lookup/')) {
+      const userId = await requireUserId(request, env);
+      if (!userId) return json({ error: 'unauthorized' }, 401);
+      const p = url.pathname;
+      const q = url.searchParams;
+
+      if (p === '/api/lookup/mvcr' && request.method === 'GET') {
+        return json(await lookupMvcr(q.get('doc_number')));
+      }
+      if (p === '/api/lookup/isir' && request.method === 'GET') {
+        return json(await lookupIsir(q.get('name'), q.get('birthdate')));
+      }
+      if (p === '/api/lookup/ares' && request.method === 'GET') {
+        return json(await lookupAres(q.get('ico')));
+      }
+      if (p === '/api/lookup/sanctions' && request.method === 'POST') {
+        let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+        return json(await lookupSanctions(env, b.name, b.birth_date));
+      }
+      if (p === '/api/lookup/pep' && request.method === 'POST') {
+        let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+        return json(await lookupPep(env, b.name, b.birth_date));
+      }
       return json({ error: 'not_found' }, 404);
     }
 
@@ -554,5 +633,17 @@ export default {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+  },
+
+  // Denní cron (viz wrangler.toml crons) — přepíše EU sankce v D1 aktuálním seznamem.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil((async () => {
+      try {
+        const r = await importEuSanctions(env);
+        console.log(`[cron] EU sankce: parsed=${r.parsed} inserted=${r.inserted}`);
+      } catch (e) {
+        console.error('[cron] import EU sankcí selhal:', e?.message || e);
+      }
+    })());
   },
 };

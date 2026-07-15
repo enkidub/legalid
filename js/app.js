@@ -9,6 +9,7 @@ import { closeKnihaPanel, getKniha, knihaDeleteConfirm, knihaDeleteDismiss, knih
 import { state } from './core/state.js';
 import { initRouter, navigate, currentPath } from './core/router.js';
 import { renderLanding, initLanding, gotoLandingSection } from './landing/landing.js';
+import { renderPovinneOsoby, initPovinneOsoby, togglePoCard, gotoProfese } from './povinne-osoby/povinne-osoby.js';
 import { renderAml, initAml } from './aml/aml.js';
 import { renderArchiv } from './archiv/archiv.js';
 import { actionToastOk, closeAboutModal, closeActionToast, closeHamburger, closePrivacyModal, openAboutModal, openHamburger, openPrivacyModal, showToast } from './core/ui.js';
@@ -160,7 +161,13 @@ function init() {
 }
 
 // ── Routing ─────────────────────────────────────────────────────────
-const KNOWN_VIEWS = ['landing', 'dolozka', 'aml', 'klienti', 'kniha', 'archiv'];
+const KNOWN_VIEWS = ['landing', 'dolozka', 'aml', 'klienti', 'kniha', 'archiv', 'povinne-osoby'];
+
+// Per-route <title> (SPA). Ostatní pohledy = výchozí titulek indexu.
+const DEFAULT_TITLE = 'Legalid — AML kontrola klientů za 3 minuty | pro povinné osoby dle zákona č. 253/2008 Sb.';
+const VIEW_TITLES = {
+  'povinne-osoby': 'Povinné osoby podle AML zákona — kdo musí provádět AML kontrolu | Legalid',
+};
 
 function resolveView(path) {
   let v = (path || '/').replace(/\/+$/, '') || '/';
@@ -185,8 +192,10 @@ function mountRoute(path) {
     else if (view === 'archiv')  host.innerHTML = renderArchiv();
     else if (view === 'klienti') { host.innerHTML = renderKlientiPage(); renderKlientiList(); }
     else if (view === 'kniha')   { host.innerHTML = renderKnihaPage(); renderKnihaList(); }
+    else if (view === 'povinne-osoby') { host.innerHTML = renderPovinneOsoby(); initPovinneOsoby(); }
     host.style.display = '';
   }
+  document.title = VIEW_TITLES[view] || DEFAULT_TITLE;
   document.querySelectorAll('.main-nav-item').forEach(b =>
     b.classList.toggle('active', b.dataset.route === view));
   window.scrollTo(0, 0);
@@ -209,6 +218,8 @@ initRouter(mountRoute);
 // v globálním scope. ES moduly mají vlastní scope, proto je tu explicitně zveřejníme.
 window.navigate = navigate; // hlavní menu (.main-nav-item) + landing CTA: onclick="navigate('/aml')" apod.
 window.gotoLandingSection = gotoLandingSection; // guest-nav + hamburger: onclick="gotoLandingSection('howto'|'pricing')"
+window.togglePoCard = togglePoCard; // /povinne-osoby accordion: onclick="togglePoCard('advokati')"
+window.gotoProfese = gotoProfese; // footer → skok na profesi: onclick="gotoProfese('advokati')"
 window.dismissInstallBanner = dismissInstallBanner; // <button class="ib-close" onclick="dismissInstallBanner()">×</button>
 window.applyUpdate = applyUpdate; // <button class="ub-btn" onclick="applyUpdate()">Obnovit</button>
 window.handleLogout = handleLogout; // <button id="headerLogoutBtn" style="display:none;font-size:12px;color:var(--ink-lt);background:n

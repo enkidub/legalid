@@ -41,7 +41,7 @@ const FIELD_MAP = [
 
 // Sloučený formulář kroku Údaje klienta. req = povinné (*).
 const DOC_TYPES = [['OP', 'Občanský průkaz'], ['Pas', 'Cestovní pas'], ['ŘP', 'Řidičský průkaz'], ['Jiné', 'Jiné']];
-const GENDERS = [['', '—'], ['M', 'Muž'], ['Ž', 'Žena']];
+const GENDERS = [['', 'Vyberte…'], ['M', 'Muž'], ['Ž', 'Žena']];
 const FORM_FIELDS = [
   { col: 'client_name', label: 'Jméno', req: true },
   { col: 'client_surname', label: 'Příjmení', req: true },
@@ -89,7 +89,7 @@ function loadLastMethod() {
 // Typ subjektu (segmentový přepínač nad dlaždicemi).
 const SUBJECT_TYPES = [['fo', 'Fyzická osoba'], ['fo_podnikatel', 'OSVČ / podnikatel'], ['po', 'Právnická osoba']];
 // Role jednající osoby (jen u PO).
-const ROLE_OPTIONS = [['', '—'], ['jednatel', 'Jednatel'], ['clen_predstavenstva', 'Člen představenstva'], ['zmocnenec', 'Zmocněnec'], ['jine', 'Jiné']];
+const ROLE_OPTIONS = [['', 'Vyberte…'], ['jednatel', 'Jednatel'], ['clen_predstavenstva', 'Člen představenstva'], ['zmocnenec', 'Zmocněnec'], ['jine', 'Jiné']];
 
 // U3 — prohlášení ověřující osoby (osobní setkání). Verze textu se ukládá do JSON kvůli auditu.
 const VERIFIER_TEXT_VERSION = 'v1-2026-07';
@@ -115,7 +115,7 @@ const DEAL_BANDS = [
   ['15k_plus', '15 000 € a více'],
 ];
 const PURPOSE_CATEGORIES = [
-  ['', '—'],
+  ['', 'Vyberte…'],
   ['prevod_nemovitosti', 'Převod nemovitosti'],
   ['uschova', 'Úschova'],
   ['korporatni', 'Korporátní transakce'],
@@ -123,7 +123,7 @@ const PURPOSE_CATEGORIES = [
   ['jine', 'Jiné'],
 ];
 const SOURCE_TYPES = [
-  ['', '—'],
+  ['', 'Vyberte…'],
   ['plat', 'Plat či příjem ze zaměstnání'],
   ['uspory', 'Úspory a investice'],
   ['prodej_nemovitosti', 'Prodej nemovitosti'],
@@ -1173,11 +1173,11 @@ function purposeValid() {
 function renderPurpose(root) {
   if (!wiz.data.deal_countries) wiz.data.deal_countries = 'Česko';   // default dle zadání
 
-  const relTiles = RELATION_TYPES.map(([v, l]) =>
-    `<button class="aml-opt${wiz.data.relation_type === v ? ' aml-opt--on' : ''}" data-act="set-relation" data-val="${v}">${esc(l)}</button>`
+  const relSegs = RELATION_TYPES.map(([v, l]) =>
+    `<button class="aml-seg${wiz.data.relation_type === v ? ' aml-seg--on' : ''}" data-act="set-relation" data-val="${v}">${esc(l)}</button>`
   ).join('');
-  const bandTiles = DEAL_BANDS.map(([v, l]) =>
-    `<button class="aml-opt aml-opt-band${wiz.data.deal_value_band === v ? ' aml-opt--on' : ''}" data-act="set-band" data-val="${v}">${esc(l)}</button>`
+  const bandSegs = DEAL_BANDS.map(([v, l]) =>
+    `<button class="aml-seg${wiz.data.deal_value_band === v ? ' aml-seg--on' : ''}" data-act="set-band" data-val="${v}">${esc(l)}</button>`
   ).join('');
   const catOpts = PURPOSE_CATEGORIES.map(([v, l]) => `<option value="${esc(v)}"${v === (wiz.data.purpose_category || '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
   const srcOpts = SOURCE_TYPES.map(([v, l]) => `<option value="${esc(v)}"${v === (wiz.data.source_of_funds_type || '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
@@ -1190,16 +1190,16 @@ function renderPurpose(root) {
 
   $('amlMain').innerHTML = `<div class="aml-card">
     <div class="aml-h">Účel obchodu</div>
-    <div class="aml-sub">Popište povahu a účel zamýšleného obchodu a původ prostředků. AI vám pomůže posoudit doklady.</div>
+    <div class="aml-sub">Popište povahu a účel zamýšleného obchodu a původ prostředků. AI porovná doložené dokumenty s deklarovaným zdrojem prostředků.</div>
 
-    <div class="aml-pfield">
-      <div class="aml-plabel">Typ vztahu <span class="aml-req">*</span></div>
-      <div class="aml-opts">${relTiles}</div>
+    <div class="aml-seg-field">
+      <span class="aml-seg-label">Typ vztahu <span class="aml-req">*</span></span>
+      <div class="aml-seg-wrap">${relSegs}</div>
     </div>
 
-    <div class="aml-pfield">
-      <div class="aml-plabel">Hodnota obchodu (EUR) <span class="aml-req">*</span></div>
-      <div class="aml-opts aml-opts-band">${bandTiles}</div>
+    <div class="aml-seg-field">
+      <span class="aml-seg-label">Hodnota obchodu (EUR) <span class="aml-req">*</span></span>
+      <div class="aml-seg-wrap">${bandSegs}</div>
     </div>
 
     <label class="aml-field">

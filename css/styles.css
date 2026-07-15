@@ -1576,26 +1576,29 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
   font-family: var(--sans); font-size: 13px; color: var(--ink); background: var(--white); outline: none; width: 100%;
 }
 .aml-field select:focus { border-color: var(--navy); }
-.aml-req { color: #c0392b; }
+.aml-req { color: #b8912f; }   /* povinné pole — zlatá; červená jen pro validační chyby */
+/* Prázdný select (placeholder „Vyberte…") — šedě. */
+.aml-field select:has(option[value=""]:checked) { color: var(--ink-fnt); }
 
 /* Segmentový přepínač typu klienta — shrink-to-fit, vlevo, stejně široké segmenty */
 .aml-seg-field { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; align-self: flex-start; max-width: 100%; margin-bottom: 4px; }
 .aml-seg-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--ink-lt); }
 .aml-seg-wrap {
-  display: inline-grid; grid-template-columns: repeat(3, 1fr);   /* stejně široké dle nejdelšího textu */
+  display: inline-flex; flex-wrap: wrap; max-width: 100%;   /* přizpůsobí se obsahu, ne plná šířka */
   border: 1.5px solid var(--rule); border-radius: 10px; overflow: hidden;
 }
 .aml-seg {
-  background: var(--white); border: none; cursor: pointer; font-family: var(--sans);
-  font-size: 13px; color: var(--ink-mid); padding: 8px 14px; border-right: 1px solid var(--rule);
-  white-space: nowrap; text-align: center;
+  flex: 0 1 auto; background: var(--white); border: none; cursor: pointer; font-family: var(--sans);
+  font-size: 13px; color: var(--ink-mid); padding: 9px 16px; border-right: 1px solid var(--rule);
+  text-align: center; line-height: 1.3;
 }
 .aml-seg:last-child { border-right: none; }
+.aml-seg:hover:not(.aml-seg--on) { background: var(--paper); }
 .aml-seg--on { background: var(--gold-p); color: var(--gold-h); font-weight: 600; }
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .aml-seg-field { align-self: stretch; }
-  .aml-seg-wrap { display: grid; width: 100%; }
-  .aml-seg { padding: 8px 6px; font-size: 12px; }
+  .aml-seg-wrap { width: 100%; }
+  .aml-seg { flex: 1 1 0; padding: 9px 8px; font-size: 12px; }
 }
 .aml-sec-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-lt); margin-top: 8px; }
 
@@ -1625,11 +1628,11 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 /* Krok Údaje klienta — dlaždice cest (4 / 2×2 / 1) */
 .aml-tiles-src { grid-template-columns: repeat(2, 1fr); margin-bottom: 16px; }
 @media (min-width: 1025px) { .aml-tiles-src { grid-template-columns: repeat(4, 1fr); } }
-.aml-tile-src { flex-direction: row; align-items: center; justify-content: flex-start; text-align: left; gap: 12px; padding: 0 16px; min-height: 90px; }
+.aml-tile-src { flex-direction: row; align-items: center; justify-content: flex-start; text-align: left; gap: 12px; padding: 0 16px; min-height: 78px; }
 .aml-tile-ico { line-height: 0; color: var(--ink-lt); flex-shrink: 0; }
 .aml-tile-ico svg { width: 26px; height: 26px; }
-.aml-tile-src .aml-tile-ico svg { width: 22px; height: 22px; }
-.aml-tile-src .aml-tile-title { font-size: 14px; }
+.aml-tile-src .aml-tile-ico svg { width: 20px; height: 20px; }
+.aml-tile-src .aml-tile-title { font-size: 15px; }
 .aml-tile-src.aml-tile--selected .aml-tile-ico { color: var(--gold-h); }
 /* Zdrojové dlaždice: 2×2 i na mobilu (přebíjí obecné .aml-tiles → 1 sloupec). */
 @media (max-width: 600px) {

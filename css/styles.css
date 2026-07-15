@@ -1957,3 +1957,31 @@ body.logged-in .nav-section-guest { display: none; }
 .po-cta { text-align: center; margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .po-cta-text { font-size: 16px; color: var(--ink-mid); margin: 0; }
 
+/* Soukromí (route /soukromi) */
+.soukromi-body { font-size: 15px; color: var(--ink-mid); line-height: 1.7; display: flex; flex-direction: column; gap: 14px; }
+.soukromi-body a { color: var(--gold-h); }
+
+/* ════════════════════ GLOBÁLNÍ PATIČKA (landing i aplikace) ════════════════════ */
+.site-footer { background: var(--navy); color: #c9d4e2; padding: 40px 0 26px; margin-top: 48px; }
+.site-footer-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px 24px; }
+.sf-col { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.sf-col-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: #8a9bb0; margin-bottom: 4px;
+}
+.sf-link {
+  background: none; border: none; padding: 0; cursor: pointer; text-align: left;
+  font-family: var(--sans); font-size: 13px; color: #c9d4e2; text-decoration: none;
+  line-height: 1.5; transition: color .12s;
+}
+.sf-link:hover { color: #fff; text-decoration: underline; }
+.sf-text { font-size: 13px; color: #9fb0c4; line-height: 1.6; }
+.sf-todo { color: #d9a441; }
+.sf-install { color: #e6c675; font-weight: 600; }
+.sf-bottom {
+  margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.1);
+  font-size: 12px; color: #8a9bb0;
+}
+@media (max-width: 860px) { .site-footer-cols { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .site-footer-cols { grid-template-columns: 1fr; gap: 22px; } }
+

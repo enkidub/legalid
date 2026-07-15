@@ -10,70 +10,61 @@ import { state } from './core/state.js';
 import { initRouter, navigate, currentPath } from './core/router.js';
 import { renderLanding, initLanding, gotoLandingSection } from './landing/landing.js';
 import { renderPovinneOsoby, initPovinneOsoby, togglePoCard, gotoProfese } from './povinne-osoby/povinne-osoby.js';
+import { renderSoukromi } from './soukromi/soukromi.js';
 import { renderAml, initAml } from './aml/aml.js';
 import { renderArchiv } from './archiv/archiv.js';
 import { actionToastOk, closeAboutModal, closeActionToast, closeHamburger, closePrivacyModal, openAboutModal, openHamburger, openPrivacyModal, showToast } from './core/ui.js';
 
 
-// ── PWA install prompt ─────────────────────────────────────────────
-function dismissInstallBanner() {
-  localStorage.setItem('installBannerDismissed', '1');
-  document.getElementById('installBanner').classList.remove('visible');
-}
-
+// ── PWA install ─────────────────────────────────────────────────────
+// Horní install banner odstraněn (Blok C). Instalaci nabízíme odkazem v patičce
+// (#footerInstall) — jen když je dostupná a neběžíme jako standalone.
 (function() {
-  const dismissed = () => localStorage.getItem('installBannerDismissed') === '1';
-
   const ua = navigator.userAgent;
   const isIOS = /iPad|iPhone|iPod/.test(ua);
-  const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
+  const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|Chrome/.test(ua);
 
-  // Banner ukazujeme JEN přihlášeným uživatelům (na landingu se neobjeví).
-  function showIos() {
-    if (dismissed() || !state.loggedIn || !(isIOS && isSafari && navigator.standalone !== true)) return;
-    document.getElementById('ib-text').textContent = 'Přidejte Legalid na plochu';
-    document.getElementById('ib-ios-hint').innerHTML =
-      'Klepněte na <svg width="13" height="13" viewBox="0 0 24 24" fill="none"' +
-      ' stroke="currentColor" stroke-width="2.2" stroke-linecap="round"' +
-      ' stroke-linejoin="round" style="vertical-align:middle;margin:0 1px">' +
-      '<path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>' +
-      '<polyline points="16 7 12 3 8 7"/><line x1="12" y1="3" x2="12" y2="16"/></svg>' +
-      ' a zvolte \'Přidat na plochu\'';
-    document.getElementById('ib-ios-hint').style.display = '';
-    document.getElementById('installBanner').classList.add('visible');
-    return;
+  const isStandalone = () =>
+    window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+  function canInstall() {
+    if (isStandalone()) return false;
+    if (state.deferredInstallPrompt) return true;   // Android / desktop Chrome
+    if (isIOS && isSafari) return true;             // iOS Safari
+    return false;
   }
 
-  function showInstall() {
-    if (dismissed() || !state.loggedIn || !state.deferredInstallPrompt) return;
-    document.getElementById('ib-text').textContent = 'Nainstalujte aplikaci Legalid';
-    document.getElementById('installBtn').style.display = '';
-    document.getElementById('installBanner').classList.add('visible');
+  function updateFooterInstall() {
+    const el = document.getElementById('footerInstall');
+    if (el) el.style.display = canInstall() ? '' : 'none';
+  }
+
+  async function runInstall() {
+    if (state.deferredInstallPrompt) {
+      state.deferredInstallPrompt.prompt();
+      try { await state.deferredInstallPrompt.userChoice; } catch {}
+      state.deferredInstallPrompt = null;
+      updateFooterInstall();
+    } else if (isIOS && isSafari) {
+      showToast('Na iPhonu: klepněte na ikonu Sdílet a zvolte „Přidat na plochu“.');
+    }
   }
 
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     state.deferredInstallPrompt = e;
-    showInstall();
-  });
-
-  // Přepočítej při změně přihlášení: přihlášení → ukázat (pokud lze), odhlášení → skrýt.
-  window.addEventListener('authchange', () => {
-    if (!state.loggedIn) { document.getElementById('installBanner')?.classList.remove('visible'); return; }
-    showIos(); showInstall();
-  });
-
-  document.getElementById('installBtn').addEventListener('click', async () => {
-    if (!state.deferredInstallPrompt) return;
-    state.deferredInstallPrompt.prompt();
-    const { outcome } = await state.deferredInstallPrompt.userChoice;
-    state.deferredInstallPrompt = null;
-    document.getElementById('installBanner').classList.remove('visible');
+    updateFooterInstall();
   });
 
   window.addEventListener('appinstalled', () => {
-    document.getElementById('installBanner').classList.remove('visible');
+    state.deferredInstallPrompt = null;
+    updateFooterInstall();
   });
+
+  // Modulový skript je defer — #footerInstall v index.html už existuje.
+  const footerBtn = document.getElementById('footerInstall');
+  if (footerBtn) footerBtn.addEventListener('click', runInstall);
+  updateFooterInstall();
 })();
 
 // ── Service worker registration ────────────────────────────────────
@@ -161,12 +152,13 @@ function init() {
 }
 
 // ── Routing ─────────────────────────────────────────────────────────
-const KNOWN_VIEWS = ['landing', 'dolozka', 'aml', 'klienti', 'kniha', 'archiv', 'povinne-osoby'];
+const KNOWN_VIEWS = ['landing', 'dolozka', 'aml', 'klienti', 'kniha', 'archiv', 'povinne-osoby', 'soukromi'];
 
 // Per-route <title> (SPA). Ostatní pohledy = výchozí titulek indexu.
 const DEFAULT_TITLE = 'Legalid — AML kontrola klientů za 3 minuty | pro povinné osoby dle zákona č. 253/2008 Sb.';
 const VIEW_TITLES = {
   'povinne-osoby': 'Povinné osoby podle AML zákona — kdo musí provádět AML kontrolu | Legalid',
+  'soukromi': 'Ochrana osobních údajů | Legalid',
 };
 
 function resolveView(path) {
@@ -193,6 +185,7 @@ function mountRoute(path) {
     else if (view === 'klienti') { host.innerHTML = renderKlientiPage(); renderKlientiList(); }
     else if (view === 'kniha')   { host.innerHTML = renderKnihaPage(); renderKnihaList(); }
     else if (view === 'povinne-osoby') { host.innerHTML = renderPovinneOsoby(); initPovinneOsoby(); }
+    else if (view === 'soukromi') { host.innerHTML = renderSoukromi(); }
     host.style.display = '';
   }
   document.title = VIEW_TITLES[view] || DEFAULT_TITLE;
@@ -220,7 +213,6 @@ window.navigate = navigate; // hlavní menu (.main-nav-item) + landing CTA: oncl
 window.gotoLandingSection = gotoLandingSection; // guest-nav + hamburger: onclick="gotoLandingSection('howto'|'pricing')"
 window.togglePoCard = togglePoCard; // /povinne-osoby accordion: onclick="togglePoCard('advokati')"
 window.gotoProfese = gotoProfese; // footer → skok na profesi: onclick="gotoProfese('advokati')"
-window.dismissInstallBanner = dismissInstallBanner; // <button class="ib-close" onclick="dismissInstallBanner()">×</button>
 window.applyUpdate = applyUpdate; // <button class="ub-btn" onclick="applyUpdate()">Obnovit</button>
 window.handleLogout = handleLogout; // <button id="headerLogoutBtn" style="display:none;font-size:12px;color:var(--ink-lt);background:n
 window.openRegistrationModal = openRegistrationModal; // <button id="headerLoginBtn" style="font-size:12px;font-weight:500;color:var(--navy);background:n

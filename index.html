@@ -25,15 +25,6 @@
 </head>
 <body>
 
-<div id="installBanner">
-  <span id="ib-text"></span>
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <button id="installBtn" style="display:none">Instalovat</button>
-    <span id="ib-ios-hint" style="display:none;font-size:13px;opacity:.9;line-height:1.5;"></span>
-    <button class="ib-close" onclick="dismissInstallBanner()">×</button>
-  </div>
-</div>
-
 <div id="updateBar">
   <span>💡 Nová verze aplikace je připravena.</span>
   <button class="ub-btn" onclick="applyUpdate()">Obnovit</button>
@@ -566,6 +557,46 @@
     </div>
   </div>
 </main>
+
+<!-- Globální patička (landing i aplikace) -->
+<footer class="site-footer" id="siteFooter">
+  <div class="wrap site-footer-cols">
+    <div class="sf-col">
+      <div class="sf-col-title">Produkt</div>
+      <button class="sf-link" onclick="navigate('/aml')">AML kontrola</button>
+      <button class="sf-link" onclick="navigate('/dolozka')">Ověřovací doložka</button>
+      <button class="sf-link" onclick="gotoLandingSection('pricing')">Ceník</button>
+      <button class="sf-link sf-install" id="footerInstall" style="display:none">Nainstalovat aplikaci</button>
+    </div>
+    <div class="sf-col">
+      <div class="sf-col-title">Povinné osoby</div>
+      <button class="sf-link" onclick="gotoProfese('advokati')">Advokáti</button>
+      <button class="sf-link" onclick="gotoProfese('notari')">Notáři</button>
+      <button class="sf-link" onclick="gotoProfese('exekutori')">Soudní exekutoři</button>
+      <button class="sf-link" onclick="gotoProfese('insolvencni-spravci')">Insolvenční správci</button>
+      <button class="sf-link" onclick="gotoProfese('danovi-poradci')">Daňoví poradci</button>
+      <button class="sf-link" onclick="gotoProfese('auditori-ucetni')">Auditoři a účetní</button>
+    </div>
+    <div class="sf-col">
+      <div class="sf-col-title" aria-hidden="true">&nbsp;</div>
+      <button class="sf-link" onclick="gotoProfese('realitni')">Realitní makléři</button>
+      <button class="sf-link" onclick="gotoProfese('drazebnici')">Dražebníci</button>
+      <button class="sf-link" onclick="gotoProfese('sverensti-spravci')">Svěřenští správci</button>
+      <button class="sf-link" onclick="gotoProfese('umeni-kovy')">Obchodníci s uměním a drahými kovy</button>
+      <button class="sf-link" onclick="gotoProfese('zastavarny')">Zastavárny</button>
+      <button class="sf-link" onclick="gotoProfese('hotovostni-platby')">Hotovostní obchody ≥ 10 000 EUR</button>
+    </div>
+    <div class="sf-col">
+      <div class="sf-col-title">Kontakt &amp; právní</div>
+      <!-- TODO: potvrdit oficiální kontaktní e-mail -->
+      <a class="sf-link" href="mailto:info@legalid.cz">info@legalid.cz</a>
+      <!-- TODO: doplnit obchodní jméno provozovatele a IČO -->
+      <div class="sf-text">Provozovatel: <span class="sf-todo">TODO</span><br>IČO: <span class="sf-todo">TODO</span></div>
+      <button class="sf-link" onclick="navigate('/soukromi')">Ochrana osobních údajů</button>
+    </div>
+  </div>
+  <div class="wrap sf-bottom">© 2026 Legalid · AML povinnosti podle zákona č. 253/2008 Sb.</div>
+</footer>
 
 <div class="toast" id="toast"></div>
 

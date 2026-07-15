@@ -191,18 +191,7 @@ export function renderLanding() {
     </div>
   </section>
 
-  <!-- FOOTER -->
-  <footer class="lnd-footer">
-    <div class="lnd-wrap lnd-footer-i">
-      <div class="lnd-footer-brand">legalid.cz</div>
-      <div class="lnd-footer-links">
-        <a href="mailto:info@legalid.cz">info@legalid.cz</a>
-        <button class="lnd-footer-link" onclick="openPrivacyModal()">Ochrana dat</button>
-        <button class="lnd-footer-link" onclick="openAboutModal()">O aplikaci</button>
-      </div>
-      <div class="lnd-footer-copy">© 2026 legalid.cz · Zpracování dat dle GDPR</div>
-    </div>
-  </footer>
+  <!-- Patička je globální (index.html #siteFooter) — sdílená s aplikací. -->
 
   <!-- Sticky CTA (jen mobil, zobrazí se po odscrollování hero) -->
   <div class="lnd-sticky-cta">

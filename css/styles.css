@@ -1762,6 +1762,7 @@ body.logged-in .nav-section-guest { display: none; }
 
 /* Co umíme — karty */
 .lnd-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.lnd-cards--duo { grid-template-columns: repeat(2, minmax(0, 340px)); justify-content: center; }
 .lnd-card {
   background: var(--paper-w); border: 1px solid var(--rule); border-radius: 14px;
   padding: 18px 22px; display: flex; flex-direction: column; gap: 8px;
@@ -1952,6 +1953,14 @@ body.logged-in .nav-section-guest { display: none; }
   font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--gold-h); white-space: nowrap;
 }
 .po-help-link:hover { text-decoration: underline; }
+
+/* Kontextová zmínka doložky (jen Advokáti / Notáři) */
+.po-dolozka {
+  margin: 14px 0 0; padding: 12px 14px; border-radius: 10px;
+  background: var(--gold-p); border: 1px solid #f0dcae;
+  font-size: 13.5px; color: var(--ink-mid); line-height: 1.6;
+}
+.po-dolozka strong { color: var(--gold-h); }
 
 /* Spodní CTA */
 .po-cta { text-align: center; margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 14px; }

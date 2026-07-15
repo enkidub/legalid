@@ -32,7 +32,7 @@ export function renderLanding() {
       <p class="lnd-sub">Splňte AML povinnosti podle zákona č. 253/2008 Sb. — bez tabulek a papírování.</p>
       <div class="lnd-cta-row">
         <button class="lnd-btn lnd-btn-primary" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
-        <button class="lnd-btn lnd-btn-ghost" onclick="navigate('/dolozka')">Vyzkoušet ověřovací doložku →</button>
+        <button class="lnd-btn lnd-btn-ghost" onclick="navigate('/povinne-osoby')">Kdo je povinná osoba? →</button>
       </div>
       <div class="lnd-hero-trust">Záznam s náležitostmi § 8 a násl. · Archiv dle § 16 · Lustrace s časovým razítkem</div>
       <div class="lnd-hero-ai">AI rozpozná doklad · lustrace v 5 rejstřících · AML záznam k archivaci</div>
@@ -55,23 +55,17 @@ export function renderLanding() {
   <section class="lnd-section">
     <div class="lnd-wrap">
       <div class="lnd-section-label">Co umíme</div>
-      <div class="lnd-cards">
+      <div class="lnd-cards lnd-cards--duo">
         <div class="lnd-card lnd-card--primary">
           <div class="lnd-card-icon"><i class="ti ti-shield-check"></i></div>
           <div class="lnd-card-title">AML kontrola</div>
-          <div class="lnd-card-text">Identifikace, lustrace sankcí a PEP, hodnocení rizika a záznam.</div>
+          <div class="lnd-card-text">Identifikace klienta, lustrace sankcí a PEP, hodnocení rizika a záznam k archivaci.</div>
           <button class="lnd-btn lnd-btn-primary lnd-btn-sm" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
-        </div>
-        <div class="lnd-card">
-          <div class="lnd-card-icon"><i class="ti ti-file-certificate"></i></div>
-          <div class="lnd-card-title">Ověřovací doložka</div>
-          <div class="lnd-card-text">Prohlášení o pravosti podpisu s AI rozpoznáním z OP.</div>
-          <button class="lnd-btn lnd-btn-ghost lnd-btn-sm" onclick="navigate('/dolozka')">Otevřít doložku →</button>
         </div>
         <div class="lnd-card">
           <div class="lnd-card-icon"><i class="ti ti-cloud-lock"></i></div>
           <div class="lnd-card-title">Archivace</div>
-          <div class="lnd-card-text">AML záznamy k dispozici pro pozdější dohledání a export.</div>
+          <div class="lnd-card-text">AML záznamy s náležitostmi podle § 8 a násl. k dispozici pro pozdější dohledání a export.</div>
           <button class="lnd-btn lnd-btn-ghost lnd-btn-sm" disabled>Součást AML kontroly</button>
         </div>
       </div>

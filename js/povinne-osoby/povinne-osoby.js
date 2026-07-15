@@ -17,14 +17,14 @@ const DOZOR_FAU = 'Finanční analytický úřad (FAÚ)';
 // pomoc  → odstavec „Jak pomůže Legalid" (2 věty, odkaz na registraci)
 export const PROFESE = [
   {
-    id: 'advokati', name: 'Advokáti',
+    id: 'advokati', name: 'Advokáti', dolozka: true,
     zaklad: '§ 2 odst. 1 písm. g) zákona č. 253/2008 Sb.',
     dozor: 'Česká advokátní komora (ČAK)',
     kdy: 'Advokát je povinnou osobou, pokud pro klienta jedná při vymezených úkonech — zejména při nakládání s jeho penězi, cennými papíry či jiným majetkem, při obchodech s nemovitostmi, správě majetku a při zakládání a správě obchodních společností nebo svěřenských fondů. Na samotné právní porady a zastupování v řízení se AML povinnosti nevztahují. <!-- OVĚŘIT -->',
     pomoc: 'Legalid provede identifikaci klienta, lustraci v rejstřících (sankce, PEP, insolvence, ARES) a vyhodnocení rizika. Výsledkem je AML záznam s náležitostmi podle § 8 a násl. — hotový do tří minut.',
   },
   {
-    id: 'notari', name: 'Notáři',
+    id: 'notari', name: 'Notáři', dolozka: true,
     zaklad: '§ 2 odst. 1 písm. g) zákona č. 253/2008 Sb.',
     dozor: 'Notářská komora ČR (NK ČR)',
     kdy: 'Notář je povinnou osobou při úkonech obdobných advokátům — zejména při úschovách peněz a listin, jednání jménem klienta při obchodech s nemovitostmi, správě majetku a při zakládání a správě obchodních společností nebo svěřenských fondů. Rozhoduje povaha úkonu, nikoli forma. <!-- OVĚŘIT -->',
@@ -126,6 +126,8 @@ function cardHtml(p, open) {
       </div>
       <p class="po-help"><strong>Jak pomůže Legalid.</strong> ${p.pomoc}
         <button class="po-help-link" onclick="openRegistrationModal()">Vyzkoušet zdarma →</button></p>
+      ${p.dolozka ? `<p class="po-dolozka"><strong>Navíc pro vás:</strong> ověřovací doložka — prohlášení o pravosti podpisu s AI rozpoznáním údajů z dokladu.
+        <button class="po-help-link" onclick="navigate('/dolozka')">Otevřít doložku →</button></p>` : ''}
     </div>
   </article>`;
 }

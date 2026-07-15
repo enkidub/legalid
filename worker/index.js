@@ -143,6 +143,11 @@ async function anthropicJson(env, { system, userContent, max_tokens = 1400 }) {
   throw new Error(lastErr);
 }
 
+// Blok 4 — úrovně rizika a jejich pořadí (MAX = přísnější vyhrává).
+const RISK_RANK = { nizke: 0, stredni: 1, vysoke: 2 };
+function maxRisk(a, b) { return (RISK_RANK[a] ?? 0) >= (RISK_RANK[b] ?? 0) ? a : b; }
+function safeParse(s) { try { return s ? JSON.parse(s) : null; } catch { return null; } }
+
 // U2 — když klient má jméno v originále (azbuka…), sankce+PEP běží i na tuto variantu.
 // Vrátí závažnější (příp. vyšší skóre) ze dvou výsledků.
 const LOOKUP_SEVERITY = { match: 3, warning: 2, manual: 1, clean: 0, error: -1 };
@@ -743,6 +748,102 @@ export default {
             .bind(JSON.stringify(result), caseId, userId).run();
         } catch { /* uložení konzistence nesmí shodit odpověď */ }
         return json(result);
+      }
+
+      // POST /api/aml/:caseId/risk-suggest — deterministická pravidla + AI návrh rizika (Blok 4)
+      const rsM = url.pathname.match(/^\/api\/aml\/(\d+)\/risk-suggest$/);
+      if (rsM) {
+        if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+        const caseId = rsM[1];
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const c = await env.DB.prepare('SELECT * FROM aml_cases WHERE id = ? AND user_id = ?').bind(caseId, userId).first();
+        if (!c) return json({ error: 'not_found' }, 404);
+        const decl = b.client_declaration || {};
+
+        // Poslední lustrace na typ.
+        const { results: lkRows } = await env.DB.prepare(
+          'SELECT lookup_type, result_status, matched_against, match_score FROM aml_lookups WHERE case_id = ? ORDER BY id'
+        ).bind(caseId).all();
+        const byType = {};
+        for (const r of (lkRows || [])) byType[r.lookup_type] = r;
+
+        // Podpůrné dokumenty (bez souboru) + jejich red flags.
+        const { results: docRows } = await env.DB.prepare(
+          'SELECT extracted_json FROM aml_documents WHERE case_id = ? AND content_base64 IS NULL'
+        ).bind(caseId).all();
+        const redFlags = [];
+        for (const d of (docRows || [])) { const j = safeParse(d.extracted_json); if (j && Array.isArray(j.red_flags)) redFlags.push(...j.red_flags); }
+
+        // Tvrdá pravidla (arch. rozhodnutí #3).
+        const detFactors = [];
+        let floor = 'nizke';
+        const sancMatch = ['sanctions', 'sanctions_entity'].some(t => byType[t]?.result_status === 'match');
+        if (sancMatch) {
+          floor = maxRisk(floor, 'vysoke');
+          detFactors.push({ factor: 'Sankční shoda', impact: 'critical', note_cs: 'Shoda klienta se sankčním seznamem — riziko vysoké, obchod nelze uskutečnit bez prověření (§ 15).' });
+        }
+        const pepHit = ['warning', 'match'].includes(byType.pep?.result_status);
+        const declPep = decl.pep === 'is';
+        if (pepHit || declPep) {
+          floor = maxRisk(floor, 'stredni');
+          detFactors.push({ factor: 'Politicky exponovaná osoba', impact: 'raises', note_cs: declPep ? 'Klient prohlásil, že je PEP — uplatněte zesílenou kontrolu (§ 4 odst. 5).' : 'Možná shoda s PEP databází — ověřte a uplatněte zesílenou kontrolu.' });
+        }
+        const noDocs = (docRows || []).length === 0;
+        if (noDocs && c.deal_value_band === '15k_plus') {
+          detFactors.push({ factor: 'Chybějící podpůrné dokumenty', impact: 'raises', note_cs: 'Vysoká hodnota obchodu (15 000 € a více) bez doložení původu prostředků.' });
+        }
+
+        const aiData = {
+          subject_type: c.subject_type, relation_type: c.relation_type, deal_value_band: c.deal_value_band,
+          deal_countries: c.deal_countries, purpose_category: c.purpose_category, business_purpose: c.business_purpose,
+          source_of_funds_type: c.source_of_funds_type, source_of_funds: c.source_of_funds, client_occupation: c.client_occupation,
+          consistency: safeParse(c.consistency_json),
+          lookups: Object.values(byType).map(r => ({ type: r.lookup_type, status: r.result_status, matched: r.matched_against, score: r.match_score })),
+          red_flags: redFlags, client_declaration: decl,
+        };
+        const system = 'Jsi AML analytik (zákon č. 253/2008 Sb., risk-based approach). Navrhni rizikový profil klienta. Zohledni: rizikové země (mimo EU/EHP zvyšují riziko), hodnotu obchodu, typ vztahu, konzistenci dokumentů, povolání vs. hodnotu obchodu, výsledky lustrací a red flags. Vrať POUZE validní JSON bez markdownu: {"suggested_level":"nizke|stredni|vysoke","factors":[{"factor":"...","impact":"neutral|raises|critical","note_cs":"..."}],"reasoning_cs":"3-4 věty"}.';
+        let ai;
+        try {
+          ai = await anthropicJson(env, { system, userContent: [{ type: 'text', text: JSON.stringify(aiData) }], max_tokens: 1200 });
+        } catch {
+          ai = { suggested_level: floor, factors: [], reasoning_cs: 'Automatický návrh AI je dočasně nedostupný; navržená úroveň vychází z tvrdých pravidel (sankce, PEP, dokumenty). Posuďte prosím riziko sami.' };
+        }
+        const finalLevel = maxRisk(floor, ['nizke', 'stredni', 'vysoke'].includes(ai.suggested_level) ? ai.suggested_level : 'nizke');
+        const factors = [...detFactors, ...(Array.isArray(ai.factors) ? ai.factors : [])];
+        const suggestion = { suggested_level: finalLevel, factors, reasoning_cs: ai.reasoning_cs || '', deterministic_floor: floor };
+
+        try {
+          await env.DB.prepare('UPDATE aml_cases SET ai_risk_suggestion = ?, ai_risk_reasoning = ? WHERE id = ? AND user_id = ?')
+            .bind(finalLevel, JSON.stringify(suggestion), caseId, userId).run();
+          if (b.client_declaration) {
+            await env.DB.prepare('UPDATE aml_cases SET client_declaration_json = ? WHERE id = ? AND user_id = ?')
+              .bind(JSON.stringify({ ...decl, timestamp: new Date().toISOString() }), caseId, userId).run();
+          }
+        } catch { /* uložení nesmí shodit odpověď */ }
+        return json(suggestion);
+      }
+
+      // POST /api/aml/:caseId/risk-decision — závazné rozhodnutí + validace odůvodnění (Blok 4)
+      const rdM = url.pathname.match(/^\/api\/aml\/(\d+)\/risk-decision$/);
+      if (rdM) {
+        if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+        const caseId = rdM[1];
+        let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+        const c = await env.DB.prepare('SELECT ai_risk_suggestion FROM aml_cases WHERE id = ? AND user_id = ?').bind(caseId, userId).first();
+        if (!c) return json({ error: 'not_found' }, 404);
+        const finalLevel = b.final_risk_level;
+        if (!['nizke', 'stredni', 'vysoke'].includes(finalLevel)) return json({ error: 'invalid_level' }, 400);
+        const decl = b.client_declaration || {};
+        if (!decl.pep || !decl.sanctions_confirmed || !decl.source_confirmed) return json({ error: 'declaration_incomplete' }, 400);
+        const justification = String(b.risk_justification || '').trim();
+        const deviates = finalLevel !== (c.ai_risk_suggestion || finalLevel);
+        const pepYes = decl.pep === 'is';
+        if ((deviates || pepYes) && !justification) return json({ error: 'justification_required' }, 400);
+        const decidedAt = new Date().toISOString();
+        await env.DB.prepare(
+          'UPDATE aml_cases SET final_risk_level = ?, risk_justification = ?, risk_decided_at = ?, client_declaration_json = ?, current_step = MAX(current_step, 4) WHERE id = ? AND user_id = ?'
+        ).bind(finalLevel, justification || null, decidedAt, JSON.stringify({ ...decl, timestamp: decidedAt }), caseId, userId).run();
+        return json({ ok: true, final_risk_level: finalLevel, risk_decided_at: decidedAt });
       }
 
       // POST /api/aml/case/create — založí nový případ

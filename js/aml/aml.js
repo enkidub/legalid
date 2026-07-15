@@ -3,7 +3,7 @@
 // Architektura: žádné inline onclick → jeden delegovaný listener na #amlRoot (data-act).
 // Tím odpadá fragilní window-bridge (chybějící bridge byl zdroj minulých ReferenceError).
 
-import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, apiAmlListCases, apiAmlListClients, apiAmlAres, apiAmlGetLookups, apiAmlRunLookup, apiAmlTerminate, apiOcr } from '../core/api.js';
+import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, apiAmlListCases, apiAmlListClients, apiAmlAres, apiAmlGetLookups, apiAmlRunLookup, apiAmlTerminate, apiAmlAnalyzeDocument, apiAmlCheckConsistency, apiAmlRiskSuggest, apiAmlRiskDecision, apiOcr } from '../core/api.js';
 import { state } from '../core/state.js';
 import { showToast, esc } from '../core/ui.js';
 import { openRegistrationModal } from '../auth/auth.js';
@@ -131,6 +131,24 @@ const COUNTRIES_CS = ['Česko', 'Slovensko', 'Německo', 'Rakousko', 'Polsko', '
   'Spojené arabské emiráty', 'Turecko'];
 const MAX_PURPOSE_DOCS = 5;
 
+// ── Blok 4 — Riziko (krok index 3) ──
+const RISK_LEVELS = [
+  ['nizke', 'Nízké', 'Standardní kontrola, nižší frekvence revizí.'],
+  ['stredni', 'Střední', 'Zvýšená pozornost, kratší interval revize.'],
+  ['vysoke', 'Vysoké', 'Zesílená kontrola dle § 9a, nejkratší interval revize.'],
+];
+const IMPACT_VIEW = {
+  neutral: { icon: '•', cls: 'neutral' },
+  raises: { icon: '▲', cls: 'raises' },
+  critical: { icon: '⚠', cls: 'critical' },
+};
+const PEP_DEFINITION = 'Politicky exponovaná osoba (PEP) je fyzická osoba ve významné veřejné funkci (hlava státu, člen vlády, poslanec, soudce nejvyššího soudu, velvyslanec, člen řídicího orgánu státního podniku apod.), a dále osoby blízké a osoby v úzkém podnikatelském vztahu s PEP (§ 4 odst. 5 zákona č. 253/2008 Sb.).';
+const PEP_NOT = 'Klient prohlašuje, že NENÍ PEP, osobou blízkou PEP ani v úzkém podnikatelském vztahu s PEP';
+const PEP_IS = 'Klient prohlašuje, že JE PEP nebo osobou blízkou PEP či v úzkém podnikatelském vztahu s PEP';
+const SANCTIONS_DECL = 'Klient prohlásil, že není osobou, vůči níž ČR uplatňuje mezinárodní sankce';
+const SOURCE_DECL = 'Klient prohlásil pravdivost údajů o zdroji a původu prostředků';
+const RISK_DISCLAIMER = 'Návrh rizika má výhradně informativní charakter a slouží jako podpůrný nástroj. Nezbavuje povinnou osobu zákonné odpovědnosti za konečné posouzení klienta dle zákona č. 253/2008 Sb.';
+
 // U4 — důvody ukončení kontroly (radio v modalu).
 const TERMINATE_REASONS = [
   ['refused', 'Klient odmítl poskytnout součinnost při identifikaci (§ 15)'],
@@ -164,6 +182,12 @@ const wiz = {
   purposeDocs: [],          // Blok 3: podpůrné dokumenty (session paměť, neperzistují se)
   consistency: null,        // Blok 3: výsledek kontroly konzistence
   consistencyLoading: false,
+  riskSuggestion: null,     // Blok 4: AI návrh { suggested_level, factors, reasoning_cs }
+  riskSuggestLoading: false,
+  declaration: { pep: null, sanctions: false, source: false },  // prohlášení klienta
+  riskDecision: { level: null, justification: '' },
+  riskDecided: false,
+  riskDeciding: false,
 };
 
 // Popisky lustrací.
@@ -231,6 +255,10 @@ function bindRoot(root) {
     }
     if (e.target.matches('input[name="amlMethod"]')) { setMethod(e.target.value); renderStep(root); return; }
     if (e.target.id === 'amlVerifierCheck') { wiz.verifierConfirmed = e.target.checked; refreshContinue(); return; }
+    // Blok 4 — prohlášení klienta.
+    if (e.target.name === 'amlPep') { wiz.declaration.pep = e.target.value; runRiskSuggest(root); return; }
+    if (e.target.id === 'amlDeclSanctions') { wiz.declaration.sanctions = e.target.checked; updateDecideBtn(); return; }
+    if (e.target.id === 'amlDeclSource') { wiz.declaration.source = e.target.checked; updateDecideBtn(); return; }
     // select / checkbox / textarea polí formuláře (typ dokladu, role, ESM, pohlaví)
     if (e.target.id && e.target.id.startsWith('aml_f_')) { readFieldsFromForm(); refreshContinue(); }
   });
@@ -238,6 +266,7 @@ function bindRoot(root) {
   root.addEventListener('input', (e) => {
     if (e.target.id && e.target.id.startsWith('aml_f_')) { readFieldsFromForm(); refreshContinue(); }
     if (e.target.id === 'amlClientSearch') { wiz.clientQuery = e.target.value; renderClientList(); }
+    if (e.target.id === 'amlRiskJust') { wiz.riskDecision.justification = e.target.value; updateDecideBtn(); }
   });
   // Drag & drop na dropzóny (source 'upload').
   root.addEventListener('dragover', (e) => {
@@ -290,6 +319,8 @@ function handleAction(root, act, ds) {
     case 'add-purpose-doc': $('amlPurposeInput')?.click(); break;
     case 'remove-purpose-doc': removePurposeDoc(root, +ds.idx); break;
     case 'check-consistency': runConsistency(root); break;
+    case 'set-risk': wiz.riskDecision.level = ds.val; renderRisk(root); break;
+    case 'risk-decide': runRiskDecision(root); break;
     default: break;
   }
 }
@@ -319,6 +350,10 @@ async function createNewCase(root) {
     wiz.lookups = null; wiz.lookupStatus = 'idle'; wiz.maxStep = 0; wiz.forceRun = false;
     wiz.verifierConfirmed = false; wiz.terminating = false;
     wiz.purposeDocs = []; wiz.consistency = null; wiz.consistencyLoading = false;
+    wiz.riskSuggestion = null; wiz.riskSuggestLoading = false;
+    wiz.declaration = { pep: null, sanctions: false, source: false };
+    wiz.riskDecision = { level: null, justification: '' };
+    wiz.riskDecided = false; wiz.riskDeciding = false;
     if (wiz.source === 'list') loadClients(root);
     renderStep(root);
   } catch {
@@ -347,6 +382,17 @@ async function resumeCase(root, id) {
     catch { wiz.verifierConfirmed = false; }
     try { wiz.consistency = c.consistency_json ? JSON.parse(c.consistency_json) : null; } catch { wiz.consistency = null; }
     wiz.purposeDocs = []; wiz.consistencyLoading = false;
+    // Blok 4 — návrh rizika, prohlášení, rozhodnutí.
+    try {
+      const rr = c.ai_risk_reasoning ? JSON.parse(c.ai_risk_reasoning) : null;
+      wiz.riskSuggestion = (rr && rr.suggested_level) ? rr
+        : (c.ai_risk_suggestion ? { suggested_level: c.ai_risk_suggestion, factors: [], reasoning_cs: '' } : null);
+    } catch { wiz.riskSuggestion = c.ai_risk_suggestion ? { suggested_level: c.ai_risk_suggestion, factors: [], reasoning_cs: '' } : null; }
+    try { const dj = c.client_declaration_json ? JSON.parse(c.client_declaration_json) : null; if (dj) wiz.declaration = { pep: dj.pep || null, sanctions: !!dj.sanctions_confirmed, source: !!dj.source_confirmed }; }
+    catch { wiz.declaration = { pep: null, sanctions: false, source: false }; }
+    wiz.riskDecided = !!c.risk_decided_at;
+    wiz.riskDecision = { level: c.final_risk_level || wiz.riskSuggestion?.suggested_level || null, justification: c.risk_justification || '', decided_at: c.risk_decided_at || null };
+    wiz.riskSuggestLoading = false; wiz.riskDeciding = false;
     wiz.step = c.current_step || 0;   // DB je již v novém schématu (migrace v4)
     wiz.maxStep = wiz.step; wiz.forceRun = false;
     wiz.source = hasClientData() ? 'manual' : 'camera';   // s daty rovnou ukaž formulář
@@ -764,6 +810,7 @@ function renderStep(root) {
   if (wiz.step === 0) renderClientStep(root);
   else if (wiz.step === 1) renderLustrace(root);
   else if (wiz.step === 2) renderPurpose(root);
+  else if (wiz.step === 3) renderRisk(root);
   else renderPlaceholder();
   renderFoot();
 }
@@ -1211,6 +1258,140 @@ async function patchPurpose() {
   await patchCase(patch);
 }
 
+// ── Krok 4 (index 3) — Riziko ────────────────────────────────────────
+function declarationPayload() {
+  return { pep: wiz.declaration.pep, sanctions_confirmed: wiz.declaration.sanctions, source_confirmed: wiz.declaration.source };
+}
+function justificationRequired() {
+  const dev = wiz.riskDecision.level && wiz.riskSuggestion && wiz.riskDecision.level !== wiz.riskSuggestion.suggested_level;
+  return !!(dev || wiz.declaration.pep === 'is');
+}
+function canDecide() {
+  const d = wiz.declaration;
+  if (!d.pep || !d.sanctions || !d.source) return false;
+  if (!wiz.riskDecision.level) return false;
+  if (justificationRequired() && !String(wiz.riskDecision.justification || '').trim()) return false;
+  return true;
+}
+function updateDecideBtn() {
+  const btn = $('amlDecideBtn');
+  if (btn) btn.disabled = !canDecide() || wiz.riskDeciding;
+}
+
+function riskAiCardHTML() {
+  if (wiz.riskSuggestLoading) return `<div class="aml-ai-card aml-ai-card-loading"><span class="aml-spinner"></span> AI navrhuje rizikový profil…</div>`;
+  const s = wiz.riskSuggestion;
+  if (!s) return '';
+  const lvl = RISK_LEVELS.find(([v]) => v === s.suggested_level) || ['', '—'];
+  const factors = (s.factors || []).map(f => {
+    const iv = IMPACT_VIEW[f.impact] || IMPACT_VIEW.neutral;
+    return `<div class="aml-factor aml-factor-${iv.cls}"><span class="aml-factor-ico">${iv.icon}</span><span><b>${esc(f.factor || '')}</b>${f.note_cs ? ' — ' + esc(f.note_cs) : ''}</span></div>`;
+  }).join('');
+  return `<div class="aml-ai-card">
+    <div class="aml-ai-card-head">
+      <span class="aml-ai-tag">AI návrh</span>
+      <span class="aml-risk-badge aml-risk-${esc(s.suggested_level)}">${esc(lvl[1])} riziko</span>
+    </div>
+    ${factors ? `<div class="aml-factors">${factors}</div>` : ''}
+    ${s.reasoning_cs ? `<div class="aml-ai-reason">${esc(s.reasoning_cs)}</div>` : ''}
+  </div>
+  <div class="aml-disclaimer">${esc(RISK_DISCLAIMER)}</div>`;
+}
+
+function declarationHTML() {
+  const d = wiz.declaration;
+  const pepRadio = (val, text) => `<label class="aml-radio"><input type="radio" name="amlPep" value="${val}"${d.pep === val ? ' checked' : ''}><span>${esc(text)}</span></label>`;
+  return `<div class="aml-decl">
+    <div class="aml-sec-title">Prohlášení klienta</div>
+    <div class="aml-decl-q">
+      <div class="aml-decl-label">Politicky exponovaná osoba (PEP) <span class="aml-req">*</span></div>
+      <div class="aml-decl-def">${esc(PEP_DEFINITION)}</div>
+      <div class="aml-radios aml-decl-radios">${pepRadio('not', PEP_NOT)}${pepRadio('is', PEP_IS)}</div>
+    </div>
+    <label class="aml-check"><input type="checkbox" id="amlDeclSanctions"${d.sanctions ? ' checked' : ''}><span>${esc(SANCTIONS_DECL)} <span class="aml-req">*</span></span></label>
+    <label class="aml-check"><input type="checkbox" id="amlDeclSource"${d.source ? ' checked' : ''}><span>${esc(SOURCE_DECL)} <span class="aml-req">*</span></span></label>
+    <div class="aml-decl-note">Prohlášení budou součástí PDF záznamu s místem pro podpis klienta.</div>
+  </div>`;
+}
+
+function decisionHTML() {
+  const cards = RISK_LEVELS.map(([v, l, desc]) =>
+    `<button class="aml-risk-card aml-risk-card-${v}${wiz.riskDecision.level === v ? ' aml-risk-card--on' : ''}" data-act="set-risk" data-val="${v}">
+      <span class="aml-risk-card-lvl">${esc(l)}</span><span class="aml-risk-card-desc">${esc(desc)}</span></button>`
+  ).join('');
+  const req = justificationRequired();
+  return `<div class="aml-decision">
+    <div class="aml-sec-title">Rozhodnutí o riziku</div>
+    <div class="aml-risk-cards">${cards}</div>
+    <label class="aml-field">
+      <span>Odůvodnění${req ? ' <span class="aml-req">*</span>' : ' (nepovinné)'}</span>
+      <textarea id="amlRiskJust" rows="3" placeholder="${req ? 'Zdůvodněte odchylku od návrhu nebo PEP status.' : 'Volitelná poznámka k rozhodnutí.'}">${esc(wiz.riskDecision.justification || '')}</textarea>
+    </label>
+    <button class="aml-btn aml-btn-primary aml-btn-block" id="amlDecideBtn" data-act="risk-decide"${canDecide() ? '' : ' disabled'}>Závazně rozhodnout</button>
+  </div>`;
+}
+
+function riskLockedHTML() {
+  const lvl = RISK_LEVELS.find(([v]) => v === wiz.riskDecision.level) || ['', '—'];
+  return `<div class="aml-decision aml-decision-locked">
+    <div class="aml-sec-title">Rozhodnutí o riziku</div>
+    <div class="aml-locked-row"><span class="aml-risk-badge aml-risk-${esc(wiz.riskDecision.level)}">${esc(lvl[1])} riziko</span> <span class="aml-locked-tag">✓ závazně rozhodnuto</span></div>
+    ${wiz.riskDecision.justification ? `<div class="aml-locked-just"><span class="aml-doc-k">Odůvodnění:</span> ${esc(wiz.riskDecision.justification)}</div>` : ''}
+    <div class="aml-decl-note">Rozhodnutí je uzamčeno. Pokračujte na krok Záznam tlačítkem Další.</div>
+  </div>`;
+}
+
+function renderRisk(root) {
+  if (!wiz.riskSuggestion && !wiz.riskSuggestLoading && !wiz.riskDecided) runRiskSuggest(root);
+  const decisionPart = wiz.riskDecided
+    ? riskLockedHTML()
+    : ((wiz.riskSuggestion || wiz.riskDecision.level) ? decisionHTML() : '');
+  $('amlMain').innerHTML = `<div class="aml-card">
+    <div class="aml-h">Vyhodnocení rizika</div>
+    <div class="aml-sub">Posuďte rizikový profil klienta. Návrh AI je podpůrný — závazné rozhodnutí je na vás.</div>
+    ${riskAiCardHTML()}
+    ${wiz.riskDecided ? '' : declarationHTML()}
+    ${decisionPart}
+  </div>`;
+}
+
+async function runRiskSuggest(root) {
+  wiz.riskSuggestLoading = true;
+  if (wiz.step === 3) renderRisk(root);
+  let res;
+  try { res = await apiAmlRiskSuggest(wiz.caseId, { client_declaration: declarationPayload() }); } catch { res = null; }
+  wiz.riskSuggestLoading = false;
+  if (!res || res.error) { showToast('Návrh rizika se nepodařilo načíst.'); if (wiz.step === 3) renderRisk(root); return; }
+  wiz.riskSuggestion = res;
+  if (!wiz.riskDecision.level) wiz.riskDecision.level = res.suggested_level;
+  if (wiz.step === 3) renderRisk(root);
+}
+
+async function runRiskDecision(root) {
+  if (wiz.riskDeciding) return;
+  if (!canDecide()) { showToast('Doplňte prohlášení klienta, úroveň rizika a případné odůvodnění.'); return; }
+  wiz.riskDeciding = true; updateDecideBtn();
+  let res;
+  try {
+    res = await apiAmlRiskDecision(wiz.caseId, {
+      final_risk_level: wiz.riskDecision.level,
+      risk_justification: wiz.riskDecision.justification || '',
+      client_declaration: declarationPayload(),
+    });
+  } catch { res = null; }
+  wiz.riskDeciding = false;
+  if (!res || res.error) {
+    const msg = res?.error === 'justification_required'
+      ? 'Odůvodnění je povinné při odchylce od návrhu nebo u PEP.'
+      : (res?.error === 'declaration_incomplete' ? 'Doplňte prosím prohlášení klienta.' : 'Rozhodnutí se nepodařilo uložit.');
+    showToast(msg); renderRisk(root); return;
+  }
+  wiz.riskDecided = true;
+  wiz.riskDecision.decided_at = res.risk_decided_at;
+  wiz.maxStep = Math.max(wiz.maxStep, 4);
+  renderRisk(root); renderSteps(); renderFoot();
+}
+
 // ── Krok 2 — automatická lustrace ────────────────────────────────────
 // Ikona + třída + text podle stavu jedné lustrace.
 function lookupView(lk) {
@@ -1589,8 +1770,10 @@ function renderFoot() {
   if (wiz.step === 0) {
     nav = '';   // krok Údaje klienta má vlastní tlačítko „pokračovat na lustraci" v kartě
   } else if (wiz.step >= 1 && wiz.step <= 3) {
-    // Lustrace (krok 1): Další je aktivní až po dokončení všech 5 lustrací.
-    const dis = (wiz.step === 1 && wiz.lookupStatus !== 'done') ? ' disabled' : '';
+    // Lustrace (1): Další až po dokončení lustrací. Riziko (3): až po závazném rozhodnutí.
+    let dis = '';
+    if (wiz.step === 1 && wiz.lookupStatus !== 'done') dis = ' disabled';
+    if (wiz.step === 3 && !wiz.riskDecided) dis = ' disabled';
     nav = `<button class="aml-btn" data-act="back">Zpět</button>
            <button class="aml-btn aml-btn-primary" data-act="next"${dis}>Další</button>`;
   } else { // Záznam (krok 4)

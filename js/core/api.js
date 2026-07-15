@@ -91,6 +91,24 @@ export async function apiAmlCheckConsistency(caseId, payload) {
   return r.json();
 }
 
+// Blok 4 — AI návrh rizika (deterministická pravidla + Anthropic). Vrací { suggested_level, factors, reasoning_cs }.
+export async function apiAmlRiskSuggest(caseId, payload) {
+  const r = await fetch(`${WORKER_URL}/api/aml/${caseId}/risk-suggest`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload || {})
+  });
+  return r.json();
+}
+
+// Blok 4 — závazné rozhodnutí o riziku (serverová validace povinného odůvodnění).
+export async function apiAmlRiskDecision(caseId, payload) {
+  const r = await fetch(`${WORKER_URL}/api/aml/${caseId}/risk-decision`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+  });
+  return r.json();
+}
+
 // U4 — ukončení kontroly (§ 15): status='terminated' + důvod. Vrací { ok, completed_at }.
 export async function apiAmlTerminate(caseId, reason) {
   const r = await fetch(`${WORKER_URL}/api/aml/${caseId}/terminate`, {

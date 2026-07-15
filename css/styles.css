@@ -1765,6 +1765,44 @@ body.logged-in .nav-section-guest { display: none; }
 .aml-sig-medium .aml-sig-dot { background: #d99a2b; }
 .aml-sig-high .aml-sig-dot { background: #c0392b; }
 
+/* ── Blok 4: Riziko ── */
+.aml-ai-card { border: 1px solid #cfdcef; background: #f4f8fd; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.aml-ai-card-loading { flex-direction: row; align-items: center; gap: 10px; color: var(--ink-mid); font-size: 13px; }
+.aml-ai-card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.aml-ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #3d6bb3; background: #e7effa; padding: 3px 9px; border-radius: 8px; }
+.aml-risk-badge { font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
+.aml-risk-nizke { color: #1a8a4a; background: #eefaf2; border: 1px solid #bfe6cd; }
+.aml-risk-stredni { color: #b8791a; background: #fff8ec; border: 1px solid #f0dcae; }
+.aml-risk-vysoke { color: #c0392b; background: #fdeeec; border: 1px solid #f0c0b8; }
+.aml-factors { display: flex; flex-direction: column; gap: 7px; }
+.aml-factor { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: var(--ink-mid); line-height: 1.5; }
+.aml-factor b { color: var(--ink); font-weight: 600; }
+.aml-factor-ico { flex-shrink: 0; width: 16px; text-align: center; font-size: 12px; margin-top: 1px; }
+.aml-factor-neutral .aml-factor-ico { color: var(--ink-lt); }
+.aml-factor-raises .aml-factor-ico { color: #d99a2b; }
+.aml-factor-critical .aml-factor-ico { color: #c0392b; }
+.aml-ai-reason { font-size: 13px; color: var(--ink-mid); line-height: 1.6; }
+.aml-disclaimer { font-size: 11px; color: var(--ink-fnt); line-height: 1.5; font-style: italic; }
+
+.aml-decl { display: flex; flex-direction: column; gap: 10px; }
+.aml-decl-q { display: flex; flex-direction: column; gap: 6px; }
+.aml-decl-label { font-size: 13px; font-weight: 600; color: var(--ink); }
+.aml-decl-def { font-size: 12px; color: var(--ink-lt); line-height: 1.55; background: var(--paper); border-radius: 8px; padding: 8px 10px; }
+.aml-radios.aml-decl-radios { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.aml-radios.aml-decl-radios .aml-radio { align-items: flex-start; }
+.aml-decl-note { font-size: 11px; color: var(--ink-fnt); line-height: 1.5; }
+
+.aml-decision { display: flex; flex-direction: column; gap: 12px; }
+.aml-risk-cards { display: flex; gap: 8px; }
+.aml-risk-card { flex: 1; display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 12px; border: 1.5px solid var(--rule); border-radius: 12px; background: var(--white); cursor: pointer; font-family: var(--sans); transition: all .14s; }
+.aml-risk-card:hover { border-color: var(--navy); }
+.aml-risk-card--on { border-color: var(--gold); background: var(--gold-p); }
+.aml-risk-card-lvl { font-size: 14px; font-weight: 700; color: var(--navy); }
+.aml-risk-card-desc { font-size: 11px; color: var(--ink-lt); line-height: 1.4; }
+.aml-decision-locked .aml-locked-row { display: flex; align-items: center; gap: 10px; }
+.aml-locked-tag { font-size: 12px; font-weight: 600; color: #1a8a4a; }
+.aml-locked-just { font-size: 13px; color: var(--ink-mid); line-height: 1.55; }
+
 @media (max-width: 600px) {
   .aml-tiles { grid-template-columns: 1fr; }
   .aml-fields { grid-template-columns: 1fr; }
@@ -1772,6 +1810,7 @@ body.logged-in .nav-section-guest { display: none; }
   .aml-foot-left, .aml-foot-right { width: 100%; }
   .aml-foot-right { justify-content: space-between; }
   .aml-opts-band { flex-direction: column; }
+  .aml-risk-cards { flex-direction: column; }
 }
 
 /* ── Plné stránky Klienti / Kniha ── */

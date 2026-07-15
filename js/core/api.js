@@ -109,6 +109,21 @@ export async function apiAmlRiskDecision(caseId, payload) {
   return r.json();
 }
 
+// Blok 5 — dokončení kontroly: status='completed' + next_review_due + record_sha256.
+export async function apiAmlComplete(caseId, record_sha256) {
+  const r = await fetch(`${WORKER_URL}/api/aml/${caseId}/complete`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ record_sha256 })
+  });
+  return r.json();
+}
+
+// Blok 5 — metadata podpůrných dokumentů (pro archiv/regeneraci PDF bez příloh).
+export async function apiAmlGetDocuments(caseId) {
+  const r = await fetch(`${WORKER_URL}/api/aml/case/${caseId}/documents`, { credentials: 'include' });
+  return r.json();
+}
+
 // U4 — ukončení kontroly (§ 15): status='terminated' + důvod. Vrací { ok, completed_at }.
 export async function apiAmlTerminate(caseId, reason) {
   const r = await fetch(`${WORKER_URL}/api/aml/${caseId}/terminate`, {

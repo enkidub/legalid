@@ -7,7 +7,8 @@ import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, ap
 import { state } from '../core/state.js';
 import { showToast, esc } from '../core/ui.js';
 import { openRegistrationModal } from '../auth/auth.js';
-import { buildTerminationPdf } from './pdf.js';
+import { apiAmlComplete, apiAmlGetDocuments } from '../core/api.js';
+import { buildTerminationPdf, buildRecordPdf } from './pdf.js';
 
 // Wizard: 5 kroků (0-index), zobrazeno jako 1–5. Krátké labely pro mobil (<640px).
 const STEP_LABELS = ['Údaje klienta', 'Lustrace', 'Účel obchodu', 'Riziko', 'Záznam'];
@@ -178,6 +179,7 @@ const wiz = {
   maxStep: 0,               // nejdál dosažený krok (pro klikatelnost indikátoru)
   forceRun: false,          // true = na kroku Lustrace spustit nově (ne načíst uložené)
   verifierConfirmed: false, // U3: checkbox prohlášení ověřující osoby (osobní setkání)
+  verifierTimestamp: null,  // čas potvrzení prohlášení (pro záznam)
   terminating: false,       // U4: probíhá ukončení kontroly
   purposeDocs: [],          // Blok 3: podpůrné dokumenty (session paměť, neperzistují se)
   consistency: null,        // Blok 3: výsledek kontroly konzistence
@@ -188,6 +190,9 @@ const wiz = {
   riskDecision: { level: null, justification: '' },
   riskDecided: false,
   riskDeciding: false,
+  generating: false,        // Blok 5: probíhá generování PDF záznamu
+  recordSha: null,
+  completeResult: null,
 };
 
 // Popisky lustrací.
@@ -321,6 +326,7 @@ function handleAction(root, act, ds) {
     case 'check-consistency': runConsistency(root); break;
     case 'set-risk': wiz.riskDecision.level = ds.val; renderRisk(root); break;
     case 'risk-decide': runRiskDecision(root); break;
+    case 'gen-record': runGenerateRecord(root); break;
     default: break;
   }
 }
@@ -354,6 +360,7 @@ async function createNewCase(root) {
     wiz.declaration = { pep: null, sanctions: false, source: false };
     wiz.riskDecision = { level: null, justification: '' };
     wiz.riskDecided = false; wiz.riskDeciding = false;
+    wiz.generating = false; wiz.recordSha = null; wiz.completeResult = null; wiz.verifierTimestamp = null;
     if (wiz.source === 'list') loadClients(root);
     renderStep(root);
   } catch {
@@ -378,8 +385,8 @@ async function resumeCase(root, id) {
     wiz.subject_type = c.subject_type || 'fo';
     wiz.data = {};
     DATA_COLS.forEach(col => { if (c[col] != null && c[col] !== '') wiz.data[col] = c[col]; });
-    try { const vj = c.verifier_declaration_json ? JSON.parse(c.verifier_declaration_json) : null; wiz.verifierConfirmed = !!(vj && vj.confirmed); }
-    catch { wiz.verifierConfirmed = false; }
+    try { const vj = c.verifier_declaration_json ? JSON.parse(c.verifier_declaration_json) : null; wiz.verifierConfirmed = !!(vj && vj.confirmed); wiz.verifierTimestamp = vj?.timestamp || null; }
+    catch { wiz.verifierConfirmed = false; wiz.verifierTimestamp = null; }
     try { wiz.consistency = c.consistency_json ? JSON.parse(c.consistency_json) : null; } catch { wiz.consistency = null; }
     wiz.purposeDocs = []; wiz.consistencyLoading = false;
     // Blok 4 — návrh rizika, prohlášení, rozhodnutí.
@@ -504,10 +511,11 @@ async function continueToLustrace(root) {
   const patch = { current_step: 1, identification_method: wiz.method, subject_type: wiz.subject_type };
   DATA_COLS.forEach(col => { patch[col] = (wiz.data[col] === '' || wiz.data[col] == null) ? null : wiz.data[col]; });
   if (wiz.method === 'personal') {
+    const vts = new Date().toISOString();
+    wiz.verifierTimestamp = vts;
     patch.verifier_declaration_json = JSON.stringify({
       confirmed: true, text_version: VERIFIER_TEXT_VERSION,
-      statement: VERIFIER_STATEMENT, checkbox: VERIFIER_CHECKBOX,
-      timestamp: new Date().toISOString(),
+      statement: VERIFIER_STATEMENT, checkbox: VERIFIER_CHECKBOX, timestamp: vts,
     });
   }
   await patchCase(patch);
@@ -811,6 +819,7 @@ function renderStep(root) {
   else if (wiz.step === 1) renderLustrace(root);
   else if (wiz.step === 2) renderPurpose(root);
   else if (wiz.step === 3) renderRisk(root);
+  else if (wiz.step === 4) renderRecord(root);
   else renderPlaceholder();
   renderFoot();
 }
@@ -1392,6 +1401,150 @@ async function runRiskDecision(root) {
   renderRisk(root); renderSteps(); renderFoot();
 }
 
+// ── Krok 5 (index 4) — Záznam ────────────────────────────────────────
+function fmtDateOnly(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  try { return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' }); } catch { return ''; }
+}
+function recapRow(label, val) {
+  return `<div class="aml-recap-row"><span class="aml-recap-k">${esc(label)}</span><span class="aml-recap-v">${esc(val || '—')}</span></div>`;
+}
+function lbl(list, v) { return (list.find(([x]) => x === v) || ['', '—'])[1]; }
+
+function renderRecord(root) {
+  if (wiz.completeResult) { renderRecordDone(root); return; }
+  if (!wiz.riskDecided) {
+    $('amlMain').innerHTML = `<div class="aml-card"><div class="aml-h">Záznam o kontrole</div>
+      <div class="aml-ai-note">Nejdřív dokončete vyhodnocení rizika (krok Riziko) a proveďte závazné rozhodnutí.</div></div>`;
+    return;
+  }
+  const client = wiz.subject_type === 'po'
+    ? (wiz.data.company_name || '—')
+    : ([wiz.data.client_name, wiz.data.client_surname].filter(Boolean).join(' ') || '—');
+  const docCount = wiz.purposeDocs.filter(d => d.status === 'done').length;
+  $('amlMain').innerHTML = `<div class="aml-card">
+    <div class="aml-h">Záznam o kontrole</div>
+    <div class="aml-sub">Zkontrolujte rekapitulaci a vygenerujte finální PDF záznam. Tím se kontrola dokončí a uloží do archivu.</div>
+    <div class="aml-recap">
+      ${recapRow('Číslo kontroly', wiz.case_number)}
+      ${recapRow('Klient', client)}
+      ${recapRow('Typ vztahu', lbl(RELATION_TYPES, wiz.data.relation_type))}
+      ${recapRow('Hodnota obchodu', lbl(DEAL_BANDS, wiz.data.deal_value_band))}
+      ${recapRow('Zdroj prostředků', lbl(SOURCE_TYPES, wiz.data.source_of_funds_type))}
+      ${recapRow('Podpůrné dokumenty', docCount ? `${docCount} přiloženo` : 'žádné')}
+      ${recapRow('Rozhodnuté riziko', lbl(RISK_LEVELS, wiz.riskDecision.level))}
+    </div>
+    <div class="aml-recap-note">PDF obsahuje plnou diakritiku, prohlášení klienta s podpisovými poli a přiložené dokumenty ze session. Přílohy se z bezpečnostních důvodů neukládají na server.</div>
+    <button class="aml-btn aml-btn-primary aml-btn-block" id="amlGenBtn" data-act="gen-record">Vygenerovat a stáhnout PDF</button>
+  </div>`;
+}
+
+function verifierForRecord() {
+  if (wiz.method === 'personal' && wiz.verifierConfirmed) {
+    return { confirmed: true, statement: VERIFIER_STATEMENT, checkbox: VERIFIER_CHECKBOX, timestamp: wiz.verifierTimestamp || null };
+  }
+  return null;
+}
+
+function buildRecordData(lookups) {
+  return {
+    caseNumber: wiz.case_number,
+    povinnaOsoba: loadPovinnaOsoba(),
+    dateISO: new Date().toISOString(),
+    subjectType: wiz.subject_type,
+    client: {
+      name: [wiz.data.client_name, wiz.data.client_surname].filter(Boolean).join(' '),
+      nameOriginal: wiz.data.client_name_original || '', birthDate: wiz.data.client_birth_date || '',
+      birthPlace: wiz.data.client_birth_place || '', address: wiz.data.client_address || '',
+      nationality: wiz.data.client_nationality || '', docType: wiz.data.client_doc_type || '',
+      docNumber: wiz.data.client_doc_number || '', docValidUntil: wiz.data.client_doc_valid_until || '',
+      rc: wiz.data.client_rc || '', occupation: wiz.data.client_occupation || '', gender: wiz.data.client_gender || '',
+    },
+    company: {
+      name: wiz.data.company_name || '', ico: wiz.data.client_ico || '', address: wiz.data.company_address || '',
+      actingRole: wiz.data.acting_person_role || '', actingNote: wiz.data.acting_person_note || '',
+      esmChecked: !!wiz.data.esm_checked, esmNote: wiz.data.esm_note || '',
+    },
+    identification: { method: wiz.method, verifier: verifierForRecord() },
+    deal: { relationType: wiz.data.relation_type, valueBand: wiz.data.deal_value_band, countries: wiz.data.deal_countries, category: wiz.data.purpose_category, purpose: wiz.data.business_purpose },
+    source: { type: wiz.data.source_of_funds_type, detail: wiz.data.source_of_funds },
+    consistency: wiz.consistency,
+    lookups: (lookups || []).map(l => ({ type: l.lookup_type, status: l.status, matched_against: l.matched_against, checked_at: l.checked_at })),
+    documents: wiz.purposeDocs.filter(d => d.status === 'done').map(d => ({ doc_type: d.doc_type, filename: d.name, sha256: d.sha256, summary: d.summary })),
+    risk: { suggestion: wiz.riskSuggestion, finalLevel: wiz.riskDecision.level, justification: wiz.riskDecision.justification, decidedAt: wiz.riskDecision.decided_at },
+    declaration: declarationPayload(),
+  };
+}
+
+function dataUrlToBytes(dataUrl) {
+  const b64 = (dataUrl.split(',')[1] || '');
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+
+function gatherAttachments() {
+  const list = [];
+  if (wiz.frontImg) list.push({ dataUrl: wiz.frontImg, mime: 'image/jpeg', caption: 'Doklad totožnosti — přední strana' });
+  if (wiz.backImg) list.push({ dataUrl: wiz.backImg, mime: 'image/jpeg', caption: 'Doklad totožnosti — zadní strana' });
+  for (const u of wiz.uploadFiles) list.push({ dataUrl: u.dataUrl, mime: u.media_type, caption: 'Doklad totožnosti — ' + (u.name || '') });
+  for (const dc of wiz.purposeDocs.filter(d => d.status === 'done')) list.push({ dataUrl: dc.dataUrl, mime: dc.mime, caption: 'Podpůrný dokument — ' + (DOC_TYPE_LABELS[dc.doc_type] || dc.name || '') });
+  return list.map(a => ({ bytes: dataUrlToBytes(a.dataUrl), mime: a.mime, caption: a.caption }));
+}
+
+async function sha256HexBytes(bytes) {
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+async function runGenerateRecord(root) {
+  if (wiz.generating) return;
+  wiz.generating = true;
+  const btn = $('amlGenBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Generuji PDF…'; }
+  try {
+    let lookups = wiz.lookups;
+    try { const r = await apiAmlGetLookups(wiz.caseId); if (r.results?.length) lookups = r.results; } catch {}
+    const data = buildRecordData(lookups);
+    const attachments = gatherAttachments();
+    const bytes = await buildRecordPdf(data, attachments);
+    const sha = await sha256HexBytes(bytes);
+    downloadPdf(bytes, `${wiz.case_number || 'AML'}-zaznam.pdf`);
+    let res;
+    try { res = await apiAmlComplete(wiz.caseId, sha); } catch { res = null; }
+    wiz.recordSha = sha;
+    wiz.completeResult = (res && !res.error) ? res : { ok: false };
+    if (!res || res.error) showToast('PDF vygenerováno, ale dokončení se nepodařilo uložit.');
+    renderRecordDone(root);
+  } catch (e) {
+    showToast('Generování PDF selhalo, zkuste to prosím znovu.');
+  } finally {
+    wiz.generating = false;
+    const b2 = $('amlGenBtn'); if (b2) { b2.disabled = false; b2.textContent = 'Vygenerovat a stáhnout PDF'; }
+  }
+}
+
+function renderRecordDone(root) {
+  renderCaseNum();
+  renderSteps();
+  const foot = $('amlFoot'); if (foot) foot.innerHTML = '';
+  const review = wiz.completeResult?.next_review_due ? fmtDateOnly(wiz.completeResult.next_review_due) : '';
+  $('amlMain').innerHTML = `<div class="aml-card aml-done">
+    <div class="aml-h">Kontrola dokončena</div>
+    <div class="aml-ai-note">Záznam ${esc(wiz.case_number || '')} byl vygenerován a stažen. Případ je uložen v archivu.</div>
+    <div class="aml-recap">
+      ${recapRow('Otisk záznamu (SHA-256)', wiz.recordSha ? wiz.recordSha.slice(0, 32) + '…' : '—')}
+      ${review ? recapRow('Příští revize do', review) : ''}
+    </div>
+    <div class="aml-upload-btns">
+      <button class="aml-btn aml-btn-primary" data-act="go-archive">Do archivu</button>
+      <button class="aml-btn" data-act="new">Nová kontrola</button>
+    </div>
+  </div>`;
+}
+
 // ── Krok 2 — automatická lustrace ────────────────────────────────────
 // Ikona + třída + text podle stavu jedné lustrace.
 function lookupView(lk) {
@@ -1764,6 +1917,8 @@ function renderTerminated(root, reasonLabel) {
 function renderFoot() {
   const foot = $('amlFoot');
   if (!foot) return;
+  // Dokončený záznam (krok 4) — bez navigace, obrazovka má vlastní tlačítka.
+  if (wiz.step === 4 && wiz.completeResult) { foot.innerHTML = ''; return; }
   // U4: „Ukončit kontrolu" (sekundární) je dostupné na všech krocích vedle Zpět/Další.
   const term = `<button class="aml-btn aml-btn-ghost aml-btn-terminate" data-act="open-terminate">Ukončit kontrolu</button>`;
   let nav = '';

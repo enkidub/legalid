@@ -846,6 +846,28 @@ export default {
         return json({ ok: true, final_risk_level: finalLevel, risk_decided_at: decidedAt });
       }
 
+      // POST /api/aml/:caseId/complete — dokončení kontroly (Blok 5): status='completed'
+      const cmpM = url.pathname.match(/^\/api\/aml\/(\d+)\/complete$/);
+      if (cmpM) {
+        if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+        const caseId = cmpM[1];
+        let b; try { b = await request.json(); } catch { b = {}; }
+        const c = await env.DB.prepare('SELECT final_risk_level, risk_decided_at FROM aml_cases WHERE id = ? AND user_id = ?').bind(caseId, userId).first();
+        if (!c) return json({ error: 'not_found' }, 404);
+        if (!c.risk_decided_at) return json({ error: 'risk_not_decided' }, 400);
+        // Interval revize: nízké +36 m, střední +24 m, vysoké +12 m.
+        const months = c.final_risk_level === 'vysoke' ? 12 : (c.final_risk_level === 'stredni' ? 24 : 36);
+        const now = new Date();
+        const review = new Date(now); review.setMonth(review.getMonth() + months);
+        const completedAt = now.toISOString();
+        const nextReview = review.toISOString();
+        const sha = String(b.record_sha256 || '').slice(0, 64) || null;
+        await env.DB.prepare(
+          "UPDATE aml_cases SET status = 'completed', final_pdf_generated = 1, completed_at = ?, next_review_due = ?, record_sha256 = ? WHERE id = ? AND user_id = ?"
+        ).bind(completedAt, nextReview, sha, caseId, userId).run();
+        return json({ ok: true, completed_at: completedAt, next_review_due: nextReview });
+      }
+
       // POST /api/aml/case/create — založí nový případ
       if (url.pathname === '/api/aml/case/create') {
         if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
@@ -917,15 +939,29 @@ export default {
         return json({ clients: results || [] });
       }
 
-      // GET /api/aml/cases — seznam případů uživatele (pro budoucí Archiv)
+      // GET /api/aml/cases — seznam případů uživatele (Archiv i „rozdělaná kontrola")
       if (url.pathname === '/api/aml/cases') {
         if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
         const { results } = await env.DB.prepare(
-          `SELECT id, status, current_step, identification_method,
-                  client_name, client_surname, final_risk_level, created_at, completed_at
+          `SELECT id, case_number, status, current_step, identification_method, subject_type,
+                  client_name, client_surname, company_name, final_risk_level,
+                  created_at, completed_at, next_review_due, terminated_reason
              FROM aml_cases WHERE user_id = ? ORDER BY created_at DESC`
         ).bind(userId).all();
         return json({ cases: results || [] });
+      }
+
+      // GET /api/aml/case/:id/documents — metadata podpůrných dokumentů (pro archiv/regeneraci)
+      const docsM = url.pathname.match(/^\/api\/aml\/case\/(\d+)\/documents$/);
+      if (docsM) {
+        if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
+        const caseId = docsM[1];
+        const owner = await env.DB.prepare('SELECT id FROM aml_cases WHERE id = ? AND user_id = ?').bind(caseId, userId).first();
+        if (!owner) return json({ error: 'not_found' }, 404);
+        const { results } = await env.DB.prepare(
+          'SELECT doc_type, filename, sha256, ai_summary FROM aml_documents WHERE case_id = ? AND content_base64 IS NULL ORDER BY id'
+        ).bind(caseId).all();
+        return json({ documents: (results || []).map(r => ({ doc_type: r.doc_type, filename: r.filename, sha256: r.sha256, summary: r.ai_summary })) });
       }
 
       // /api/aml/case/:id  a  /api/aml/case/:id/document

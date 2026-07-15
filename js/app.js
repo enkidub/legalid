@@ -13,7 +13,7 @@ import { renderPovinneOsoby, initPovinneOsoby, togglePoCard, gotoProfese } from 
 import { renderSoukromi } from './soukromi/soukromi.js';
 import { openDemoModal, closeDemoModal, submitDemoRequest } from './demo/demo.js';
 import { renderAml, initAml } from './aml/aml.js';
-import { renderArchiv } from './archiv/archiv.js';
+import { renderArchiv, initArchiv } from './archiv/archiv.js';
 import { actionToastOk, closeAboutModal, closeActionToast, closeHamburger, closePrivacyModal, openAboutModal, openHamburger, openPrivacyModal, showToast } from './core/ui.js';
 
 
@@ -182,7 +182,7 @@ function mountRoute(path) {
     dolozka.style.display = 'none';
     if (view === 'landing')      { host.innerHTML = renderLanding(); initLanding(); }
     else if (view === 'aml')     { host.innerHTML = renderAml(); initAml(); }
-    else if (view === 'archiv')  host.innerHTML = renderArchiv();
+    else if (view === 'archiv')  { host.innerHTML = renderArchiv(); initArchiv(); }
     else if (view === 'klienti') { host.innerHTML = renderKlientiPage(); renderKlientiList(); }
     else if (view === 'kniha')   { host.innerHTML = renderKnihaPage(); renderKnihaList(); }
     else if (view === 'povinne-osoby') { host.innerHTML = renderPovinneOsoby(); initPovinneOsoby(); }

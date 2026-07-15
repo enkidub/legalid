@@ -42,8 +42,9 @@ const ACCENT = [0.11, 0.24, 0.45];    // navy
 const WARN_BG = [0.99, 0.96, 0.90];
 
 class Builder {
-  constructor(doc, font, fontB, rgb) {
+  constructor(doc, font, fontB, rgb, PDFDocument) {
     this.doc = doc; this.font = font; this.fontB = fontB; this.rgb = rgb;
+    this.PDFDocument = PDFDocument;
     this.pages = []; this._newPage();
   }
   _newPage() {
@@ -201,6 +202,15 @@ class Builder {
     this.y -= h;
   }
 
+  // Vloží všechny stránky přiloženého PDF (příloha typu PDF).
+  async appendPdf(bytes) {
+    try {
+      const src = await this.PDFDocument.load(bytes, { ignoreEncryption: true });
+      const copied = await this.doc.copyPages(src, src.getPageIndices());
+      for (const p of copied) { this.doc.addPage(p); this.pages.push(p); }
+    } catch { /* nevalidní/zaheslované PDF přílohy přeskoč */ }
+  }
+
   // Patička se stránkováním na všech stránkách. Volat naposledy.
   finalize(footerText) {
     const total = this.pages.length;
@@ -220,7 +230,7 @@ export async function createPdfBuilder() {
   doc.registerFontkit(fontkit);
   const font = await doc.embedFont(reg, { subset: true });
   const fontB = await doc.embedFont(bold, { subset: true });
-  return new Builder(doc, font, fontB, rgb);
+  return new Builder(doc, font, fontB, rgb, PDFDocument);
 }
 
 // Formátování data „14. 7. 2026" z ISO/prostého řetězce.
@@ -235,6 +245,148 @@ export function fmtDateCs(iso) {
 function povinnaOsobaLine(p) {
   if (!p) return '—';
   return [p.jmeno, p.role, p.sidlo].filter(Boolean).join(', ') || '—';
+}
+
+// ── Popisky kódů → čeština (pro záznam) ──
+const L_RELATION = { jednorazovy: 'Jednorázový obchod', obchodni_vztah: 'Obchodní vztah (opakované služby)' };
+const L_BAND = { do_1k: 'do 1 000 €', '1k_15k': '1 000 – 15 000 €', '15k_plus': '15 000 € a více' };
+const L_CATEGORY = { prevod_nemovitosti: 'Převod nemovitosti', uschova: 'Úschova', korporatni: 'Korporátní transakce', rodinne_dedicke: 'Rodinné a dědické', jine: 'Jiné' };
+const L_SOURCE = { plat: 'Plat či příjem ze zaměstnání', uspory: 'Úspory a investice', prodej_nemovitosti: 'Prodej nemovitosti', dedictvi: 'Dědictví', podnikani: 'Příjem z podnikání', penze: 'Penzijní fondy', jine: 'Jiné' };
+const L_DOCTYPE = { kupni_smlouva: 'Kupní smlouva', vypis_uctu: 'Výpis z účtu', darovaci_smlouva: 'Darovací smlouva', potvrzeni: 'Potvrzení', danove_priznani: 'Daňové přiznání', jine: 'Jiný dokument', doklad_front: 'Doklad totožnosti', doklad_back: 'Doklad totožnosti (zadní)' };
+const L_RISK = { nizke: 'Nízké', stredni: 'Střední', vysoke: 'Vysoké' };
+const L_CONSISTENCY = { consistent: 'Konzistentní', partial: 'Částečně konzistentní', inconsistent: 'Nekonzistentní' };
+const L_LOOKUP = { mvcr: 'Neplatné doklady (MVČR)', isir: 'Insolvenční rejstřík (ISIR)', ares: 'ARES', sanctions: 'Sankční seznam EU', pep: 'PEP databáze', isir_po: 'Insolvenční rejstřík (firma)', sanctions_entity: 'Sankční seznam EU (firmy)' };
+const L_LK_STATUS = { clean: 'V pořádku', warning: 'Ke kontrole', match: 'SHODA', manual: 'Ověřte ručně', error: 'Nedostupné', pending: 'Neproběhlo' };
+const L_METHOD = { personal: 'Osobní setkání', video: 'Video hovor', bankid: 'BankID', micropayment: 'Mikroplatba' };
+
+// Blok 5 — plný AML záznam o identifikaci a kontrole klienta.
+// attachments: [{ bytes:Uint8Array, mime, caption }] (jen při generování ze session; archiv = []).
+export async function buildRecordPdf(data, attachments = []) {
+  const b = await createPdfBuilder();
+  const d = data || {};
+
+  b.heading('Záznam o identifikaci a kontrole klienta');
+  b.subtitle('podle zákona č. 253/2008 Sb., o některých opatřeních proti legalizaci výnosů z trestné činnosti a financování terorismu');
+
+  // 1. Hlavička
+  b.sectionTitle('Základní údaje');
+  b.keyVal('Číslo kontroly', d.caseNumber || '—');
+  b.keyVal('Povinná osoba', povinnaOsobaLine(d.povinnaOsoba));
+  b.keyVal('Datum vyhotovení', fmtDateCs(d.dateISO));
+
+  // 2. Obchod
+  b.sectionTitle('Obchod');
+  b.keyVal('Typ vztahu', L_RELATION[d.deal?.relationType] || d.deal?.relationType || '—');
+  b.keyVal('Hodnota obchodu', L_BAND[d.deal?.valueBand] || d.deal?.valueBand || '—');
+  b.keyVal('Dotčené země', d.deal?.countries || '—');
+  b.keyVal('Kategorie', L_CATEGORY[d.deal?.category] || d.deal?.category || '—');
+  if (d.deal?.purpose) b.keyVal('Popis obchodu', d.deal.purpose);
+
+  // 3. Klient
+  b.sectionTitle('Klient');
+  if (d.subjectType === 'po') {
+    b.keyVal('Právnická osoba', d.company?.name || '—');
+    b.keyVal('IČO', d.company?.ico || '—');
+    b.keyVal('Sídlo', d.company?.address || '—');
+    b.keyVal('Jednající osoba', [d.client?.name, d.company?.actingRole].filter(Boolean).join(' — ') || '—');
+    if (d.company?.actingNote) b.keyVal('Poznámka', d.company.actingNote);
+    b.keyVal('Skuteční majitelé (ESM)', d.company?.esmChecked ? 'Ověřeno v evidenci skutečných majitelů' : 'Neověřeno');
+    if (d.company?.esmNote) b.keyVal('ESM poznámka', d.company.esmNote);
+  } else {
+    b.keyVal('Jméno a příjmení', d.client?.name || '—');
+  }
+  if (d.client?.nameOriginal) b.keyVal('Jméno v originále', d.client.nameOriginal);
+  b.keyVal('Datum narození', d.client?.birthDate || '—');
+  if (d.client?.rc) b.keyVal('Rodné číslo', d.client.rc);
+  if (d.client?.address) b.keyVal('Adresa', d.client.address);
+  b.keyVal('Státní občanství', d.client?.nationality || '—');
+  b.keyVal('Doklad totožnosti', [d.client?.docType, d.client?.docNumber].filter(Boolean).join(' č. ') || '—');
+  if (d.client?.occupation) b.keyVal('Povolání / zaměstnavatel', d.client.occupation);
+  b.keyVal('Způsob potvrzení totožnosti', L_METHOD[d.identification?.method] || d.identification?.method || '—');
+  const ver = d.identification?.verifier;
+  if (ver && ver.confirmed) {
+    b.moveDown(2);
+    b.text('Prohlášení ověřující osoby', { size: 10, bold: true });
+    b.para(ver.statement || '', { size: 9.5, color: [0.42, 0.45, 0.52] });
+    if (ver.checkbox) b.para('☑ ' + ver.checkbox, { size: 9.5, color: [0.42, 0.45, 0.52] });
+    if (ver.timestamp) b.para('Potvrzeno: ' + fmtDateCs(ver.timestamp), { size: 9, color: [0.42, 0.45, 0.52] });
+  }
+
+  // 4. Lustrace
+  b.sectionTitle('Lustrace v rejstřících a seznamech');
+  const lkRows = (d.lookups || []).map(l => [
+    L_LOOKUP[l.type] || l.type,
+    L_LK_STATUS[l.status] || l.status || '—',
+    fmtDateCs(l.checked_at),
+  ]);
+  if (lkRows.length) b.table(['Zdroj', 'Výsledek', 'Ověřeno'], lkRows, [5, 3, 3]);
+  else b.para('Lustrace neproběhly.', { color: [0.42, 0.45, 0.52] });
+  if (d.client?.nameOriginal) b.para('Sankční a PEP lustrace byly provedeny i pro jméno v originále.', { size: 9, color: [0.42, 0.45, 0.52] });
+
+  // 5. Zdroj prostředků
+  b.sectionTitle('Zdroj a původ prostředků');
+  b.keyVal('Typ zdroje', L_SOURCE[d.source?.type] || d.source?.type || '—');
+  if (d.source?.detail) b.keyVal('Upřesnění', d.source.detail);
+  if (d.consistency) {
+    b.keyVal('Konzistence s doklady', L_CONSISTENCY[d.consistency.consistency] || d.consistency.consistency || '—');
+    if (d.consistency.summary_cs) b.para(d.consistency.summary_cs, { size: 9.5, color: [0.42, 0.45, 0.52] });
+    for (const s of (d.consistency.signals || [])) b.para(`• ${s.description_cs || s.type || ''} (${s.severity || 'low'})`, { size: 9, color: [0.42, 0.45, 0.52] });
+  }
+
+  // 6. Dokumenty
+  if ((d.documents || []).length) {
+    b.sectionTitle('Podpůrné dokumenty');
+    const docRows = d.documents.map(x => [
+      L_DOCTYPE[x.doc_type] || x.doc_type || 'Dokument',
+      x.filename || '—',
+      (x.sha256 || '').slice(0, 16) + (x.sha256 ? '…' : ''),
+      x.summary || '',
+    ]);
+    b.table(['Typ', 'Soubor', 'SHA-256', 'Shrnutí'], docRows, [2.4, 2.2, 2, 4]);
+  }
+
+  // 7. Riziko
+  b.sectionTitle('Vyhodnocení rizika');
+  const sug = d.risk?.suggestion;
+  if (sug) {
+    b.keyVal('AI návrh úrovně', L_RISK[sug.suggested_level] || sug.suggested_level || '—');
+    for (const f of (sug.factors || [])) {
+      const mark = f.impact === 'critical' ? '⚠ ' : (f.impact === 'raises' ? '▲ ' : '• ');
+      b.para(`${mark}${f.factor || ''}${f.note_cs ? ' — ' + f.note_cs : ''}`, { size: 9.5, color: [0.42, 0.45, 0.52] });
+    }
+    if (sug.reasoning_cs) b.para(sug.reasoning_cs, { size: 9.5, color: [0.42, 0.45, 0.52] });
+    b.para('Návrh rizika má výhradně informativní charakter a slouží jako podpůrný nástroj. Nezbavuje povinnou osobu zákonné odpovědnosti za konečné posouzení klienta dle zákona č. 253/2008 Sb.', { size: 8.5, color: [0.55, 0.57, 0.63] });
+  }
+  b.moveDown(4);
+  b.keyVal('Závazné rozhodnutí', L_RISK[d.risk?.finalLevel] || d.risk?.finalLevel || '—');
+  if (d.risk?.justification) b.keyVal('Odůvodnění', d.risk.justification);
+  b.keyVal('Datum rozhodnutí', fmtDateCs(d.risk?.decidedAt));
+
+  // 8. Prohlášení klienta
+  b.sectionTitle('Prohlášení klienta');
+  const dec = d.declaration || {};
+  b.para(dec.pep === 'is'
+    ? 'Klient prohlašuje, že JE politicky exponovanou osobou nebo osobou blízkou PEP či v úzkém podnikatelském vztahu s PEP (§ 4 odst. 5 zákona č. 253/2008 Sb.).'
+    : 'Klient prohlašuje, že NENÍ politicky exponovanou osobou, osobou blízkou PEP ani v úzkém podnikatelském vztahu s PEP (§ 4 odst. 5 zákona č. 253/2008 Sb.).', { size: 9.5 });
+  if (dec.sanctions_confirmed) b.para('Klient prohlásil, že není osobou, vůči níž Česká republika uplatňuje mezinárodní sankce.', { size: 9.5 });
+  if (dec.source_confirmed) b.para('Klient prohlásil pravdivost údajů o zdroji a původu prostředků.', { size: 9.5 });
+  b.moveDown(6);
+  b.para('V ................................ dne ................................', { size: 10 });
+  b.signatureLines(['Klient (podpis)', 'Povinná osoba (podpis)']);
+
+  // 9. Přílohy (jen ze session paměti)
+  if (attachments && attachments.length) {
+    for (const a of attachments) {
+      if (!a || !a.bytes) continue;
+      if (a.mime === 'application/pdf') await b.appendPdf(a.bytes);
+      else await b.imagePage(a.bytes, a.mime, a.caption);
+    }
+  } else if (d.regenerated) {
+    b.sectionTitle('Přílohy');
+    b.para('Podpůrné dokumenty a doklady se z bezpečnostních důvodů neukládají na server. Tato kopie záznamu byla vygenerována z archivu a neobsahuje obrazové přílohy. Originály přikládá povinná osoba ze své evidence.', { size: 9.5, color: [0.42, 0.45, 0.52] });
+  }
+
+  return b.finalize(`Legalid · legalid.cz · ${d.caseNumber || ''}`);
 }
 
 // U4 — zjednodušený záznam o neuskutečnění obchodu / ukončení kontroly (§ 15).

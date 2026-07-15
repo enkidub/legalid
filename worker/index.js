@@ -102,6 +102,17 @@ async function requireUserId(request, env) {
   return payload ? payload.sub : null;
 }
 
+// ── Centrální profil povinné osoby (tabulka user_profiles) ──
+const ENTITY_TYPES = ['advokat', 'notar', 'exekutor', 'insolvencni_spravce', 'danovy_poradce',
+  'auditor', 'ucetni', 'realitni', 'drazebnik', 'sverensky_spravce', 'obchodnik', 'zastavarna', 'jina'];
+const PROFILE_FIELDS = ['entity_type', 'display_name', 'ico', 'reg_number', 'address',
+  'contact_email', 'contact_phone', 'logo_base64', 'logo_mime'];
+
+async function getProfile(env, userId) {
+  try { return await env.DB.prepare('SELECT * FROM user_profiles WHERE user_id = ?').bind(userId).first(); }
+  catch { return null; }
+}
+
 // ── Centrální evidence klientů (tabulka clients) ──
 const CLIENT_COLS = ['subject_type', 'name', 'surname', 'company_name', 'ico', 'birth_date',
   'birth_place', 'rc', 'doc_type', 'doc_number', 'address', 'nationality', 'email', 'phone',
@@ -298,7 +309,7 @@ export default {
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': corsOk ? origin : allowed[0],
-      'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Allow-Credentials': 'true',
     };
@@ -1061,8 +1072,8 @@ export default {
           return json({ ok: true, document_id: r.meta.last_row_id });
         }
 
-        // GET /api/aml/case/:id — stav případu
-        if (request.method === 'GET') return json({ case: amlCase });
+        // GET /api/aml/case/:id — stav případu + profil povinné osoby (pro PDF/regeneraci)
+        if (request.method === 'GET') return json({ case: amlCase, profile: (await getProfile(env, userId)) || null });
 
         // PATCH /api/aml/case/:id — částečný update (whitelist sloupců)
         if (request.method === 'PATCH') {
@@ -1103,6 +1114,39 @@ export default {
       }
 
       return json({ error: 'not_found' }, 404);
+    }
+
+    // ════════════════ Profil povinné osoby ════════════════
+    if (url.pathname === '/api/profile') {
+      const userId = await requireUserId(request, env);
+      if (!userId) return json({ error: 'unauthorized' }, 401);
+
+      if (request.method === 'GET') {
+        return json({ profile: (await getProfile(env, userId)) || null });
+      }
+      if (request.method === 'PUT') {
+        let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+        if (b.entity_type && !ENTITY_TYPES.includes(b.entity_type)) return json({ error: 'invalid_entity_type' }, 400);
+        if (b.logo_base64) {
+          const bytes = Math.floor(String(b.logo_base64).length * 3 / 4);
+          if (bytes > 300 * 1024) return json({ error: 'logo_too_large' }, 400);
+          if (!['image/png', 'image/jpeg'].includes(b.logo_mime)) return json({ error: 'invalid_logo_mime' }, 400);
+        }
+        const vals = PROFILE_FIELDS.map(f => {
+          let v = b[f];
+          if (v === '' || v == null) return null;
+          v = String(v);
+          return f === 'logo_base64' ? v : v.slice(0, 500);
+        });
+        const now = new Date().toISOString();
+        await env.DB.prepare(
+          `INSERT INTO user_profiles (user_id, ${PROFILE_FIELDS.join(', ')}, updated_at)
+           VALUES (?, ${PROFILE_FIELDS.map(() => '?').join(', ')}, ?)
+           ON CONFLICT(user_id) DO UPDATE SET ${PROFILE_FIELDS.map(f => `${f} = excluded.${f}`).join(', ')}, updated_at = excluded.updated_at`
+        ).bind(userId, ...vals, now).run();
+        return json({ profile: await getProfile(env, userId) });
+      }
+      return json({ error: 'method_not_allowed' }, 405);
     }
 
     // ════════════════ Centrální evidence klientů ════════════════

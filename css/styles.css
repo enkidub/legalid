@@ -815,6 +815,21 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
   font-weight: 500; cursor: pointer; transition: background .14s;
 }
 .btn-reg-submit:hover { background: var(--gold-h); }
+.reg-or { display: flex; align-items: center; gap: 10px; margin: 14px 0; color: var(--ink-lt); font-size: 12px; }
+.reg-or::before, .reg-or::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+.btn-reg-google {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 10px; border: 1.5px solid var(--rule); border-radius: var(--r);
+  background: #fff; color: #3c4043; font-family: var(--sans); font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: background .14s, border-color .14s;
+}
+.btn-reg-google:hover { background: var(--paper); border-color: var(--ink-fnt); }
+.btn-reg-google svg { flex-shrink: 0; }
+.btn-reg-text {
+  display: block; width: 100%; margin-top: 10px; padding: 8px; border: none; background: none;
+  color: var(--ink-lt); font-family: var(--sans); font-size: 13px; cursor: pointer;
+}
+.btn-reg-text:hover { color: var(--navy); text-decoration: underline; }
 
 /* ── UPGRADE MODAL ── */
 .upgrade-overlay {

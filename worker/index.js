@@ -355,6 +355,101 @@ export default {
       });
     }
 
+    // --- GET /api/auth/google --- (zahájení OAuth: redirect na Google)
+    // Session mechanismus (JWT + cookie) zůstává; OAuth jen přidává cestu, jak session vznikne.
+    const GOOGLE_REDIRECT_URI = 'https://legalid.kuba-houser.workers.dev/api/auth/google/callback';
+    const FRONTEND_URL = 'https://legalid.cz/';
+    if (url.pathname === '/api/auth/google') {
+      if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
+      if (!env.GOOGLE_CLIENT_ID) return json({ error: 'oauth_not_configured' }, 500);
+      // CSRF state — náhodný token uložený do krátkodobé cookie, ověříme v callbacku.
+      const state = b64url(crypto.getRandomValues(new Uint8Array(16)).buffer);
+      const remember = url.searchParams.get('remember') === '1' ? '1' : '0';
+      const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+      authUrl.searchParams.set('client_id', env.GOOGLE_CLIENT_ID);
+      authUrl.searchParams.set('redirect_uri', GOOGLE_REDIRECT_URI);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('scope', 'openid email');
+      authUrl.searchParams.set('state', `${state}.${remember}`);   // stav + volba „zapamatovat"
+      authUrl.searchParams.set('prompt', 'select_account');
+      return new Response(null, {
+        status: 302,
+        headers: {
+          'Location': authUrl.toString(),
+          // Krátkodobá cookie na ověření state (10 min). Lax stačí — callback je na téže doméně.
+          'Set-Cookie': `oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`,
+        },
+      });
+    }
+
+    // --- GET /api/auth/google/callback --- (výměna code → email → session)
+    if (url.pathname === '/api/auth/google/callback') {
+      if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
+      const fail = (reason) => new Response(null, {
+        status: 302,
+        headers: { 'Location': `${FRONTEND_URL}?login_error=${reason}` },
+      });
+
+      const code = url.searchParams.get('code');
+      const [stateToken, rememberFlag] = (url.searchParams.get('state') || '').split('.');
+      const cookie = request.headers.get('Cookie') || '';
+      const cm = cookie.match(/(?:^|;\s*)oauth_state=([^;]+)/);
+      const cookieState = cm ? cm[1] : null;
+      if (!code || !stateToken || !cookieState || stateToken !== cookieState) return fail('oauth_state');
+
+      // Výměna authorization code za token.
+      let tokenData;
+      try {
+        const tr = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            code,
+            client_id: env.GOOGLE_CLIENT_ID,
+            client_secret: env.GOOGLE_CLIENT_SECRET,
+            redirect_uri: GOOGLE_REDIRECT_URI,
+            grant_type: 'authorization_code',
+          }),
+        });
+        tokenData = await tr.json();
+        if (!tr.ok || !tokenData.access_token) return fail('oauth_token');
+      } catch { return fail('oauth_token'); }
+
+      // E-mail z userinfo endpointu (jednodušší než ověřovat podpis id_tokenu proti JWKS).
+      let info;
+      try {
+        const ur = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+          headers: { 'Authorization': `Bearer ${tokenData.access_token}` },
+        });
+        info = await ur.json();
+      } catch { return fail('oauth_userinfo'); }
+
+      const email = (info.email || '').trim().toLowerCase();
+      // Odmítni neověřený e-mail (email_verified !== true; userinfo vrací boolean, snese i string).
+      const emailVerified = info.email_verified === true || info.email_verified === 'true';
+      if (!isValidEmail(email) || !emailVerified) return fail('oauth_email');
+
+      // KRITICKÉ — propojení účtů: hledej podle e-mailu case-insensitive → přihlas do TÉHOŽ účtu.
+      let user = await env.DB.prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE').bind(email).first();
+      if (!user) {
+        const trialEnd = new Date(Date.now() + 30*24*3600*1000).toISOString();
+        await env.DB.prepare("INSERT INTO users (email, plan, trial_ends_at) VALUES (?, 'trial', ?)").bind(email, trialEnd).run();
+        user = await env.DB.prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE').bind(email).first();
+      }
+
+      // Session identická s /auth/verify: JWT { sub, email, exp } + cookie SameSite=None.
+      const sessionDays = rememberFlag === '1' ? 90 : 7;
+      const maxAge = sessionDays * 24 * 3600;
+      const jwt = await signJWT(
+        { sub: user.id, email: user.email, exp: Math.floor(Date.now() / 1000) + maxAge },
+        env.JWT_SECRET
+      );
+      const headers = new Headers({ 'Location': FRONTEND_URL });
+      headers.append('Set-Cookie', `session=${jwt}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${maxAge}`);
+      headers.append('Set-Cookie', 'oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0');
+      return new Response(null, { status: 302, headers });
+    }
+
     // --- POST /api/admin/sanctions/reimport (jen správce) ---
     if (url.pathname === '/api/admin/sanctions/reimport') {
       if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);

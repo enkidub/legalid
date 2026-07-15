@@ -4,6 +4,11 @@ compatibility_date = "2024-01-01"
 
 [vars]
 ALLOWED_ORIGINS = "https://legalid.cz,http://localhost:8080"
+# Google OAuth Client ID (veřejný, proto ve vars). Client Secret je secret:
+#   npx wrangler secret put GOOGLE_CLIENT_SECRET
+# Sem vlož Client ID z Google Cloud Console a nasaď `npx wrangler deploy`.
+# Dokud je prázdné, /api/auth/google vrací oauth_not_configured.
+GOOGLE_CLIENT_ID = ""
 
 [triggers]
 crons = ["0 3 * * *"]  # denně 3:00 UTC — přepis EU sankcí v D1

@@ -2,8 +2,24 @@
 // Vygenerováno refaktoringem z původního monolitického index.html.
 
 import { apiCheckSession, apiLogout, apiSendMagicLink, apiTrackUsage } from '../core/api.js';
-import { state } from '../core/state.js';
+import { state, CONFIG } from '../core/state.js';
 import { closeHamburger } from '../core/ui.js';
+
+// Přesměruje na worker OAuth start (celostránková navigace, ne fetch — browser musí
+// jít na Google). Volba „Zůstat přihlášen" se propíše přes ?remember=1.
+export function loginWithGoogle() {
+  const remember = document.getElementById('regRemember')?.checked ? '1' : '0';
+  window.location.href = `${CONFIG.workerUrl}/api/auth/google?remember=${remember}`;
+}
+
+// Webová schránka podle domény e-mailu (tlačítko „Otevřít schránku"); null → tlačítko skryj.
+function inboxUrlFor(email) {
+  const domain = (email.split('@')[1] || '').toLowerCase();
+  if (domain === 'gmail.com' || domain === 'googlemail.com') return 'https://mail.google.com';
+  if (domain === 'seznam.cz') return 'https://email.seznam.cz';
+  if (['outlook.com', 'hotmail.com', 'live.com', 'outlook.cz', 'hotmail.cz'].includes(domain)) return 'https://outlook.live.com';
+  return null;
+}
 
 export function openRegistrationModal() {
   document.getElementById('regFormView').style.display = '';
@@ -41,7 +57,13 @@ export async function submitRegEmail() {
     const { ok, data } = await apiSendMagicLink(email, remember);
     if (!ok || !data.ok) throw new Error('failed');
     document.getElementById('regSuccessMsg').textContent =
-      `Na ${email} jsme poslali přihlašovací odkaz. Zkontrolujte schránku (i spam), platí 15 minut.`;
+      `Odkaz jsme poslali na ${email}. Zkontrolujte schránku (i spam), platí 15 minut.`;
+    const inbox = document.getElementById('regOpenInbox');
+    const inboxUrl = inboxUrlFor(email);
+    if (inbox) {
+      if (inboxUrl) { inbox.href = inboxUrl; inbox.style.display = ''; }
+      else inbox.style.display = 'none';
+    }
     document.getElementById('regFormView').style.display = 'none';
     document.getElementById('regSuccessView').style.display = 'block';
   } catch {

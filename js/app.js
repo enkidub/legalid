@@ -1,7 +1,7 @@
 // legalid.cz — js/app.js
 // Vygenerováno refaktoringem z původního monolitického index.html.
 
-import { checkSession, closeCenikModal, closeRegistrationModal, closeUpgradeModal, handleLogout, openCenikModal, openRegistrationModal, selectPlan, submitRegEmail } from './auth/auth.js';
+import { checkSession, closeCenikModal, closeRegistrationModal, closeUpgradeModal, handleLogout, loginWithGoogle, openCenikModal, openRegistrationModal, selectPlan, submitRegEmail } from './auth/auth.js';
 import { activeResetPmSettings, cfgUpdateAdvokat, clearAdvokatStorage, closeCfgPanel, closeCfgPanelToMenu, closeFormatPanel, closePrintModal, closeSplitMenu, diagramClick, handleFiles, hideOcrSuccess, onKomboSettingsInput, onPmSettingsInput, onSettingsInput, openCfgPanel, openDolozkaPreview, openSettings, pmDiagramClick, prefillDates, removePhoto, resetSettings, saveAndPrint, saveSettings, selectCustomFormat, selectFormat, switchPmTab, toggleAdvokat, toggleCfgSection, togglePreview, toggleSplitMenu, triggerUpload, updateAdvokat, updatePreview, zmenFormat } from './dolozka/dolozka.js';
 import { buildDolozkaPreviewContent, closePostPrintToast, downloadDocx, noveOvereni, printDolozka, printStitky, scalePrintPreview } from './dolozka/generate.js';
 import { closeKlientiPanel, klientiDeleteConfirm, klientiDeleteDismiss, klientiDeleteDo, klientiEditCancel, klientiEditSave, klientiEditStart, klientiLoad, openKlientiPanel, renderKlientiList, renderKlientiPage } from './klienti/klienti.js';
@@ -216,6 +216,7 @@ window.gotoProfese = gotoProfese; // footer → skok na profesi: onclick="gotoPr
 window.applyUpdate = applyUpdate; // <button class="ub-btn" onclick="applyUpdate()">Obnovit</button>
 window.handleLogout = handleLogout; // <button id="headerLogoutBtn" style="display:none;font-size:12px;color:var(--ink-lt);background:n
 window.openRegistrationModal = openRegistrationModal; // <button id="headerLoginBtn" style="font-size:12px;font-weight:500;color:var(--navy);background:n
+window.loginWithGoogle = loginWithGoogle; // <button class="btn-reg-google" onclick="loginWithGoogle()">Pokračovat s Google</button>
 window.openHamburger = openHamburger; // <button class="btn-hamburger" style="margin-left:0" onclick="openHamburger()" aria-label="Nabídk
 window.closeHamburger = closeHamburger; // <div class="nav-overlay" id="navOverlay" onclick="closeHamburger()"></div>
 window.openKnihaPanel = openKnihaPanel; // <button class="nav-item" onclick="openKnihaPanel()">

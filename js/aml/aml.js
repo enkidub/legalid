@@ -231,8 +231,10 @@ export function renderAml() {
   return `
 <div class="aml-shell">
   <div class="aml" id="amlRoot">
-    <div class="aml-casenum" id="amlCaseNum"></div>
-    <div class="aml-steps" id="amlSteps"></div>
+    <div class="aml-head-row">
+      <div class="aml-steps" id="amlSteps"></div>
+      <div class="aml-casenum" id="amlCaseNum"></div>
+    </div>
     <div class="aml-main" id="amlMain"><div class="aml-loading">Načítám…</div></div>
     <div class="aml-foot" id="amlFoot"></div>
   </div>
@@ -589,7 +591,7 @@ function removeSide(root, side) {
 
 // Reset celého kroku 1 (upload/foto + formulář + způsob ověření). Nemaže aml_case.
 function restartStep(root) {
-  if (!confirm('Opravdu vymazat všechna nahraná data a údaje?')) return;
+  if (!confirm('Opravdu vymazat všechna data případu?')) return;
   wiz.data = {};
   wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
   wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.method = 'personal';
@@ -939,7 +941,6 @@ function renderClientStep(root) {
   const hasAnything = showForm || wiz.uploadFiles.length || !!wiz.frontImg || !!wiz.backImg || isPo;
   const formShown = showForm || isPo;   // u PO jednající osobu ukazuj vždy
   $('amlMain').innerHTML = `<div class="aml-card">
-    ${hasAnything ? `<button class="aml-reset-top" data-act="restart-step">Vymazat vše</button>` : ''}
     <div class="aml-h">Údaje klienta</div>
     <div class="aml-sub">Vyplňte údaje klienta a zvolte, jak byla potvrzena jeho totožnost.</div>
     <div class="aml-seg-field">
@@ -950,7 +951,8 @@ function renderClientStep(root) {
     ${isPo ? `<div class="aml-sec-title">Jednající osoba</div>` : ''}
     <div class="aml-tiles aml-tiles-src">${tiles}</div>
     <div class="aml-src-area">${sourceAreaHTML()}</div>
-    ${formShown ? `<div class="aml-form-wrap" id="amlClientForm">${clientFormHTML()}</div>` : ''}
+    ${formShown ? `<div class="aml-form-note">Pole označená <span class="aml-req">*</span> jsou povinná.</div>
+    <div class="aml-form-wrap" id="amlClientForm">${clientFormHTML()}</div>` : ''}
     ${isPo ? actingRoleHTML() : ''}
     ${isPo ? esmBlockHTML() : ''}
     <div class="aml-method">
@@ -961,6 +963,7 @@ function renderClientStep(root) {
     <button class="aml-btn aml-btn-primary aml-btn-block" id="amlContinue" data-act="continue-lustrace"${canContinueStep0() ? '' : ' disabled'}>
       Údaje jsou úplné, pokračovat na lustraci →
     </button>
+    ${hasAnything ? `<button class="aml-reset-link" data-act="restart-step">Vymazat vše</button>` : ''}
   </div>`;
 }
 
@@ -1029,7 +1032,7 @@ function esmBlockHTML() {
 function sourceAreaHTML() {
   if (wiz.source === 'camera') return cameraSlotsHTML();
   if (wiz.source === 'upload') return uploadZoneHTML();
-  if (wiz.source === 'manual') return `<div class="aml-src-hint">Vyplňte údaje klienta ručně ve formuláři níže.</div>`;
+  if (wiz.source === 'manual') return '';
   if (wiz.source === 'list') return clientListHTML();
   return '';
 }

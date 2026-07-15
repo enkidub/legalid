@@ -1473,31 +1473,41 @@ body.logged-in .nav-section-guest { display: none; }
 body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); background-attachment: fixed; }
 
 /* Indikátor kroků */
+/* Hlavičkový řádek: step indikátor vlevo (osa karty), číslo kontroly vpravo. */
+.aml-head-row { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
 .aml-steps {
-  display: flex; gap: 4px; margin-bottom: 22px;
+  display: flex; gap: 6px; flex: 1; min-width: 0;
   overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
 }
 .aml-steps::-webkit-scrollbar { display: none; }
-.aml-step { display: flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 4px 8px; }
+.aml-step { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 4px 6px; position: relative; }
 .aml-step-dot {
-  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; background: var(--rule); color: var(--ink-lt);
+  font-size: 14px; font-weight: 700; background: var(--rule); color: var(--ink-lt);
 }
-.aml-step-label { font-size: 12px; font-weight: 500; color: var(--ink-lt); white-space: nowrap; }
+.aml-step-label { font-size: 15px; font-weight: 500; color: var(--ink-lt); white-space: nowrap; }
 .aml-step--click { cursor: pointer; }
 .aml-step--click:hover .aml-step-label { color: var(--navy); text-decoration: underline; }
-.aml-step--click:hover .aml-step-dot { filter: brightness(0.92); }
 .aml-step.active .aml-step-dot { background: var(--navy); color: #fff; }
-.aml-step.active .aml-step-label { color: var(--navy); font-weight: 600; }
+.aml-step.active .aml-step-label { color: var(--navy); font-weight: 700; position: relative; }
+.aml-step.active .aml-step-label::after { content: ''; position: absolute; left: 0; right: 0; bottom: -4px; height: 3px; border-radius: 2px; background: var(--gold); }
 .aml-step.done .aml-step-dot { background: var(--gold); color: #fff; }
 .aml-step.done .aml-step-label { color: var(--ink-mid); }
+.aml-step.future .aml-step-dot { background: var(--rule); color: var(--ink-fnt); }
+.aml-step.future .aml-step-label { color: var(--ink-fnt); }
+@media (max-width: 640px) {
+  .aml-head-row { flex-direction: column-reverse; align-items: stretch; gap: 8px; margin-bottom: 18px; }
+  .aml-casenum { font-size: 11px; }
+  .aml-step-dot { width: 28px; height: 28px; font-size: 13px; }
+  .aml-step-label { font-size: 13px; }
+}
 
 /* Karta kroku */
 .aml-card {
   position: relative;
   background: var(--white); border: 1px solid var(--rule); border-radius: 14px;
-  padding: 22px 20px; box-shadow: var(--sh); display: flex; flex-direction: column; gap: 14px;
+  padding: clamp(22px, 3vw, 32px) clamp(20px, 3vw, 30px); box-shadow: var(--sh); display: flex; flex-direction: column; gap: 18px;
 }
 .aml-h { font-family: var(--serif); font-size: 20px; font-weight: 600; color: var(--navy); }
 .aml-sub { font-size: 13px; color: var(--ink-lt); line-height: 1.6; margin-top: -8px; }
@@ -1615,10 +1625,18 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 /* Krok Údaje klienta — dlaždice cest (4 / 2×2 / 1) */
 .aml-tiles-src { grid-template-columns: repeat(2, 1fr); margin-bottom: 16px; }
 @media (min-width: 1025px) { .aml-tiles-src { grid-template-columns: repeat(4, 1fr); } }
-.aml-tile-src { align-items: center; text-align: center; gap: 8px; padding: 18px 12px; }
-.aml-tile-ico { line-height: 0; color: var(--ink-lt); }
+.aml-tile-src { flex-direction: row; align-items: center; justify-content: flex-start; text-align: left; gap: 12px; padding: 0 16px; min-height: 90px; }
+.aml-tile-ico { line-height: 0; color: var(--ink-lt); flex-shrink: 0; }
 .aml-tile-ico svg { width: 26px; height: 26px; }
+.aml-tile-src .aml-tile-ico svg { width: 22px; height: 22px; }
+.aml-tile-src .aml-tile-title { font-size: 14px; }
 .aml-tile-src.aml-tile--selected .aml-tile-ico { color: var(--gold-h); }
+/* Zdrojové dlaždice: 2×2 i na mobilu (přebíjí obecné .aml-tiles → 1 sloupec). */
+@media (max-width: 600px) {
+  .aml-tiles.aml-tiles-src { grid-template-columns: repeat(2, 1fr); }
+  .aml-tile-src { min-height: 74px; padding: 0 12px; gap: 8px; }
+  .aml-tile-src .aml-tile-title { font-size: 13px; }
+}
 
 /* Prostřední část podle dlaždice */
 .aml-src-area:empty { display: none; }
@@ -1663,13 +1681,14 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 }
 .aml-up-name { font-weight: 400; font-size: 10px; color: var(--ink-lt); text-align: center; word-break: break-all; }
 
-/* Vymazat vše — reset link vpravo nahoře v kartě */
-.aml-reset-top {
-  position: absolute; top: 16px; right: 18px; z-index: 2;
+/* Vymazat vše — malý šedý odkaz pod formulářem (dřív vpravo nahoře) */
+.aml-reset-link {
+  align-self: center; margin-top: 2px;
   background: none; border: none; cursor: pointer;
-  font-family: var(--sans); font-size: 12px; color: var(--ink-lt); text-decoration: underline;
+  font-family: var(--sans); font-size: 12px; color: var(--ink-lt); text-decoration: underline; padding: 4px;
 }
-.aml-reset-top:hover { color: #c0392b; }
+.aml-reset-link:hover { color: #c0392b; }
+.aml-form-note { font-size: 12px; color: var(--ink-lt); margin-top: 2px; }
 
 /* Formulář */
 .aml-form-wrap { margin-top: 4px; }
@@ -1764,7 +1783,7 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .aml-cam-btns { display: flex; justify-content: center; gap: 10px; }
 
 /* ── Týden 4: číslo kontroly, prohlášení, ukončení, modal ── */
-.aml-casenum { display: flex; align-items: center; gap: 7px; margin-bottom: 12px; font-size: 12px; color: var(--ink-lt); }
+.aml-casenum { display: flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 12px; color: var(--ink-lt); }
 .aml-casenum:empty { display: none; }
 .aml-cn-label { color: var(--ink-fnt); }
 .aml-cn-val { font-weight: 700; color: var(--navy); letter-spacing: .3px; font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; }

@@ -2,6 +2,24 @@
 // Marketingový landing pro nepřihlášené uživatele (route "/").
 // CTA volají window-bridged funkce: openRegistrationModal, navigate, selectPlan, openPrivacyModal, openAboutModal.
 
+import { navigate } from '../core/router.js';
+
+// Skok na sekci landingu z hlavičky/patičky/hamburgeru (i z jiné routy).
+// anchor: 'howto' → .lnd-howto | 'pricing' → #lnd-pricing
+export function gotoLandingSection(anchor) {
+  const sel = anchor === 'pricing' ? '#lnd-pricing' : '.lnd-howto';
+  const doScroll = () => {
+    const el = document.querySelector(sel);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  if (document.querySelector('.lnd')) {
+    doScroll();
+  } else {
+    navigate('/');                                   // mountRoute vykreslí landing synchronně
+    requestAnimationFrame(() => requestAnimationFrame(doScroll));
+  }
+}
+
 export function renderLanding() {
   return `
 <div class="lnd">

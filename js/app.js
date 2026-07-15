@@ -8,7 +8,7 @@ import { closeKlientiPanel, klientiDeleteConfirm, klientiDeleteDismiss, klientiD
 import { closeKnihaPanel, getKniha, knihaDeleteConfirm, knihaDeleteDismiss, knihaDeleteDo, knihaEditCancel, knihaEditSave, knihaEditStart, knihaLoad, knihaReprint, openKnihaPanel, renderKnihaList, renderKnihaPage } from './kniha/kniha.js';
 import { state } from './core/state.js';
 import { initRouter, navigate, currentPath } from './core/router.js';
-import { renderLanding, initLanding } from './landing/landing.js';
+import { renderLanding, initLanding, gotoLandingSection } from './landing/landing.js';
 import { renderAml, initAml } from './aml/aml.js';
 import { renderArchiv } from './archiv/archiv.js';
 import { actionToastOk, closeAboutModal, closeActionToast, closeHamburger, closePrivacyModal, openAboutModal, openHamburger, openPrivacyModal, showToast } from './core/ui.js';
@@ -208,6 +208,7 @@ initRouter(mountRoute);
 // Inline onclick/onchange v index.html (a v generovaných šablonách) volá tyto funkce
 // v globálním scope. ES moduly mají vlastní scope, proto je tu explicitně zveřejníme.
 window.navigate = navigate; // hlavní menu (.main-nav-item) + landing CTA: onclick="navigate('/aml')" apod.
+window.gotoLandingSection = gotoLandingSection; // guest-nav + hamburger: onclick="gotoLandingSection('howto'|'pricing')"
 window.dismissInstallBanner = dismissInstallBanner; // <button class="ib-close" onclick="dismissInstallBanner()">×</button>
 window.applyUpdate = applyUpdate; // <button class="ub-btn" onclick="applyUpdate()">Obnovit</button>
 window.handleLogout = handleLogout; // <button id="headerLogoutBtn" style="display:none;font-size:12px;color:var(--ink-lt);background:n

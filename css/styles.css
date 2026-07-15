@@ -1338,6 +1338,30 @@ body.logged-in .main-nav { display: flex; }
   body.logged-in .main-nav { display: none; }            /* kolaps do hamburgeru */
   body.logged-in .nav-section-mobile { display: block; }
 }
+
+/* ── Guest nav (nepřihlášení) — v hlavičce jen na desktopu >900px ── */
+.guest-nav { display: none; align-items: center; gap: 2px; }
+.guest-nav-item {
+  background: none; border: none; cursor: pointer;
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  color: var(--ink-mid); padding: 7px 11px; border-radius: 7px;
+  white-space: nowrap; transition: background .12s, color .12s;
+}
+.guest-nav-item:hover { background: var(--paper); color: var(--navy); }
+@media (min-width: 901px) {
+  body:not(.logged-in) .guest-nav { display: flex; }
+}
+/* Guest sekce v hamburgeru — skrytá po přihlášení */
+body.logged-in .nav-section-guest { display: none; }
+
+/* ── Desktop >900px: tři zóny (nav vlevo, logo uprostřed, akce vpravo) ── */
+@media (min-width: 901px) {
+  .app-header-i { position: relative; }
+  .app-brand {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
 @media (max-width: 900px) { .app-tagline { display: none; } }
 
 /* ── Router host ── */

@@ -66,6 +66,11 @@
       <button class="main-nav-item" data-route="kniha" onclick="navigate('/kniha')">Kniha</button>
       <button class="main-nav-item" data-route="archiv" onclick="navigate('/archiv')">Archiv</button>
     </nav>
+    <nav class="guest-nav" id="guestNav" aria-label="Navigace">
+      <button class="guest-nav-item" onclick="navigate('/povinne-osoby')">Povinné osoby</button>
+      <button class="guest-nav-item" onclick="gotoLandingSection('howto')">Jak to funguje</button>
+      <button class="guest-nav-item" onclick="gotoLandingSection('pricing')">Ceník</button>
+    </nav>
     <div id="headerAuth" style="margin-left:auto;display:flex;align-items:center;gap:6px;">
       <span id="headerUserEmail" style="display:none;font-size:12px;color:var(--ink-lt);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
       <button id="headerLogoutBtn" style="display:none;font-size:12px;color:var(--ink-lt);background:none;border:none;cursor:pointer;font-family:var(--sans);padding:4px 8px;border-radius:var(--r);transition:color .14s;" onclick="handleLogout()">Odhlásit</button>
@@ -86,6 +91,30 @@
     <button class="btn-nav-close" onclick="closeHamburger()" aria-label="Zavřít">×</button>
   </div>
   <div class="nav-sections">
+    <!-- Guest navigace (nepřihlášení) — Povinné osoby / Jak to funguje / Ceník -->
+    <div class="nav-section nav-section-guest">
+      <button class="nav-item" onclick="closeHamburger();navigate('/povinne-osoby')">
+        <span class="nav-item-icon"><i class="ti ti-users-group"></i></span>
+        <div class="nav-item-text">
+          <span class="nav-item-label">Povinné osoby</span>
+          <span class="nav-item-sub">Kdo musí provádět AML kontrolu</span>
+        </div>
+      </button>
+      <button class="nav-item" onclick="closeHamburger();gotoLandingSection('howto')">
+        <span class="nav-item-icon"><i class="ti ti-list-numbers"></i></span>
+        <div class="nav-item-text">
+          <span class="nav-item-label">Jak to funguje</span>
+          <span class="nav-item-sub">5 kroků, cca 3 minuty na klienta</span>
+        </div>
+      </button>
+      <button class="nav-item" onclick="closeHamburger();gotoLandingSection('pricing')">
+        <span class="nav-item-icon"><i class="ti ti-receipt"></i></span>
+        <div class="nav-item-text">
+          <span class="nav-item-label">Ceník</span>
+          <span class="nav-item-sub">Pilotní přístup zdarma</span>
+        </div>
+      </button>
+    </div>
     <!-- Hlavní navigace — viditelná v hamburgeru jen na mobilu (<640px) -->
     <div class="nav-section nav-section-mobile">
       <button class="nav-item" onclick="closeHamburger();navigate('/aml')">

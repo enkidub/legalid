@@ -52,9 +52,7 @@
     </button>
     <nav class="main-nav" id="mainNav" aria-label="Hlavní nabídka">
       <button class="main-nav-item" data-route="aml" onclick="navigate('/aml')">AML kontrola</button>
-      <button class="main-nav-item" data-route="dolozka" onclick="navigate('/dolozka')">Doložka</button>
       <button class="main-nav-item" data-route="klienti" onclick="navigate('/klienti')">Klienti</button>
-      <button class="main-nav-item" data-route="kniha" onclick="navigate('/kniha')">Kniha</button>
       <button class="main-nav-item" data-route="archiv" onclick="navigate('/archiv')">Archiv</button>
     </nav>
     <nav class="guest-nav" id="guestNav" aria-label="Navigace">
@@ -106,20 +104,13 @@
         </div>
       </button>
     </div>
-    <!-- Hlavní navigace — viditelná v hamburgeru jen na mobilu (<640px) -->
+    <!-- Hlavní navigace — v hamburgeru jen na mobilu (<640px); na desktopu je v horní liště -->
     <div class="nav-section nav-section-mobile">
       <button class="nav-item" onclick="closeHamburger();navigate('/aml')">
         <span class="nav-item-icon"><i class="ti ti-shield-check"></i></span>
         <div class="nav-item-text">
           <span class="nav-item-label">AML kontrola</span>
-          <span class="nav-item-sub">Brzy — připravujeme</span>
-        </div>
-      </button>
-      <button class="nav-item" onclick="closeHamburger();navigate('/dolozka')">
-        <span class="nav-item-icon"><i class="ti ti-file-certificate"></i></span>
-        <div class="nav-item-text">
-          <span class="nav-item-label">Doložka</span>
-          <span class="nav-item-sub">Prohlášení o pravosti podpisu</span>
+          <span class="nav-item-sub">Identifikace, lustrace, riziko, záznam</span>
         </div>
       </button>
       <button class="nav-item" onclick="closeHamburger();navigate('/klienti')">
@@ -129,18 +120,29 @@
           <span class="nav-item-sub">Uložené údaje klientů</span>
         </div>
       </button>
+      <button class="nav-item" onclick="closeHamburger();navigate('/archiv')">
+        <span class="nav-item-icon"><i class="ti ti-archive"></i></span>
+        <div class="nav-item-text">
+          <span class="nav-item-label">Archiv</span>
+          <span class="nav-item-sub">Dokončené a ukončené AML záznamy</span>
+        </div>
+      </button>
+    </div>
+    <!-- Ověřování podpisů (Doložka + Kniha) — pro advokáty a notáře; v hamburgeru i na desktopu -->
+    <div class="nav-section nav-section-tools">
+      <div class="nav-section-label">Ověřování podpisů</div>
+      <button class="nav-item" onclick="closeHamburger();navigate('/dolozka')">
+        <span class="nav-item-icon"><i class="ti ti-file-certificate"></i></span>
+        <div class="nav-item-text">
+          <span class="nav-item-label">Doložka</span>
+          <span class="nav-item-sub">Prohlášení o pravosti podpisu</span>
+        </div>
+      </button>
       <button class="nav-item" onclick="closeHamburger();navigate('/kniha')">
         <span class="nav-item-icon"><i class="ti ti-notebook"></i></span>
         <div class="nav-item-text">
           <span class="nav-item-label">Kniha prohlášení</span>
           <span class="nav-item-sub">Evidence ověřených podpisů</span>
-        </div>
-      </button>
-      <button class="nav-item" onclick="closeHamburger();navigate('/archiv')">
-        <span class="nav-item-icon"><i class="ti ti-archive"></i></span>
-        <div class="nav-item-text">
-          <span class="nav-item-label">Archiv</span>
-          <span class="nav-item-sub">Brzy</span>
         </div>
       </button>
     </div>

@@ -1354,6 +1354,11 @@ body.logged-in .main-nav { display: flex; }
   body.logged-in .nav-section-mobile { display: block; }
 }
 
+/* Ověřování podpisů (Doložka/Kniha) — v hamburgeru po přihlášení, na desktopu i mobilu */
+.nav-section-tools { display: none; border-top: 1px solid var(--rule); margin-top: -1px; }
+body.logged-in .nav-section-tools { display: block; }
+.nav-section-label { font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-fnt); padding: 8px 12px 3px; }
+
 /* ── Guest nav (nepřihlášení) — v hlavičce jen na desktopu >900px ── */
 .guest-nav { display: none; align-items: center; gap: 2px; }
 .guest-nav-item {

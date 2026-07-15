@@ -112,19 +112,44 @@ function genCaseNumber() {
   return `AML-${ym}-${rand}`;
 }
 
+// U2 — když klient má jméno v originále (azbuka…), sankce+PEP běží i na tuto variantu.
+// Vrátí závažnější (příp. vyšší skóre) ze dvou výsledků.
+const LOOKUP_SEVERITY = { match: 3, warning: 2, manual: 1, clean: 0, error: -1 };
+function higherLookup(a, b) {
+  const ra = LOOKUP_SEVERITY[a.status] ?? 0;
+  const rb = LOOKUP_SEVERITY[b.status] ?? 0;
+  if (rb > ra) return b;
+  if (ra > rb) return a;
+  return (b.match_score ?? 0) > (a.match_score ?? 0) ? b : a;
+}
+
 // Spustí všech 5 lustrací paralelně nad daty případu, uloží každou do aml_lookups
 // a vrátí pole výsledků. Každá lustrace je odolná (interní try/catch → status 'error'),
 // takže selhání jedné nikdy nebrání ostatním.
 async function runAllLookups(env, c) {
   const name = [c.client_name, c.client_surname].filter(Boolean).join(' ').trim();
   const birth = c.client_birth_date || null;
+  const nameOrig = (c.client_name_original || '').trim();
+  // U2 — sankce/PEP: primární kolo na latinku, druhé kolo na originál jména (vyšší z obou).
+  const sanctionsTask = (async () => {
+    const primary = await lookupSanctions(env, name, birth);
+    if (!nameOrig) return primary;
+    try { return higherLookup(primary, await lookupSanctions(env, nameOrig, birth)); }
+    catch { return primary; }
+  })();
+  const pepTask = (async () => {
+    const primary = await lookupPep(env, name, birth);
+    if (!nameOrig) return primary;
+    try { return higherLookup(primary, await lookupPep(env, nameOrig, birth)); }
+    catch { return primary; }
+  })();
   // Pozn.: aml_cases zatím nemá IČO klienta → ARES se přeskočí (klient je fyzická osoba).
   const tasks = [
     ['mvcr', lookupMvcr(c.client_doc_number, c.client_doc_type)],
     ['isir', lookupIsir(c.client_surname, c.client_name, birth)],
     ['ares', lookupAres(c.client_ico || null)],
-    ['sanctions', lookupSanctions(env, name, birth)],
-    ['pep', lookupPep(env, name, birth)],
+    ['sanctions', sanctionsTask],
+    ['pep', pepTask],
   ];
   // Právnická osoba: 5 lustrací výše běží na JEDNAJÍCÍ OSOBU; navíc lustrace firmy.
   if (c.subject_type === 'po') {
@@ -608,6 +633,22 @@ export default {
         if (!amlCase) return json({ error: 'not_found' }, 404);
         const results = await runAllLookups(env, amlCase);
         return json({ results });
+      }
+
+      // POST /api/aml/:caseId/terminate — ukončení kontroly (§ 15): status='terminated'
+      const termM = url.pathname.match(/^\/api\/aml\/(\d+)\/terminate$/);
+      if (termM) {
+        if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+        const caseId = termM[1];
+        let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+        const owner = await env.DB.prepare('SELECT id FROM aml_cases WHERE id = ? AND user_id = ?').bind(caseId, userId).first();
+        if (!owner) return json({ error: 'not_found' }, 404);
+        const reason = String(b.reason || '').slice(0, 2000);
+        const completedAt = new Date().toISOString();
+        await env.DB.prepare(
+          "UPDATE aml_cases SET status = 'terminated', terminated_reason = ?, completed_at = ? WHERE id = ? AND user_id = ?"
+        ).bind(reason, completedAt, caseId, userId).run();
+        return json({ ok: true, completed_at: completedAt });
       }
 
       // POST /api/aml/case/create — založí nový případ

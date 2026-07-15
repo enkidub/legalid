@@ -73,6 +73,15 @@ export async function apiAmlRunLookup(caseId) {
   return r.json();
 }
 
+// U4 — ukončení kontroly (§ 15): status='terminated' + důvod. Vrací { ok, completed_at }.
+export async function apiAmlTerminate(caseId, reason) {
+  const r = await fetch(`${WORKER_URL}/api/aml/${caseId}/terminate`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason })
+  });
+  return r.json();
+}
+
 // remember: true → dlouhá session (90 dní), jinak 7 dní.
 export async function apiSendMagicLink(email, remember = false) {
   const r = await fetch(`${WORKER_URL}/auth/send`, {

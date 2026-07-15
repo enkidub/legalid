@@ -1,4 +1,4 @@
-const CACHE = 'legalid-v51'; // ← BUMP při každém deployi
+const CACHE = 'legalid-v52'; // ← BUMP při každém deployi
 
 const APP_SHELL = [
   '/',
@@ -22,6 +22,7 @@ const APP_SHELL = [
   '/js/soukromi/soukromi.js',
   '/js/demo/demo.js',
   '/js/aml/aml.js',
+  '/js/aml/pdf.js',
   '/js/archiv/archiv.js',
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap',
   'https://unpkg.com/docx@8.5.0/build/index.umd.js',

@@ -3,10 +3,11 @@
 // Architektura: žádné inline onclick → jeden delegovaný listener na #amlRoot (data-act).
 // Tím odpadá fragilní window-bridge (chybějící bridge byl zdroj minulých ReferenceError).
 
-import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, apiAmlListCases, apiAmlListClients, apiAmlAres, apiAmlGetLookups, apiAmlRunLookup, apiOcr } from '../core/api.js';
+import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, apiAmlListCases, apiAmlListClients, apiAmlAres, apiAmlGetLookups, apiAmlRunLookup, apiAmlTerminate, apiOcr } from '../core/api.js';
 import { state } from '../core/state.js';
 import { showToast, esc } from '../core/ui.js';
 import { openRegistrationModal } from '../auth/auth.js';
+import { buildTerminationPdf } from './pdf.js';
 
 // Wizard: 5 kroků (0-index), zobrazeno jako 1–5. Krátké labely pro mobil (<640px).
 const STEP_LABELS = ['Údaje klienta', 'Lustrace', 'Účel obchodu', 'Riziko', 'Záznam'];
@@ -33,6 +34,7 @@ const GENDERS = [['', '—'], ['M', 'Muž'], ['Ž', 'Žena']];
 const FORM_FIELDS = [
   { col: 'client_name', label: 'Jméno', req: true },
   { col: 'client_surname', label: 'Příjmení', req: true },
+  { col: 'client_name_original', label: 'Jméno a příjmení v originále', ph: 'např. azbuka, arabské písmo…' },
   { col: 'client_birth_date', label: 'Datum narození', req: true, ph: 'DD.MM.RRRR' },
   { col: 'client_doc_type', label: 'Typ dokladu', req: true, type: 'select', opts: DOC_TYPES },
   { col: 'client_doc_number', label: 'Číslo dokladu', req: true },
@@ -41,9 +43,13 @@ const FORM_FIELDS = [
   { col: 'client_rc', label: 'Rodné číslo' },
   { col: 'client_address', label: 'Adresa trvalého pobytu' },
   { col: 'client_nationality', label: 'Státní občanství', req: true },
-  { col: 'client_gender', label: 'Pohlaví', type: 'select', opts: GENDERS },
+  { col: 'client_gender', label: 'Pohlaví', type: 'select', opts: GENDERS,
+    note: 'Pohlaví je povinné, není-li přiděleno rodné číslo (§ 5 odst. 1 písm. a) zák. č. 253/2008 Sb.).' },
+  { col: 'client_occupation', label: 'Povolání / zaměstnavatel' },
   { col: 'client_ico', label: 'IČO (podnikající FO)' },
 ];
+// Pohlaví je povinné, jen když není vyplněné rodné číslo (§ 5 odst. 1 písm. a).
+function genderRequired() { return !String(wiz.data.client_rc || '').trim(); }
 const REQUIRED_COLS = FORM_FIELDS.filter(f => f.req).map(f => f.col);
 
 // Cesty získání dat (horní dlaždice). SVG line ikony ve stylu landingu (stroke, bez fill).
@@ -55,6 +61,7 @@ const SVG = {
   manual: `<svg ${ICO}><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
   list: `<svg ${ICO}><circle cx="10" cy="7" r="4"/><path d="M10.3 15H7a4 4 0 0 0-4 4v2"/><circle cx="17" cy="17" r="3"/><path d="m21 21-1.9-1.9"/></svg>`,
   close: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  copy: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
 };
 const SOURCES = [
   { id: 'camera', svg: SVG.camera, title: 'Vyfotit doklad' },
@@ -73,12 +80,24 @@ const SUBJECT_TYPES = [['fo', 'Fyzická osoba'], ['fo_podnikatel', 'OSVČ / podn
 // Role jednající osoby (jen u PO).
 const ROLE_OPTIONS = [['', '—'], ['jednatel', 'Jednatel'], ['clen_predstavenstva', 'Člen představenstva'], ['zmocnenec', 'Zmocněnec'], ['jine', 'Jiné']];
 
+// U3 — prohlášení ověřující osoby (osobní setkání). Verze textu se ukládá do JSON kvůli auditu.
+const VERIFIER_TEXT_VERSION = 'v1-2026-07';
+const VERIFIER_STATEMENT = 'Prohlašuji, že jsem v souladu s § 8 a § 9 zákona č. 253/2008 Sb. provedl/a identifikaci a kontrolu klienta, osobně se s ním setkal/a a ověřil/a jeho totožnost z předloženého průkazu totožnosti porovnáním podoby.';
+const VERIFIER_CHECKBOX = 'Potvrzuji totožnost klienta z předložených dokladů a vizuálně jsem ověřil/a shodu podoby s fotografií v dokladu (§ 8 odst. 1).';
+
 // Způsoby potvrzení totožnosti (dolní radia). Jen 'personal' aktivní v MVP.
 const METHODS = [
   { id: 'personal', enabled: true, title: 'Osobní setkání' },
   { id: 'video', enabled: false, title: 'Video hovor' },
   { id: 'bankid', enabled: false, title: 'BankID' },
   { id: 'micropayment', enabled: false, title: 'Mikroplatba' },
+];
+
+// U4 — důvody ukončení kontroly (radio v modalu).
+const TERMINATE_REASONS = [
+  ['refused', 'Klient odmítl poskytnout součinnost při identifikaci (§ 15)'],
+  ['not_realized', 'Obchod se neuskutečnil'],
+  ['other', 'Jiný důvod'],
 ];
 
 // Pracovní stav wizardu (v paměti, persistuje se přes PATCH na server).
@@ -102,6 +121,8 @@ const wiz = {
   lookupStatus: 'idle',     // 'idle' | 'running' | 'loading' | 'done'
   maxStep: 0,               // nejdál dosažený krok (pro klikatelnost indikátoru)
   forceRun: false,          // true = na kroku Lustrace spustit nově (ne načíst uložené)
+  verifierConfirmed: false, // U3: checkbox prohlášení ověřující osoby (osobní setkání)
+  terminating: false,       // U4: probíhá ukončení kontroly
 };
 
 // Popisky lustrací.
@@ -129,6 +150,7 @@ const $ = (id) => document.getElementById(id);
 export function renderAml() {
   return `
 <div class="aml" id="amlRoot">
+  <div class="aml-casenum" id="amlCaseNum"></div>
   <div class="aml-steps" id="amlSteps"></div>
   <div class="aml-main" id="amlMain"><div class="aml-loading">Načítám…</div></div>
   <div class="aml-foot" id="amlFoot"></div>
@@ -163,7 +185,8 @@ function bindRoot(root) {
       if (f) handleFile(root, f, side);
       e.target.value = '';
     }
-    if (e.target.matches('input[name="amlMethod"]')) setMethod(e.target.value);
+    if (e.target.matches('input[name="amlMethod"]')) { setMethod(e.target.value); renderStep(root); return; }
+    if (e.target.id === 'amlVerifierCheck') { wiz.verifierConfirmed = e.target.checked; refreshContinue(); return; }
     // select / checkbox / textarea polí formuláře (typ dokladu, role, ESM, pohlaví)
     if (e.target.id && e.target.id.startsWith('aml_f_')) { readFieldsFromForm(); refreshContinue(); }
   });
@@ -213,6 +236,11 @@ function handleAction(root, act, ds) {
     case 'goto-step': goToStep(root, +ds.idx); break;
     case 'toggle-detail': toggleLookupDetail(ds.type); break;
     case 'rerun-lookups': wiz.lookupStatus = 'idle'; wiz.lookups = null; renderLustrace(root); break;
+    case 'copy-casenum': copyCaseNum(); break;
+    case 'open-terminate': openTerminateModal(root); break;
+    case 'close-terminate': closeTerminateModal(); break;
+    case 'confirm-terminate': confirmTerminate(root); break;
+    case 'go-archive': wiz.caseId = null; if (window.navigate) window.navigate('/archiv'); break;
     default: break;
   }
 }
@@ -240,6 +268,7 @@ async function createNewCase(root) {
     wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
     wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.clients = null; wiz.clientQuery = '';
     wiz.lookups = null; wiz.lookupStatus = 'idle'; wiz.maxStep = 0; wiz.forceRun = false;
+    wiz.verifierConfirmed = false; wiz.terminating = false;
     if (wiz.source === 'list') loadClients(root);
     renderStep(root);
   } catch {
@@ -263,6 +292,8 @@ async function resumeCase(root, id) {
     wiz.subject_type = c.subject_type || 'fo';
     wiz.data = {};
     DATA_COLS.forEach(col => { if (c[col] != null && c[col] !== '') wiz.data[col] = c[col]; });
+    try { const vj = c.verifier_declaration_json ? JSON.parse(c.verifier_declaration_json) : null; wiz.verifierConfirmed = !!(vj && vj.confirmed); }
+    catch { wiz.verifierConfirmed = false; }
     wiz.step = c.current_step || 0;   // DB je již v novém schématu (migrace v4)
     wiz.maxStep = wiz.step; wiz.forceRun = false;
     wiz.source = hasClientData() ? 'manual' : 'camera';   // s daty rovnou ukaž formulář
@@ -355,6 +386,11 @@ async function goToStep(root, idx) {
 async function continueToLustrace(root) {
   readFieldsFromForm();
   if (!formValid()) { showToast('Vyplňte prosím všechna povinná pole (*).'); return; }
+  // U3: osobní setkání vyžaduje potvrzené prohlášení ověřující osoby.
+  if (wiz.method === 'personal' && !wiz.verifierConfirmed) {
+    showToast('Potvrďte prosím prohlášení ověřující osoby (osobní setkání).');
+    return;
+  }
   // PO: bez ověření skutečných majitelů nelze pokračovat.
   if (wiz.subject_type === 'po' && !wiz.data.esm_checked) {
     showToast('U právnické osoby nejdřív ověřte skutečné majitele v ESM a zaškrtněte potvrzení.');
@@ -362,6 +398,13 @@ async function continueToLustrace(root) {
   }
   const patch = { current_step: 1, identification_method: wiz.method, subject_type: wiz.subject_type };
   DATA_COLS.forEach(col => { patch[col] = (wiz.data[col] === '' || wiz.data[col] == null) ? null : wiz.data[col]; });
+  if (wiz.method === 'personal') {
+    patch.verifier_declaration_json = JSON.stringify({
+      confirmed: true, text_version: VERIFIER_TEXT_VERSION,
+      statement: VERIFIER_STATEMENT, checkbox: VERIFIER_CHECKBOX,
+      timestamp: new Date().toISOString(),
+    });
+  }
   await patchCase(patch);
   wiz.step = 1; wiz.maxStep = Math.max(wiz.maxStep, 1);
   wiz.lookupStatus = 'idle'; wiz.lookups = null; wiz.forceRun = true;   // nová data → čerstvá lustrace
@@ -506,13 +549,14 @@ function readFieldsFromForm() {
 function formValid() {
   const req = [...REQUIRED_COLS];
   if (wiz.subject_type === 'fo_podnikatel' || wiz.subject_type === 'po') req.push('client_ico');
+  if (genderRequired()) req.push('client_gender');
   return req.every(col => String(wiz.data[col] ?? '').trim());
 }
 
 // Přepne stav tlačítka „pokračovat na lustraci" bez re-renderu (nezahodí fokus).
 function refreshContinue() {
   const btn = $('amlContinue');
-  if (btn) btn.disabled = !formValid();
+  if (btn) btn.disabled = !canContinueStep0();
 }
 
 async function saveDoc(type, img, extracted) {
@@ -631,7 +675,32 @@ function renderSteps() {
   }).join('');
 }
 
+// U1 — hlavička s číslem kontroly + ikona kopírovat (na všech krocích wizardu).
+function renderCaseNum() {
+  const el = $('amlCaseNum');
+  if (!el) return;
+  if (!wiz.case_number) { el.innerHTML = ''; return; }
+  el.innerHTML = `<span class="aml-cn-label">Kontrola č.</span>
+    <span class="aml-cn-val">${esc(wiz.case_number)}</span>
+    <button class="aml-cn-copy" data-act="copy-casenum" aria-label="Kopírovat číslo kontroly" title="Kopírovat">${SVG.copy}</button>`;
+}
+
+function copyCaseNum() {
+  if (!wiz.case_number) return;
+  const done = () => showToast('Číslo kontroly zkopírováno.');
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(wiz.case_number).then(done).catch(() => showToast('Kopírování se nezdařilo.'));
+  } else {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = wiz.case_number; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove(); done();
+    } catch { showToast('Kopírování se nezdařilo.'); }
+  }
+}
+
 function renderStep(root) {
+  renderCaseNum();
   renderSteps();
   if (wiz.step === 0) renderClientStep(root);
   else if (wiz.step === 1) renderLustrace(root);
@@ -687,10 +756,29 @@ function renderClientStep(root) {
       <div class="aml-method-title">Jak byla potvrzena totožnost klienta?</div>
       <div class="aml-radios">${methods}</div>
     </div>
-    <button class="aml-btn aml-btn-primary aml-btn-block" id="amlContinue" data-act="continue-lustrace"${formValid() ? '' : ' disabled'}>
+    ${(wiz.method === 'personal' && formShown) ? verifierDeclHTML() : ''}
+    <button class="aml-btn aml-btn-primary aml-btn-block" id="amlContinue" data-act="continue-lustrace"${canContinueStep0() ? '' : ' disabled'}>
       Údaje jsou úplné, pokračovat na lustraci →
     </button>
   </div>`;
+}
+
+// U3 — rámeček prohlášení ověřující osoby (jen „Osobní setkání").
+function verifierDeclHTML() {
+  const checked = wiz.verifierConfirmed ? ' checked' : '';
+  return `<div class="aml-verifier">
+    <div class="aml-verifier-title">Prohlášení ověřující osoby</div>
+    <div class="aml-verifier-text">${esc(VERIFIER_STATEMENT)}</div>
+    <label class="aml-check aml-verifier-check"><input type="checkbox" id="amlVerifierCheck"${checked}>
+      <span>${esc(VERIFIER_CHECKBOX)}</span></label>
+  </div>`;
+}
+
+// Lze pokračovat z kroku Údaje klienta? (data úplná + u osobního setkání potvrzené prohlášení)
+function canContinueStep0() {
+  if (!formValid()) return false;
+  if (wiz.method === 'personal' && !wiz.verifierConfirmed) return false;
+  return true;
 }
 
 // Blok Společnost (PO) — IČO + načtení z ARES + název/sídlo.
@@ -801,7 +889,9 @@ function clientFormHTML() {
   const fields = FORM_FIELDS.filter(f => !(f.col === 'client_ico' && wiz.subject_type === 'po'));
   return `<div class="aml-fields">` + fields.map(f => {
     const val = wiz.data[f.col] || '';
-    const req = f.req || (f.col === 'client_ico' && wiz.subject_type === 'fo_podnikatel');
+    const req = f.req
+      || (f.col === 'client_ico' && wiz.subject_type === 'fo_podnikatel')
+      || (f.col === 'client_gender' && genderRequired());
     const star = req ? ' <span class="aml-req">*</span>' : '';
     let input;
     if (f.type === 'select') {
@@ -810,7 +900,8 @@ function clientFormHTML() {
     } else {
       input = `<input id="aml_f_${f.col}" value="${esc(val)}"${f.ph ? ` placeholder="${esc(f.ph)}"` : ''}>`;
     }
-    return `<label class="aml-field"><span>${esc(f.label)}${star}</span>${input}</label>`;
+    const note = f.note ? `<span class="aml-field-note">${esc(f.note)}</span>` : '';
+    return `<label class="aml-field"><span>${esc(f.label)}${star}</span>${input}${note}</label>`;
   }).join('') + `</div>`;
 }
 
@@ -1130,19 +1221,115 @@ function toggleLookupDetail(type) {
   if (el) el.hidden = !el.hidden;
 }
 
+// ── U4 — Ukončit kontrolu (§ 15) ─────────────────────────────────────
+// Povinná osoba z uložených údajů advokáta (localStorage), pro záhlaví PDF.
+function loadPovinnaOsoba() {
+  try {
+    const s = JSON.parse(localStorage.getItem('legalid_advokat') || 'null');
+    return s ? { jmeno: s.jmeno || '', role: s.role || '', sidlo: s.sidlo || '', ev_cislo: s.ev_cislo || '' } : null;
+  } catch { return null; }
+}
+
+// Stáhne PDF (Uint8Array) pod daným názvem.
+function downloadPdf(bytes, filename) {
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+function openTerminateModal(root) {
+  if ($('amlTermModal')) return;
+  const radios = TERMINATE_REASONS.map(([k, l], i) =>
+    `<label class="aml-radio"><input type="radio" name="amlTermReason" value="${k}"${i === 0 ? ' checked' : ''}><span>${esc(l)}</span></label>`
+  ).join('');
+  const ov = document.createElement('div');
+  ov.className = 'aml-modal-ov'; ov.id = 'amlTermModal';
+  ov.innerHTML = `<div class="aml-modal">
+    <div class="aml-modal-title">Ukončit kontrolu</div>
+    <div class="aml-modal-sub">Zvolte důvod ukončení. Vygenerujeme zjednodušený záznam a případ se uloží do archivu jako ukončený.</div>
+    <div class="aml-radios aml-term-reasons">${radios}</div>
+    <textarea id="amlTermText" class="aml-term-text" rows="3" placeholder="Upřesnění (u jiného důvodu povinné)"></textarea>
+    <div class="aml-modal-btns">
+      <button class="aml-btn" data-act="close-terminate">Zrušit</button>
+      <button class="aml-btn aml-btn-danger" data-act="confirm-terminate">Ukončit kontrolu</button>
+    </div>
+  </div>`;
+  root.appendChild(ov);
+}
+
+function closeTerminateModal() { $('amlTermModal')?.remove(); }
+
+async function confirmTerminate(root) {
+  if (wiz.terminating) return;
+  const sel = root.querySelector('input[name="amlTermReason"]:checked');
+  if (!sel) { showToast('Vyberte prosím důvod ukončení.'); return; }
+  const reasonKey = sel.value;
+  const text = (root.querySelector('#amlTermText')?.value || '').trim();
+  const reasonLabel = (TERMINATE_REASONS.find(([k]) => k === reasonKey) || [])[1] || 'Ukončeno';
+  if (reasonKey === 'other' && !text) { showToast('U jiného důvodu prosím doplňte popis.'); return; }
+  wiz.terminating = true;
+  const btn = root.querySelector('[data-act="confirm-terminate"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Ukončuji…'; }
+  const reasonForDb = `${reasonLabel}${text ? ' — ' + text : ''}`;
+  let res;
+  try { res = await apiAmlTerminate(wiz.caseId, reasonForDb); } catch { res = null; }
+  if (!res || res.error) {
+    wiz.terminating = false;
+    if (btn) { btn.disabled = false; btn.textContent = 'Ukončit kontrolu'; }
+    showToast('Ukončení se nezdařilo, zkuste to znovu.');
+    return;
+  }
+  closeTerminateModal();
+  try {
+    const bytes = await buildTerminationPdf({
+      caseNumber: wiz.case_number,
+      povinnaOsoba: loadPovinnaOsoba(),
+      dateISO: res.completed_at,
+      clientName: [wiz.data.client_name, wiz.data.client_surname].filter(Boolean).join(' '),
+      clientNameOriginal: wiz.data.client_name_original || '',
+      clientBirthDate: wiz.data.client_birth_date || '',
+      clientDocNumber: wiz.data.client_doc_number || '',
+      reasonLabel, reasonText: text,
+    });
+    downloadPdf(bytes, `${wiz.case_number || 'AML'}-ukonceno.pdf`);
+  } catch {
+    showToast('Případ byl ukončen, ale PDF se nepodařilo vygenerovat.');
+  }
+  wiz.terminating = false;
+  renderTerminated(root, reasonLabel);
+}
+
+function renderTerminated(root, reasonLabel) {
+  renderCaseNum();
+  const steps = $('amlSteps'); if (steps) steps.innerHTML = '';
+  const foot = $('amlFoot'); if (foot) foot.innerHTML = '';
+  $('amlMain').innerHTML = `<div class="aml-card aml-done">
+    <div class="aml-h">Kontrola ukončena</div>
+    <div class="aml-ai-note">Případ ${esc(wiz.case_number || '')} byl ukončen (${esc(reasonLabel)}). Zjednodušený záznam se stáhl a případ najdete v archivu se štítkem „ukončeno".</div>
+    <div class="aml-upload-btns">
+      <button class="aml-btn aml-btn-primary" data-act="go-archive">Do archivu</button>
+      <button class="aml-btn" data-act="new">Nová kontrola</button>
+    </div>
+  </div>`;
+}
+
 function renderFoot() {
   const foot = $('amlFoot');
   if (!foot) return;
-  let html = '';
+  // U4: „Ukončit kontrolu" (sekundární) je dostupné na všech krocích vedle Zpět/Další.
+  const term = `<button class="aml-btn aml-btn-ghost aml-btn-terminate" data-act="open-terminate">Ukončit kontrolu</button>`;
+  let nav = '';
   if (wiz.step === 0) {
-    html = '';   // krok Údaje klienta má vlastní tlačítko „pokračovat na lustraci" v kartě
+    nav = '';   // krok Údaje klienta má vlastní tlačítko „pokračovat na lustraci" v kartě
   } else if (wiz.step >= 1 && wiz.step <= 3) {
     // Lustrace (krok 1): Další je aktivní až po dokončení všech 5 lustrací.
     const dis = (wiz.step === 1 && wiz.lookupStatus !== 'done') ? ' disabled' : '';
-    html = `<button class="aml-btn" data-act="back">Zpět</button>
-            <button class="aml-btn aml-btn-primary" data-act="next"${dis}>Další</button>`;
-  } else { // Hotovo (krok 4)
-    html = `<button class="aml-btn" data-act="back">Zpět</button>`;
+    nav = `<button class="aml-btn" data-act="back">Zpět</button>
+           <button class="aml-btn aml-btn-primary" data-act="next"${dis}>Další</button>`;
+  } else { // Záznam (krok 4)
+    nav = `<button class="aml-btn" data-act="back">Zpět</button>`;
   }
-  foot.innerHTML = html;
+  foot.innerHTML = `<div class="aml-foot-left">${term}</div><div class="aml-foot-right">${nav}</div>`;
 }

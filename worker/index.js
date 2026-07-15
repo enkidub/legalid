@@ -113,6 +113,17 @@ async function getProfile(env, userId) {
   catch { return null; }
 }
 
+// Viditelnost nástrojů podpisů: explicitní 1/0, jinak odvození z entity_type
+// (advokát/notář/nevyplněno → true, jiný vyplněný typ → false).
+function resolveSigTools(p) {
+  if (p && p.show_signature_tools === 1) return true;
+  if (p && p.show_signature_tools === 0) return false;
+  const t = p && p.entity_type;
+  if (t === 'advokat' || t === 'notar') return true;
+  if (t) return false;
+  return true;
+}
+
 // ── Centrální evidence klientů (tabulka clients) ──
 const CLIENT_COLS = ['subject_type', 'name', 'surname', 'company_name', 'ico', 'birth_date',
   'birth_place', 'rc', 'doc_type', 'doc_number', 'address', 'nationality', 'email', 'phone',
@@ -1122,7 +1133,8 @@ export default {
       if (!userId) return json({ error: 'unauthorized' }, 401);
 
       if (request.method === 'GET') {
-        return json({ profile: (await getProfile(env, userId)) || null });
+        const p = await getProfile(env, userId);
+        return json({ profile: p ? { ...p, resolved_signature_tools: resolveSigTools(p) } : null, resolved_signature_tools: resolveSigTools(p) });
       }
       if (request.method === 'PUT') {
         let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
@@ -1132,19 +1144,24 @@ export default {
           if (bytes > 300 * 1024) return json({ error: 'logo_too_large' }, 400);
           if (!['image/png', 'image/jpeg'].includes(b.logo_mime)) return json({ error: 'invalid_logo_mime' }, 400);
         }
+        let sst = b.show_signature_tools;
+        if (sst !== 0 && sst !== 1 && sst !== null && sst !== undefined) return json({ error: 'invalid_show_signature_tools' }, 400);
+        sst = (sst === 0 || sst === 1) ? sst : null;
         const vals = PROFILE_FIELDS.map(f => {
           let v = b[f];
           if (v === '' || v == null) return null;
           v = String(v);
           return f === 'logo_base64' ? v : v.slice(0, 500);
         });
+        const cols = [...PROFILE_FIELDS, 'show_signature_tools'];
         const now = new Date().toISOString();
         await env.DB.prepare(
-          `INSERT INTO user_profiles (user_id, ${PROFILE_FIELDS.join(', ')}, updated_at)
-           VALUES (?, ${PROFILE_FIELDS.map(() => '?').join(', ')}, ?)
-           ON CONFLICT(user_id) DO UPDATE SET ${PROFILE_FIELDS.map(f => `${f} = excluded.${f}`).join(', ')}, updated_at = excluded.updated_at`
-        ).bind(userId, ...vals, now).run();
-        return json({ profile: await getProfile(env, userId) });
+          `INSERT INTO user_profiles (user_id, ${cols.join(', ')}, updated_at)
+           VALUES (?, ${cols.map(() => '?').join(', ')}, ?)
+           ON CONFLICT(user_id) DO UPDATE SET ${cols.map(f => `${f} = excluded.${f}`).join(', ')}, updated_at = excluded.updated_at`
+        ).bind(userId, ...vals, sst, now).run();
+        const p = await getProfile(env, userId);
+        return json({ profile: { ...p, resolved_signature_tools: resolveSigTools(p) } });
       }
       return json({ error: 'method_not_allowed' }, 405);
     }

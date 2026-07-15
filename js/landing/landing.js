@@ -38,12 +38,12 @@ export function renderLanding() {
       <div class="lnd-hero-ai">AI rozpozná doklad · lustrace v 5 rejstřících · AML záznam k archivaci</div>
 
       <!-- Product proof — rámeček ve stylu prohlížečového okna.
-           TODO: až bude nahrávka wizardu, vyměň <img> za <video autoplay loop muted playsinline>
-           (CSS pro video variantu je připraveno: .lnd-proof-media video). -->
+           Autoplay je řízen z initLanding() (respektuje prefers-reduced-motion);
+           při nepřehrání zůstane poster. -->
       <div class="lnd-proof">
         <div class="lnd-proof-bar"><span></span><span></span><span></span></div>
         <div class="lnd-proof-media">
-          <video src="/assets/landing/wizard-demo.mp4" autoplay loop muted playsinline preload="metadata"
+          <video id="lndProofVideo" src="/assets/landing/wizard-demo.mp4" loop muted playsinline preload="metadata"
                  poster="/assets/landing/wizard-demo.png"
                  aria-label="Ukázka AML wizardu Legalid — vyplnění údajů klienta a lustrace v rejstřících"></video>
         </div>
@@ -205,6 +205,16 @@ let _stickyIo = null;
 
 // Volá se po mountu landingu (app.js). Sticky CTA se odhalí, až hero opustí viewport.
 export function initLanding() {
+  // Product-proof video: přehraj jen když uživatel nemá prefers-reduced-motion.
+  // Jinak zůstane poster (poslední frame wizardu).
+  const video = document.getElementById('lndProofVideo');
+  const reduce = typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (video && !reduce) {
+    const p = video.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});   // ignoruj block autoplay
+  }
+
   if (_stickyIo) { _stickyIo.disconnect(); _stickyIo = null; }
   const hero = document.querySelector('.lnd-hero');
   const cta = document.querySelector('.lnd-sticky-cta');

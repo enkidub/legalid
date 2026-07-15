@@ -252,20 +252,20 @@ export function renderLanding() {
     </div>
   </section>
 
-  <!-- KDO ZA LEGALID STOJÍ (TODO: doplnit reálný text a foto) -->
+  <!-- KDO ZA LEGALID STOJÍ — dočasně skryto (chybí reálný text a foto). Vrátit až s obsahem:
   <section class="lnd-section">
     <div class="lnd-wrap lnd-wrap--narrow">
       <div class="lnd-section-label">Kdo za Legalid stojí</div>
       <div class="lnd-about">
         <div class="lnd-about-photo" aria-hidden="true"></div>
         <div class="lnd-about-text">
-          <!-- TODO: nahradit placeholder reálným textem (2–3 věty) a fotem. -->
           Legalid staví praktikující právník a vývojář — z frustrace z ručního papírování kolem AML.
           Cílem je nástroj, který povinné osobě ušetří čas a přitom drží zákonné náležitosti.
         </div>
       </div>
     </div>
   </section>
+  -->
 
   <!-- DEMO CTA sekce (Blok B) -->
   <section class="lnd-section lnd-demo">

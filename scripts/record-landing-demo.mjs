@@ -71,6 +71,8 @@ async function main() {
   });
 
   const page = await context.newPage();
+  const videoStart = Date.now();   // ~začátek nahrávání (pro ořez úvodu, než se wizard namontuje)
+  let trimSec = 0;
 
   // Zachyť číslo/ID vytvořeného AML case z odpovědi /api/aml/case/create.
   let createdCaseId = null, createdCaseNumber = null;
@@ -95,6 +97,9 @@ async function main() {
 
   // ── Krok 1/5 — Údaje klienta ──
   await page.waitForSelector('.aml-tile-src[data-source="manual"]', { timeout: 20000 });
+  // Wizard je vidět (krok 0) → od tohoto času nechat video; úvod (landing, než checkSession
+  // namontuje wizard) se ořízne. Malý lead-in 0,4 s, ať video „začíná step indikátorem".
+  trimSec = Math.max(0, (Date.now() - videoStart) / 1000 - 0.4);
   await sleep(600);
   await page.locator('.aml-seg[data-subject="fo"]').click();           // typ: Fyzická osoba
   await sleep(400);
@@ -110,6 +115,8 @@ async function main() {
   await humanFill(page, '#aml_f_client_doc_number', '123456789');
   await humanFill(page, '#aml_f_client_doc_valid_until', '01.01.2030');
   await humanFill(page, '#aml_f_client_nationality', 'Česká republika');
+  // U2 — pohlaví je povinné, není-li vyplněno rodné číslo (§ 5 odst. 1 písm. a).
+  await page.selectOption('#aml_f_client_gender', 'M');
   await sleep(500);
 
   // U3 — prohlášení ověřující osoby (osobní setkání) je povinné pro odemčení tlačítka.
@@ -144,12 +151,12 @@ async function main() {
 
   // ── Krok 4/5 — Riziko ──
   console.log('→ Čekám na AI návrh rizika…');
-  await page.waitForSelector('.aml-ai-card .aml-risk-badge', { timeout: 30000 });
+  await page.waitForSelector('.aml-ai-card .aml-risk-badge', { timeout: 60000 });
   await sleep(2500);   // divák čte faktory
   await page.locator('input[name="amlPep"][value="not"]').check();    // klient NENÍ PEP
   await sleep(300);
   // Změna PEP re-spustí návrh — počkej, než se karta znovu ustálí.
-  await page.waitForSelector('.aml-ai-card .aml-risk-badge', { timeout: 30000 });
+  await page.waitForSelector('.aml-ai-card .aml-risk-badge', { timeout: 60000 });
   await page.locator('#amlDeclSanctions').check();
   await sleep(300);
   await page.locator('#amlDeclSource').check();
@@ -192,7 +199,7 @@ async function main() {
   // crop headeru → scale 1280 → 24 fps → bez zvuku → faststart. Cíl < 3 MB (jinak crf 30).
   const encode = (crf) => {
     execFileSync(FFMPEG, [
-      '-y', '-i', srcVideo,
+      '-y', '-ss', trimSec.toFixed(2), '-i', srcVideo,
       '-vf', `crop=iw:ih-${headerH}:0:${headerH},scale=1280:-2,fps=24`,
       '-c:v', 'libx264', '-crf', String(crf), '-pix_fmt', 'yuv420p',
       '-an', '-movflags', '+faststart', MP4,

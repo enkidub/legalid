@@ -45,6 +45,7 @@ export async function ensureProfileLoaded() {
   _logo = { base64: _profile?.logo_base64 || null, mime: _profile?.logo_mime || null };
   syncStateAdvokat(_profile, readExtra());
   _loaded = true;
+  applyPanelState();
   return _profile;
 }
 
@@ -57,6 +58,27 @@ export async function reloadProfile() {
   set('aJmeno', a.jmeno); set('aRole', a.role); set('aEvCislo', a.ev_cislo);
   set('aCisloKnihy', a.cislo_knihy); set('aSidlo', a.sidlo);
   if (typeof window !== 'undefined' && window.updatePreview) window.updatePreview();
+}
+
+// Resolved viditelnost nástrojů podpisů — jedna pravda ze serveru (Blok B),
+// s klientským fallbackem (advokát/notář/nevyplněno → true).
+export function resolvedSigTools() {
+  const p = _profile;
+  if (p && typeof p.resolved_signature_tools === 'boolean') return p.resolved_signature_tools;
+  const t = p?.entity_type;
+  if (!t) return true;
+  return t === 'advokat' || t === 'notar';
+}
+
+// Nastaví stav bočního panelu (tečka u Nastavení, viditelnost sekce podpisů, odmítnutí upoutávky).
+export function applyPanelState() {
+  const body = document.body;
+  const empty = state.loggedIn && !profileIsFilled();
+  body.classList.toggle('profile-empty', empty);
+  const s = document.getElementById('navSettingsItem');
+  if (s) s.setAttribute('aria-label', 'Nastavení — profil povinné osoby' + (empty ? ', profil nevyplněn' : ''));
+  body.classList.toggle('sig-tools', state.loggedIn && resolvedSigTools());
+  body.classList.toggle('sig-hint-off', localStorage.getItem('sigToolsHintDismissed') === '1');
 }
 
 // Je profil vyplněn natolik, aby dával smysl v záznamu?
@@ -277,6 +299,7 @@ export async function profileSave() {
   }
   syncStateAdvokat(_profile, extra);
   refreshBanner();
+  applyPanelState();
   if (btn) btn.disabled = false;
   if (status) { status.textContent = '✓ Uloženo'; status.className = 'cfg-save-status is-ok'; }
   showToast('Profil uložen.');

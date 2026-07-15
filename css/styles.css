@@ -715,6 +715,8 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .nav-footer-link:not(:last-child)::after {
   content: '·'; color: var(--rule); padding: 0 4px;
 }
+.nav-footer-ver { font-size: 11px; color: var(--ink-fnt); font-family: var(--sans); padding: 2px 6px; }
+.nav-footer-ver::after { content: '·'; color: var(--rule); padding: 0 4px; }
 
 /* ── ABOUT MODAL ── */
 .about-overlay {
@@ -1383,7 +1385,21 @@ body.logged-in .main-nav { display: flex; }
 
 /* Ověřování podpisů (Doložka/Kniha) — v hamburgeru po přihlášení, na desktopu i mobilu */
 .nav-section-tools { display: none; border-top: 1px solid var(--rule); margin-top: -1px; }
-body.logged-in .nav-section-tools { display: block; }
+body.logged-in.sig-tools .nav-section-tools { display: block; }   /* jen když resolved_signature_tools */
+
+/* Tečka „profil nevyplněn" u Nastavení (A4) */
+.nav-dot { display: none; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-left: 7px; vertical-align: middle; }
+body.profile-empty #navProfileDot { display: inline-block; }
+
+/* Upoutávka na zapnutí nástrojů podpisů (C3) — jen logged-in, skrytá sekce, neodmítnutá */
+.nav-sig-hint { display: none; align-items: center; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--rule); }
+body.logged-in:not(.sig-tools):not(.sig-hint-off) .nav-sig-hint { display: flex; }
+.nav-sig-hint-main { flex: 1; display: flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; font-family: var(--sans); font-size: 12px; color: var(--ink-lt); text-align: left; padding: 0; line-height: 1.4; }
+.nav-sig-hint-main:hover { color: var(--navy); }
+.nav-sig-hint-ico { color: var(--gold); font-size: 14px; flex-shrink: 0; }
+.nav-sig-hint-x { background: none; border: none; cursor: pointer; color: var(--ink-fnt); font-size: 17px; line-height: 1; padding: 2px 4px; flex-shrink: 0; }
+.nav-sig-hint-x:hover { color: var(--ink); }
+.nav-section-account { border-top: 1px solid var(--rule); }
 .nav-section-label { font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-fnt); padding: 8px 12px 3px; }
 
 /* ── Guest nav (nepřihlášení) — v hlavičce jen na desktopu >900px ── */

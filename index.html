@@ -128,7 +128,7 @@
         </div>
       </button>
     </div>
-    <!-- Ověřování podpisů (Doložka + Kniha) — pro advokáty a notáře; v hamburgeru i na desktopu -->
+    <!-- OVĚŘOVÁNÍ PODPISŮ (Doložka + Kniha) — viditelnost dle profilu (resolved_signature_tools) -->
     <div class="nav-section nav-section-tools">
       <div class="nav-section-label">Ověřování podpisů</div>
       <button class="nav-item" onclick="closeHamburger();navigate('/dolozka')">
@@ -146,23 +146,31 @@
         </div>
       </button>
     </div>
-    <!-- Sekundární — vždy v hamburgeru -->
-    <div class="nav-section nav-section-sep">
-      <!-- Ceník skryt do napojení Stripe — obnovit níže uvedený odkaz, až budou platby live:
-      <button class="nav-item" onclick="closeHamburger();openCenikModal()">
-        <span class="nav-item-icon"><i class="ti ti-receipt"></i></span>
-        <div class="nav-item-text">
-          <span class="nav-item-label">Ceník</span>
-          <span class="nav-item-sub">Plány a funkce</span>
-        </div>
+    <!-- Upoutávka (C3) — jen když je sekce skrytá a upoutávka není odmítnutá -->
+    <div class="nav-sig-hint" id="navSigHint">
+      <button class="nav-sig-hint-main" onclick="sigHintOpen()">
+        <span class="nav-sig-hint-ico"><i class="ti ti-pencil"></i></span>
+        <span>Ověřování podpisů — zapnout v Nastavení</span>
       </button>
-      -->
-      <button class="nav-item" onclick="openCfgPanel()">
+      <button class="nav-sig-hint-x" onclick="sigHintDismiss(event)" aria-label="Skrýt upozornění">×</button>
+    </div>
+    <!-- ÚČET -->
+    <div class="nav-section nav-section-account">
+      <div class="nav-section-label">Účet</div>
+      <button class="nav-item" id="navSettingsItem" onclick="openCfgPanel()" aria-label="Nastavení — profil povinné osoby">
         <span class="nav-item-icon">&#x2699;&#xFE0E;</span>
         <div class="nav-item-text">
-          <span class="nav-item-label">Nastavení</span>
+          <span class="nav-item-label">Nastavení<span class="nav-dot" id="navProfileDot" aria-hidden="true"></span></span>
           <span class="nav-item-sub">Profil povinné osoby</span>
         </div>
+      </button>
+      <button class="nav-item" onclick="closeHamburger();window.open('mailto:info@legalid.cz?subject=N%C3%A1pov%C4%9Bda','_blank')">
+        <span class="nav-item-icon"><i class="ti ti-help-circle"></i></span>
+        <div class="nav-item-text"><span class="nav-item-label">Nápověda</span></div>
+      </button>
+      <button class="nav-item" onclick="closeHamburger();openAboutModal()">
+        <span class="nav-item-icon"><i class="ti ti-info-circle"></i></span>
+        <div class="nav-item-text"><span class="nav-item-label">O aplikaci</span></div>
       </button>
     </div>
   </div>
@@ -174,8 +182,7 @@
     </div>
   </button>
   <div class="nav-footer">
-    <button class="nav-footer-link" onclick="closeHamburger();window.open('mailto:info@legalid.cz?subject=N%C3%A1pov%C4%9Bda','_blank')">Nápověda</button>
-    <button class="nav-footer-link" onclick="closeHamburger();openAboutModal()">O aplikaci · Verze 1.0</button>
+    <span class="nav-footer-ver">Verze 1.0</span>
     <button class="nav-footer-link" onclick="closeHamburger();openPrivacyModal()">Ochrana dat</button>
   </div>
 </nav>

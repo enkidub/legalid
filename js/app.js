@@ -191,6 +191,7 @@ function mountRoute(path) {
     host.style.display = '';
   }
   document.title = VIEW_TITLES[view] || DEFAULT_TITLE;
+  document.body.classList.toggle('view-aml', view === 'aml');   // krémový gradient za wizardem
   document.querySelectorAll('.main-nav-item').forEach(b =>
     b.classList.toggle('active', b.dataset.route === view));
   window.scrollTo(0, 0);

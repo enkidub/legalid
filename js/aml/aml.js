@@ -15,6 +15,15 @@ import { getProfile, ensureProfileLoaded, profileIsFilled } from '../profile/pro
 const STEP_LABELS = ['Údaje klienta', 'Lustrace', 'Účel obchodu', 'Riziko', 'Záznam'];
 const STEP_LABELS_SHORT = ['Údaje', 'Lustrace', 'Účel', 'Riziko', 'Záznam'];
 
+// Kontextová nápověda k aktivnímu kroku (pravý panel ≥1440px). Statické texty.
+const CONTEXT_HELP = [
+  'Údaje slouží k identifikaci podle § 8. Doklad můžete vyfotit — AI údaje přečte a předvyplní.',
+  'Klient se prověří v 5–7 rejstřících. Každá kontrola dostane časové razítko do záznamu.',
+  'Popis účelu a zdroje prostředků vyžaduje § 9. Doložené dokumenty AI porovná s deklarací.',
+  'AI navrhne rizikový profil — rozhodnutí je vždy na vás a zapíše se do záznamu.',
+  'PDF záznam s náležitostmi § 8 a násl., časovými razítky a kryptografickým otiskem.',
+];
+
 // Mapování OCR: DB sloupec ← klíč z AML OCR. (RČ/IČO OCR nevrací — jen ve formuláři.)
 const FIELD_MAP = [
   ['client_name', 'jmeno'],
@@ -220,11 +229,14 @@ const $ = (id) => document.getElementById(id);
 
 export function renderAml() {
   return `
-<div class="aml" id="amlRoot">
-  <div class="aml-casenum" id="amlCaseNum"></div>
-  <div class="aml-steps" id="amlSteps"></div>
-  <div class="aml-main" id="amlMain"><div class="aml-loading">Načítám…</div></div>
-  <div class="aml-foot" id="amlFoot"></div>
+<div class="aml-shell">
+  <div class="aml" id="amlRoot">
+    <div class="aml-casenum" id="amlCaseNum"></div>
+    <div class="aml-steps" id="amlSteps"></div>
+    <div class="aml-main" id="amlMain"><div class="aml-loading">Načítám…</div></div>
+    <div class="aml-foot" id="amlFoot"></div>
+  </div>
+  <aside class="aml-context" id="amlContext" aria-label="Kontext kontroly"></aside>
 </div>`;
 }
 
@@ -858,9 +870,36 @@ function copyCaseNum() {
   }
 }
 
+// Kontextový panel vpravo (jen ≥1440px) — mini souhrn případu + nápověda ke kroku.
+function renderContext() {
+  const el = $('amlContext');
+  if (!el) return;
+  const subj = SUBJECT_TYPES.find(([v]) => v === wiz.subject_type);
+  const clientName = wiz.subject_type === 'po'
+    ? (wiz.data.company_name || '')
+    : [wiz.data.client_name, wiz.data.client_surname].filter(Boolean).join(' ');
+  const rows = [
+    wiz.case_number && ['Číslo', wiz.case_number],
+    subj && ['Typ klienta', subj[1]],
+    clientName && ['Klient', clientName],
+  ].filter(Boolean).map(([k, v]) => `<div class="aml-ctx-row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('');
+  const steps = STEP_LABELS.map((label, i) => {
+    const cls = i === wiz.step ? 'is-active' : (i < wiz.step ? 'is-done' : '');
+    const mark = i < wiz.step ? '✓' : String(i + 1);
+    return `<li class="aml-ctx-step ${cls}"><span class="aml-ctx-mark">${mark}</span>${esc(label)}</li>`;
+  }).join('');
+  el.innerHTML = `<div class="aml-ctx-card">
+      <div class="aml-ctx-title">Souhrn kontroly</div>
+      ${rows}
+      <ul class="aml-ctx-steps">${steps}</ul>
+    </div>
+    <div class="aml-ctx-help">${esc(CONTEXT_HELP[wiz.step] || '')}</div>`;
+}
+
 function renderStep(root) {
   renderCaseNum();
   renderSteps();
+  renderContext();
   if (wiz.step === 0) renderClientStep(root);
   else if (wiz.step === 1) renderLustrace(root);
   else if (wiz.step === 2) renderPurpose(root);

@@ -1447,7 +1447,30 @@ body.logged-in .nav-section-guest { display: none; }
 .view-placeholder-text { color: var(--ink-lt); font-size: 15px; line-height: 1.7; }
 
 /* ════════════════════ AML WIZARD ════════════════════ */
-.aml { max-width: 640px; margin: 0 auto; padding: clamp(16px, 3vw, 28px) var(--pad) 96px; }
+/* Shell: karta jako hlavní osa (vycentrovaná), kontextový panel jako přílepek vpravo. */
+.aml-shell { display: flex; justify-content: center; align-items: flex-start; gap: 32px; }
+.aml { width: min(860px, 94vw); margin: 0; padding: clamp(16px, 3vw, 28px) 0 96px; }
+
+/* Kontextový panel — jen ≥1440px, sticky, vizuálně tišší než karta. */
+.aml-context { display: none; width: 300px; flex-shrink: 0; position: sticky; top: 84px; align-self: flex-start; padding-top: clamp(16px, 3vw, 28px); }
+@media (min-width: 1440px) { .aml-context { display: block; } }
+.aml-ctx-card { background: var(--gold-p); border: 1px solid #efe6d4; border-radius: 14px; padding: 16px 18px; }
+.aml-ctx-title { font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-lt); margin-bottom: 10px; }
+.aml-ctx-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--ink-lt); padding: 3px 0; }
+.aml-ctx-row b { color: var(--ink); font-weight: 600; text-align: right; }
+.aml-ctx-steps { list-style: none; margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid #efe6d4; display: flex; flex-direction: column; gap: 7px; }
+.aml-ctx-step { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-lt); }
+.aml-ctx-mark { width: 18px; height: 18px; border-radius: 50%; background: var(--rule); color: var(--ink-lt); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.aml-ctx-step.is-done .aml-ctx-mark { background: var(--gold); color: #fff; }
+.aml-ctx-step.is-active { color: var(--navy); font-weight: 600; }
+.aml-ctx-step.is-active .aml-ctx-mark { background: var(--navy); color: #fff; }
+.aml-ctx-help { font-size: 12px; color: var(--ink-lt); line-height: 1.6; padding: 14px 4px 0; }
+
+/* Na širší kartě (>700px) větší mezera mezi sloupci polí. */
+@media (min-width: 760px) { .aml-fields { column-gap: 30px; row-gap: 14px; } }
+
+/* Decentní krémový gradient za wizardem (konzistentní s landingem). */
+body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); background-attachment: fixed; }
 
 /* Indikátor kroků */
 .aml-steps {

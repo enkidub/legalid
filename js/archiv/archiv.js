@@ -98,10 +98,11 @@ async function regenerate(root, id) {
     const cr = await apiAmlGetCase(id);
     const c = cr.case;
     if (!c) throw new Error('not_found');
+    const profile = cr.profile || null;
     let bytes;
     if (c.status === 'terminated') {
       bytes = await buildTerminationPdf({
-        caseNumber: c.case_number, povinnaOsoba: loadPovinnaOsoba(), dateISO: c.completed_at || c.created_at,
+        caseNumber: c.case_number, povinnaOsoba: profile, dateISO: c.completed_at || c.created_at,
         clientName: [c.client_name, c.client_surname].filter(Boolean).join(' '),
         clientNameOriginal: c.client_name_original || '', clientBirthDate: c.client_birth_date || '',
         clientDocNumber: c.client_doc_number || '', reasonLabel: c.terminated_reason || 'Ukončeno', reasonText: '',
@@ -110,7 +111,7 @@ async function regenerate(root, id) {
       let lookups = [], documents = [];
       try { const l = await apiAmlGetLookups(id); lookups = l.results || []; } catch {}
       try { const d = await apiAmlGetDocuments(id); documents = d.documents || []; } catch {}
-      bytes = await buildRecordPdf(recordDataFromCase(c, lookups, documents));
+      bytes = await buildRecordPdf(recordDataFromCase(c, lookups, documents, profile));
     }
     downloadPdf(bytes, `${c.case_number || 'AML'}-zaznam.pdf`);
   } catch {
@@ -120,9 +121,9 @@ async function regenerate(root, id) {
   }
 }
 
-function recordDataFromCase(c, lookups, documents) {
+function recordDataFromCase(c, lookups, documents, profile) {
   return {
-    caseNumber: c.case_number, povinnaOsoba: loadPovinnaOsoba(), dateISO: c.completed_at || c.created_at,
+    caseNumber: c.case_number, povinnaOsoba: profile || null, dateISO: c.completed_at || c.created_at,
     subjectType: c.subject_type,
     client: {
       name: [c.client_name, c.client_surname].filter(Boolean).join(' '), nameOriginal: c.client_name_original || '',
@@ -143,6 +144,7 @@ function recordDataFromCase(c, lookups, documents) {
     documents: documents || [],
     risk: { suggestion: parse(c.ai_risk_reasoning), finalLevel: c.final_risk_level, justification: c.risk_justification, decidedAt: c.risk_decided_at },
     declaration: parse(c.client_declaration_json),
+    recordSha: c.record_sha256 || null,
     regenerated: true,
   };
 }

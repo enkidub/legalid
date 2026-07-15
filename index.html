@@ -161,7 +161,7 @@
         <span class="nav-item-icon">&#x2699;&#xFE0E;</span>
         <div class="nav-item-text">
           <span class="nav-item-label">Nastavení</span>
-          <span class="nav-item-sub">Profil advokáta</span>
+          <span class="nav-item-sub">Profil povinné osoby</span>
         </div>
       </button>
     </div>
@@ -768,40 +768,13 @@
   </div>
   <div class="cfg-body">
 
-    <!-- Sekce 1: Profil advokáta -->
+    <!-- Sekce 1: Profil povinné osoby (naplní js/profile/profile.js při otevření) -->
     <div class="cfg-section open" id="cfgSec1">
       <button class="cfg-section-head" onclick="toggleCfgSection('cfgSec1')">
-        <span class="cfg-section-title">Profil advokáta</span>
+        <span class="cfg-section-title">Profil povinné osoby</span>
         <span class="cfg-section-arrow">▾</span>
       </button>
-      <div class="cfg-section-body">
-        <p class="cfg-section-desc">Vyplňte jednou — automaticky se uloží a použije ve všech doložkách.</p>
-        <div class="form-grid">
-          <div class="form-group full">
-            <label class="form-label" for="cfg_aJmeno">Celé jméno *</label>
-            <input class="form-input" id="cfg_aJmeno" type="text" placeholder="JUDr. Jana Nováková" oninput="cfgUpdateAdvokat()">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="cfg_aRole">Role *</label>
-            <input class="form-input" id="cfg_aRole" type="text" placeholder="advokátka" oninput="cfgUpdateAdvokat()">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="cfg_aEvCislo">Ev. č. ČAK *</label>
-            <input class="form-input" id="cfg_aEvCislo" type="text" placeholder="12345" oninput="cfgUpdateAdvokat()">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="cfg_aCisloKnihy">Číslo knihy *</label>
-            <input class="form-input" id="cfg_aCisloKnihy" type="text" placeholder="012345" oninput="cfgUpdateAdvokat()">
-          </div>
-          <div class="form-group full">
-            <label class="form-label" for="cfg_aSidlo">Sídlo *</label>
-            <input class="form-input" id="cfg_aSidlo" type="text" placeholder="Ulice 1, Praha 1, 110 00" oninput="cfgUpdateAdvokat()">
-          </div>
-        </div>
-        <div style="margin-top:12px;text-align:right;">
-          <button class="btn-clear-storage" onclick="clearAdvokatStorage()">Vymazat uložené údaje</button>
-        </div>
-      </div>
+      <div class="cfg-section-body" id="cfgProfileBody"></div>
     </div>
 
     <!-- Sekce „Doložka — rozměry" a „Štítky do knihy — rozměry" odstraněny z globálního

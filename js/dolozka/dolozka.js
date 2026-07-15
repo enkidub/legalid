@@ -5,6 +5,7 @@ import { buildDolozkaPreviewContent, printStitky, scalePrintPreview } from './ge
 import { runOcr } from './ocr.js';
 import { COMBO_PM_DEFAULTS, FORMAT_DEFAULTS, MM, PM_DEFAULTS, SCALE, getDolozkaSettings, getSettings, state } from '../core/state.js';
 import { _closeAllSidePanels, _closePanelToMenu, _openPanelFromMenu, showToast } from '../core/ui.js';
+import { initSettingsPanel } from '../profile/profile.js';
 
 export function updateAdvokat() {
   state.advokat.jmeno       = document.getElementById('aJmeno').value.trim();
@@ -448,9 +449,8 @@ export function resetDolozkaSettings() {
 
 export function openCfgPanel(section) {
   _closeAllSidePanels();
-  syncCfgFromAdvokat();
+  initSettingsPanel();   // vloží a naplní „Profil povinné osoby" (js/profile/profile.js)
   syncDolozkaInputs();
-  // Globální Nastavení obsahuje už jen Profil advokáta — sekce rozměrů štítků byla odstraněna.
   if (section === 'advokat') openCfgSection('cfgSec1');
   const panel = document.getElementById('cfgPanel');
   const overlay = document.getElementById('cfgOverlay');

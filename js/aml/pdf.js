@@ -8,6 +8,8 @@
 //   buildRecordPdf(data)      → Uint8Array  (Blok 5, plný AML záznam) — doplněno později
 //   createPdfBuilder()        → Builder     (nízkoúrovňové API pro oba)
 
+import { ENTITY_LABELS, regLabel, dozorFor } from '../core/entities.js';
+
 const CDN_PDFLIB = 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm';
 const CDN_FONTKIT = 'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/+esm';
 
@@ -35,11 +37,13 @@ const PAGE_W = 595.28, PAGE_H = 841.89;
 const MARGIN = 56;
 const CONTENT_W = PAGE_W - 2 * MARGIN;
 
-const INK = [0.13, 0.15, 0.20];       // tmavě šedomodrá
-const MUTED = [0.42, 0.45, 0.52];
+const NAVY = [0.118, 0.165, 0.267];   // #1e2a44 — nadpisy
+const GOLD = [0.722, 0.569, 0.184];   // #b8912f — akcentní linky
+const INK = [0.133, 0.149, 0.180];    // #22262e — text
+const MUTED = [0.44, 0.47, 0.53];     // meta
 const RULE = [0.82, 0.84, 0.88];
-const ACCENT = [0.11, 0.24, 0.45];    // navy
 const WARN_BG = [0.99, 0.96, 0.90];
+const ACCENT = NAVY;                   // zpětná kompat. (žádná modrá)
 
 class Builder {
   constructor(doc, font, fontB, rgb, PDFDocument) {
@@ -94,14 +98,63 @@ class Builder {
   }
 
   heading(str) {
-    this.text(str, { size: 16, bold: true, color: ACCENT, lineGap: 6 });
+    this.text(str, { size: 20, bold: true, color: NAVY, lineGap: 6 });
     this.moveDown(2);
   }
   subtitle(str) { this.text(str, { size: 9.5, color: MUTED, lineGap: 4 }); this.moveDown(6); }
   sectionTitle(str) {
-    this.moveDown(8); this.ensure(22);
-    this.text(str, { size: 11.5, bold: true, color: ACCENT, lineGap: 4 });
-    this.moveDown(3); this.hr(); this.moveDown(4);
+    this.moveDown(10); this.ensure(24);
+    this.text(str, { size: 13, bold: true, color: NAVY, lineGap: 4 });
+    this.moveDown(3); this.goldRule(); this.moveDown(5);
+  }
+  goldRule() {
+    this.ensure(6);
+    this.page.drawLine({ start: { x: MARGIN, y: this.y }, end: { x: PAGE_W - MARGIN, y: this.y }, thickness: 1, color: this._col(GOLD) });
+    this.moveDown(2);
+  }
+
+  // Hlavička 1. strany: vlevo logo, vpravo blok povinné osoby, pod tím titul + č. kontroly + datum.
+  async header(profile, docTitle, caseNumber, dateISO, regenerated) {
+    const p = profile || {};
+    const topY = this.y;
+    const rightX = PAGE_W - MARGIN;
+    const rows = [];
+    if (p.display_name) rows.push([p.display_name, true]);
+    if (p.entity_type && ENTITY_LABELS[p.entity_type]) rows.push([ENTITY_LABELS[p.entity_type], false]);
+    if (p.ico) rows.push([`IČO: ${p.ico}`, false]);
+    if (p.reg_number) rows.push([`${regLabel(p.entity_type)}: ${p.reg_number}`, false]);
+    if (p.address) rows.push([p.address, false]);
+    if (p.entity_type) rows.push([`Dozor: ${dozorFor(p.entity_type)}`, false]);
+    let ry = topY;
+    for (const [txt, bold] of rows) {
+      const size = bold ? 11 : 8.5;
+      const font = bold ? this.fontB : this.font;
+      for (const ln of this._wrap(txt, size, bold, CONTENT_W * 0.56)) {
+        const w = font.widthOfTextAtSize(ln, size);
+        this.page.drawText(ln, { x: rightX - w, y: ry - size, size, font, color: this._col(bold ? NAVY : MUTED) });
+        ry -= size + 3;
+      }
+    }
+    let ly = topY;
+    if (p.logo_base64) {
+      try {
+        const bytes = b64ToBytes(p.logo_base64);
+        const img = p.logo_mime === 'image/png' ? await this.doc.embedPng(bytes) : await this.doc.embedJpg(bytes);
+        const scale = Math.min(40 / img.height, 1);
+        this.page.drawImage(img, { x: MARGIN, y: topY - img.height * scale, width: img.width * scale, height: img.height * scale });
+        ly = topY - img.height * scale;
+      } catch { /* nevalidní logo přeskoč */ }
+    }
+    this.y = Math.min(ly, ry) - 12;
+    this.goldRule();
+    this.moveDown(8);
+    this.heading(docTitle);
+    const meta = [];
+    if (caseNumber) meta.push(`Číslo kontroly: ${caseNumber}`);
+    if (dateISO) meta.push(`Datum: ${fmtDateCs(dateISO)}`);
+    if (meta.length) this.text(meta.join('     ·     '), { size: 9, color: MUTED, lineGap: 4 });
+    if (regenerated) this.text('Kopie vygenerovaná z archivu (bez obrazových příloh).', { size: 8.5, color: MUTED, lineGap: 4 });
+    this.moveDown(6);
   }
   para(str, opts = {}) { const h = this.text(str, { size: 10, lineGap: 4, ...opts }); this.moveDown(3); return h; }
 
@@ -211,12 +264,14 @@ class Builder {
     } catch { /* nevalidní/zaheslované PDF přílohy přeskoč */ }
   }
 
-  // Patička se stránkováním na všech stránkách. Volat naposledy.
-  finalize(footerText) {
+  // Patička se stránkováním na všech stránkách + SHA-256 na poslední. Volat naposledy.
+  finalize(footerText, recordSha) {
     const total = this.pages.length;
     this.pages.forEach((pg, i) => {
-      const txt = `${footerText} · strana ${i + 1}/${total}`;
-      pg.drawText(txt, { x: MARGIN, y: MARGIN - 22, size: 8, font: this.font, color: this._col(MUTED) });
+      pg.drawText(`${footerText} · strana ${i + 1}/${total}`, { x: MARGIN, y: MARGIN - 22, size: 8, font: this.font, color: this._col(MUTED) });
+      if (recordSha && i === total - 1) {
+        pg.drawText(`SHA-256: ${String(recordSha).slice(0, 32)}…`, { x: MARGIN, y: MARGIN - 32, size: 7.5, font: this.font, color: this._col(MUTED) });
+      }
     });
     return this.doc.save();
   }
@@ -242,9 +297,11 @@ export function fmtDateCs(iso) {
   catch { return String(iso); }
 }
 
-function povinnaOsobaLine(p) {
-  if (!p) return '—';
-  return [p.jmeno, p.role, p.sidlo].filter(Boolean).join(', ') || '—';
+function b64ToBytes(b64) {
+  const bin = atob(b64);
+  const a = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+  return a;
 }
 
 // ── Popisky kódů → čeština (pro záznam) ──
@@ -265,14 +322,9 @@ export async function buildRecordPdf(data, attachments = []) {
   const b = await createPdfBuilder();
   const d = data || {};
 
-  b.heading('Záznam o identifikaci a kontrole klienta');
-  b.subtitle('podle zákona č. 253/2008 Sb., o některých opatřeních proti legalizaci výnosů z trestné činnosti a financování terorismu');
-
-  // 1. Hlavička
-  b.sectionTitle('Základní údaje');
-  b.keyVal('Číslo kontroly', d.caseNumber || '—');
-  b.keyVal('Povinná osoba', povinnaOsobaLine(d.povinnaOsoba));
-  b.keyVal('Datum vyhotovení', fmtDateCs(d.dateISO));
+  await b.header(d.povinnaOsoba, 'Záznam o identifikaci a kontrole klienta', d.caseNumber, d.dateISO, d.regenerated);
+  b.text('podle zákona č. 253/2008 Sb., o některých opatřeních proti legalizaci výnosů z trestné činnosti a financování terorismu', { size: 9, color: MUTED, lineGap: 4 });
+  b.moveDown(4);
 
   // 2. Obchod
   b.sectionTitle('Obchod');
@@ -308,7 +360,7 @@ export async function buildRecordPdf(data, attachments = []) {
     b.moveDown(2);
     b.text('Prohlášení ověřující osoby', { size: 10, bold: true });
     b.para(ver.statement || '', { size: 9.5, color: [0.42, 0.45, 0.52] });
-    if (ver.checkbox) b.para('☑ ' + ver.checkbox, { size: 9.5, color: [0.42, 0.45, 0.52] });
+    if (ver.checkbox) b.para('• ' + ver.checkbox, { size: 9.5, color: MUTED });
     if (ver.timestamp) b.para('Potvrzeno: ' + fmtDateCs(ver.timestamp), { size: 9, color: [0.42, 0.45, 0.52] });
   }
 
@@ -351,8 +403,8 @@ export async function buildRecordPdf(data, attachments = []) {
   if (sug) {
     b.keyVal('AI návrh úrovně', L_RISK[sug.suggested_level] || sug.suggested_level || '—');
     for (const f of (sug.factors || [])) {
-      const mark = f.impact === 'critical' ? '⚠ ' : (f.impact === 'raises' ? '▲ ' : '• ');
-      b.para(`${mark}${f.factor || ''}${f.note_cs ? ' — ' + f.note_cs : ''}`, { size: 9.5, color: [0.42, 0.45, 0.52] });
+      const sev = f.impact === 'critical' ? ' [kritický]' : (f.impact === 'raises' ? ' [zvyšuje riziko]' : '');
+      b.para(`•  ${f.factor || ''}${sev}${f.note_cs ? ' — ' + f.note_cs : ''}`, { size: 9.5, color: MUTED });
     }
     if (sug.reasoning_cs) b.para(sug.reasoning_cs, { size: 9.5, color: [0.42, 0.45, 0.52] });
     b.para('Návrh rizika má výhradně informativní charakter a slouží jako podpůrný nástroj. Nezbavuje povinnou osobu zákonné odpovědnosti za konečné posouzení klienta dle zákona č. 253/2008 Sb.', { size: 8.5, color: [0.55, 0.57, 0.63] });
@@ -386,19 +438,15 @@ export async function buildRecordPdf(data, attachments = []) {
     b.para('Podpůrné dokumenty a doklady se z bezpečnostních důvodů neukládají na server. Tato kopie záznamu byla vygenerována z archivu a neobsahuje obrazové přílohy. Originály přikládá povinná osoba ze své evidence.', { size: 9.5, color: [0.42, 0.45, 0.52] });
   }
 
-  return b.finalize(`Legalid · legalid.cz · ${d.caseNumber || ''}`);
+  return b.finalize(`Legalid · legalid.cz · ${d.caseNumber || ''}`, d.recordSha);
 }
 
 // U4 — zjednodušený záznam o neuskutečnění obchodu / ukončení kontroly (§ 15).
 export async function buildTerminationPdf(data) {
   const b = await createPdfBuilder();
-  b.heading('Záznam o ukončení AML kontroly');
-  b.subtitle('podle zákona č. 253/2008 Sb., o některých opatřeních proti legalizaci výnosů z trestné činnosti a financování terorismu');
-
-  b.sectionTitle('Základní údaje');
-  b.keyVal('Číslo kontroly', data.caseNumber || '—');
-  b.keyVal('Povinná osoba', povinnaOsobaLine(data.povinnaOsoba));
-  b.keyVal('Datum ukončení', fmtDateCs(data.dateISO));
+  await b.header(data.povinnaOsoba, 'Záznam o ukončení AML kontroly', data.caseNumber, data.dateISO, data.regenerated);
+  b.text('podle zákona č. 253/2008 Sb., o některých opatřeních proti legalizaci výnosů z trestné činnosti a financování terorismu', { size: 9, color: MUTED, lineGap: 4 });
+  b.moveDown(4);
 
   b.sectionTitle('Klient');
   b.keyVal('Jméno a příjmení', data.clientName || '—');

@@ -9,6 +9,7 @@ import { showToast, esc } from '../core/ui.js';
 import { openRegistrationModal } from '../auth/auth.js';
 import { apiAmlComplete, apiAmlGetDocuments, apiClientsSearch } from '../core/api.js';
 import { buildTerminationPdf, buildRecordPdf } from './pdf.js';
+import { getProfile, ensureProfileLoaded, profileIsFilled } from '../profile/profile.js';
 
 // Wizard: 5 kroků (0-index), zobrazeno jako 1–5. Krátké labely pro mobil (<640px).
 const STEP_LABELS = ['Údaje klienta', 'Lustrace', 'Účel obchodu', 'Riziko', 'Záznam'];
@@ -327,6 +328,7 @@ function handleAction(root, act, ds) {
     case 'set-risk': wiz.riskDecision.level = ds.val; renderRisk(root); break;
     case 'risk-decide': runRiskDecision(root); break;
     case 'gen-record': runGenerateRecord(root); break;
+    case 'open-settings': if (window.openCfgPanel) window.openCfgPanel('advokat'); break;
     default: break;
   }
 }
@@ -389,6 +391,7 @@ async function createNewCase(root) {
     wiz.riskDecision = { level: null, justification: '' };
     wiz.riskDecided = false; wiz.riskDeciding = false;
     wiz.generating = false; wiz.recordSha = null; wiz.completeResult = null; wiz.verifierTimestamp = null;
+    wiz._profileTried = false;
     if (wiz.source === 'list') loadClients(root);
     renderStep(root);
   } catch {
@@ -1461,6 +1464,10 @@ function lbl(list, v) { return (list.find(([x]) => x === v) || ['', '—'])[1]; 
 
 function renderRecord(root) {
   if (wiz.completeResult) { renderRecordDone(root); return; }
+  if (!getProfile() && !wiz._profileTried) {
+    wiz._profileTried = true;
+    ensureProfileLoaded().then(() => { if (wiz.step === 4) renderRecord(root); });
+  }
   if (!wiz.riskDecided) {
     $('amlMain').innerHTML = `<div class="aml-card"><div class="aml-h">Záznam o kontrole</div>
       <div class="aml-ai-note">Nejdřív dokončete vyhodnocení rizika (krok Riziko) a proveďte závazné rozhodnutí.</div></div>`;
@@ -1470,9 +1477,13 @@ function renderRecord(root) {
     ? (wiz.data.company_name || '—')
     : ([wiz.data.client_name, wiz.data.client_surname].filter(Boolean).join(' ') || '—');
   const docCount = wiz.purposeDocs.filter(d => d.status === 'done').length;
+  const profBanner = !profileIsFilled(getProfile())
+    ? `<div class="aml-warn-banner">Záznam bude bez údajů povinné osoby — vyplňte je v <button class="aml-inline-link" data-act="open-settings">Nastavení</button>.</div>`
+    : '';
   $('amlMain').innerHTML = `<div class="aml-card">
     <div class="aml-h">Záznam o kontrole</div>
     <div class="aml-sub">Zkontrolujte rekapitulaci a vygenerujte finální PDF záznam. Tím se kontrola dokončí a uloží do archivu.</div>
+    ${profBanner}
     <div class="aml-recap">
       ${recapRow('Číslo kontroly', wiz.case_number)}
       ${recapRow('Klient', client)}
@@ -1497,7 +1508,7 @@ function verifierForRecord() {
 function buildRecordData(lookups) {
   return {
     caseNumber: wiz.case_number,
-    povinnaOsoba: loadPovinnaOsoba(),
+    povinnaOsoba: getProfile(),
     dateISO: new Date().toISOString(),
     subjectType: wiz.subject_type,
     client: {
@@ -1553,6 +1564,7 @@ async function runGenerateRecord(root) {
   try {
     let lookups = wiz.lookups;
     try { const r = await apiAmlGetLookups(wiz.caseId); if (r.results?.length) lookups = r.results; } catch {}
+    await ensureProfileLoaded();
     const data = buildRecordData(lookups);
     const attachments = gatherAttachments();
     const bytes = await buildRecordPdf(data, attachments);
@@ -1867,14 +1879,6 @@ function toggleLookupDetail(type) {
 }
 
 // ── U4 — Ukončit kontrolu (§ 15) ─────────────────────────────────────
-// Povinná osoba z uložených údajů profilu (localStorage), pro záhlaví PDF.
-function loadPovinnaOsoba() {
-  try {
-    const s = JSON.parse(localStorage.getItem('legalid_advokat') || 'null');
-    return s ? { jmeno: s.jmeno || '', role: s.role || '', sidlo: s.sidlo || '', ev_cislo: s.ev_cislo || '' } : null;
-  } catch { return null; }
-}
-
 // Stáhne PDF (Uint8Array) pod daným názvem.
 function downloadPdf(bytes, filename) {
   const blob = new Blob([bytes], { type: 'application/pdf' });
@@ -1927,10 +1931,11 @@ async function confirmTerminate(root) {
     return;
   }
   closeTerminateModal();
+  await ensureProfileLoaded();
   try {
     const bytes = await buildTerminationPdf({
       caseNumber: wiz.case_number,
-      povinnaOsoba: loadPovinnaOsoba(),
+      povinnaOsoba: getProfile(),
       dateISO: res.completed_at,
       clientName: [wiz.data.client_name, wiz.data.client_surname].filter(Boolean).join(' '),
       clientNameOriginal: wiz.data.client_name_original || '',

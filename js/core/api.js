@@ -109,6 +109,19 @@ export async function apiAmlRiskDecision(caseId, payload) {
   return r.json();
 }
 
+// Profil povinné osoby (globální nastavení). Vyžaduje session.
+export async function apiGetProfile() {
+  const r = await fetch(`${WORKER_URL}/api/profile`, { credentials: 'include' });
+  return r.json();
+}
+export async function apiSaveProfile(profile) {
+  const r = await fetch(`${WORKER_URL}/api/profile`, {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile)
+  });
+  return { ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) };
+}
+
 // Centrální evidence klientů — fulltext hledání (GET /api/clients?q=).
 export async function apiClientsSearch(q = '') {
   const url = q ? `${WORKER_URL}/api/clients?q=${encodeURIComponent(q)}` : `${WORKER_URL}/api/clients`;

@@ -14,6 +14,7 @@ import { renderSoukromi } from './soukromi/soukromi.js';
 import { openDemoModal, closeDemoModal, submitDemoRequest } from './demo/demo.js';
 import { renderAml, initAml } from './aml/aml.js';
 import { renderArchiv, initArchiv } from './archiv/archiv.js';
+import { profileEntityChange, profileLogoSelect, profileLogoRemove, profileSave, reloadProfile } from './profile/profile.js';
 import { actionToastOk, closeAboutModal, closeActionToast, closeHamburger, closePrivacyModal, openAboutModal, openHamburger, openPrivacyModal, showToast } from './core/ui.js';
 
 
@@ -198,6 +199,7 @@ function mountRoute(path) {
 // Login/logout: přepni viditelnost hlavního menu a přemountuj aktuální route.
 window.addEventListener('authchange', () => {
   document.body.classList.toggle('logged-in', state.loggedIn);
+  reloadProfile();   // natáhni profil povinné osoby (D1 po přihlášení / localStorage host)
   mountRoute(currentPath());
 });
 
@@ -227,6 +229,10 @@ window.openKnihaPanel = openKnihaPanel; // <button class="nav-item" onclick="ope
 window.openKlientiPanel = openKlientiPanel; // <button class="nav-item" onclick="openKlientiPanel()">
 window.openCenikModal = openCenikModal; // <button class="nav-item" onclick="closeHamburger();openCenikModal()">
 window.openCfgPanel = openCfgPanel; // <button class="nav-item" onclick="openCfgPanel()">
+window.profileEntityChange = profileEntityChange; // <select id="cfg_entity_type" onchange="profileEntityChange()">
+window.profileLogoSelect = profileLogoSelect; // <input id="cfg_logo" onchange="profileLogoSelect(event)">
+window.profileLogoRemove = profileLogoRemove; // <button id="cfg_logo_remove" onclick="profileLogoRemove()">
+window.profileSave = profileSave; // <button id="cfg_save_btn" onclick="profileSave()">
 window.openAboutModal = openAboutModal; // <button class="nav-footer-link" onclick="closeHamburger();openAboutModal()">O aplikaci · Verze 1
 window.openPrivacyModal = openPrivacyModal; // <button class="nav-footer-link" onclick="closeHamburger();openPrivacyModal()">Ochrana dat</butto
 window.closeAboutModal = closeAboutModal; // <div class="about-overlay" id="aboutOverlay" onclick="if(event.target===this)closeAboutModal()">

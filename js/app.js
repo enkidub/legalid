@@ -4,7 +4,7 @@
 import { checkSession, closeCenikModal, closeRegistrationModal, closeUpgradeModal, handleLogout, loginWithGoogle, openCenikModal, openRegistrationModal, selectPlan, submitRegEmail } from './auth/auth.js';
 import { activeResetPmSettings, cfgUpdateAdvokat, clearAdvokatStorage, closeCfgPanel, closeCfgPanelToMenu, closeFormatPanel, closePrintModal, closeSplitMenu, diagramClick, handleFiles, hideOcrSuccess, onKomboSettingsInput, onPmSettingsInput, onSettingsInput, openCfgPanel, openDolozkaPreview, openSettings, pmDiagramClick, prefillDates, removePhoto, resetSettings, saveAndPrint, saveSettings, selectCustomFormat, selectFormat, switchPmTab, toggleAdvokat, toggleCfgSection, togglePreview, toggleSplitMenu, triggerUpload, updateAdvokat, updatePreview, zmenFormat } from './dolozka/dolozka.js';
 import { buildDolozkaPreviewContent, closePostPrintToast, downloadDocx, noveOvereni, printDolozka, printStitky, scalePrintPreview } from './dolozka/generate.js';
-import { closeKlientiPanel, klientiDeleteConfirm, klientiDeleteDismiss, klientiDeleteDo, klientiEditCancel, klientiEditSave, klientiEditStart, klientiLoad, openKlientiPanel, renderKlientiList, renderKlientiPage } from './klienti/klienti.js';
+import { closeKlientiPanel, klientiDeleteConfirm, klientiDeleteDismiss, klientiDeleteDo, klientiEditCancel, klientiEditSave, klientiEditStart, klientiLoad, openKlientiPanel, renderKlientiList, renderKlientiPage, klientiSearch, klientiToggle, klientiNewAml, klientiImport, klientiImportDismiss } from './klienti/klienti.js';
 import { closeKnihaPanel, getKniha, knihaDeleteConfirm, knihaDeleteDismiss, knihaDeleteDo, knihaEditCancel, knihaEditSave, knihaEditStart, knihaLoad, knihaReprint, openKnihaPanel, renderKnihaList, renderKnihaPage } from './kniha/kniha.js';
 import { state } from './core/state.js';
 import { initRouter, navigate, currentPath } from './core/router.js';
@@ -288,6 +288,11 @@ window.knihaEditCancel = knihaEditCancel; // <button class="btn-lp-cancel-edit" 
 window.knihaDeleteDo = knihaDeleteDo; // <button class="btn-lp-del" onclick="knihaDeleteDo(${r.id})">Smazat</button>
 window.knihaDeleteDismiss = knihaDeleteDismiss; // <button class="btn-lp-cancel-edit" onclick="knihaDeleteDismiss(${r.id})">Zrušit</button>
 window.klientiLoad = klientiLoad; // <button class="btn-lp-action" title="Načíst do formuláře" onclick="klientiLoad(${k.id})">↩</butt
+window.klientiSearch = klientiSearch; // <input class="lp-search" id="klientiSearch" ... oninput="klientiSearch()">
+window.klientiToggle = klientiToggle; // <button ... onclick="klientiToggle(${c.id})">Historie</button>
+window.klientiNewAml = klientiNewAml; // <button ... onclick="klientiNewAml(${c.id})">+ AML</button>
+window.klientiImport = klientiImport; // <button class="btn-lp-save" onclick="klientiImport()">Přenést</button>
+window.klientiImportDismiss = klientiImportDismiss; // <button ... onclick="klientiImportDismiss()">Teď ne</button>
 window.klientiEditStart = klientiEditStart; // <button class="btn-lp-action" title="Upravit" onclick="klientiEditStart(${k.id})">&#x270E;</butt
 window.klientiDeleteConfirm = klientiDeleteConfirm; // <button class="btn-lp-action danger" title="Smazat" onclick="klientiDeleteConfirm(${k.id})">&#xD
 window.klientiEditSave = klientiEditSave; // <button class="btn-lp-save" onclick="klientiEditSave(${k.id})">Uložit</button>

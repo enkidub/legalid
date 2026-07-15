@@ -116,6 +116,44 @@ export async function apiClientsSearch(q = '') {
   return r.json();
 }
 
+// Detail klienta + historie AML případů.
+export async function apiClientGet(id) {
+  const r = await fetch(`${WORKER_URL}/api/clients/${id}`, { credentials: 'include' });
+  return r.json();
+}
+
+// Vytvoření/upsert klienta (created_from: 'manual' | 'dolozka'). Vrací { client, created }.
+export async function apiClientCreate(data) {
+  const r = await fetch(`${WORKER_URL}/api/clients`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+  });
+  return r.json();
+}
+
+export async function apiClientUpdate(id, patch) {
+  const r = await fetch(`${WORKER_URL}/api/clients/${id}`, {
+    method: 'PATCH', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch)
+  });
+  return r.json();
+}
+
+// Smazání klienta. status 409 (r.ok=false) = má navázané AML případy.
+export async function apiClientDelete(id) {
+  const r = await fetch(`${WORKER_URL}/api/clients/${id}`, { method: 'DELETE', credentials: 'include' });
+  return { ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) };
+}
+
+// Bulk import z localStorage → { created, merged }.
+export async function apiClientsImport(clients) {
+  const r = await fetch(`${WORKER_URL}/api/clients/import`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clients })
+  });
+  return r.json();
+}
+
 // Blok 5 — dokončení kontroly: status='completed' + next_review_due + record_sha256.
 export async function apiAmlComplete(caseId, record_sha256) {
   const r = await fetch(`${WORKER_URL}/api/aml/${caseId}/complete`, {

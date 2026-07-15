@@ -1020,6 +1020,21 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 }
 .btn-lp-action:hover { background: var(--paper-w); color: var(--ink); }
 .btn-lp-action.danger:hover { background: #fff0f0; color: #c0392b; border-color: #f5c6c6; }
+.btn-lp-action--txt { width: auto; padding: 0 10px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+
+/* Klienti — AML stav, historie, migrační banner (C2/C3) */
+.lp-item-aml-line { font-size: 11px; color: var(--gold-h); line-height: 1.5; }
+.lp-item-aml-line.is-none { color: var(--ink-fnt); }
+.lp-item-actions { flex-wrap: wrap; }
+.lp-item-history { padding: 8px 0 2px; display: flex; flex-direction: column; gap: 5px; }
+.lp-hist-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; border-top: 1px solid var(--rule); padding-top: 5px; }
+.lp-hist-num { font-weight: 600; color: var(--navy); font-family: ui-monospace, Menlo, monospace; }
+.lp-hist-meta { color: var(--ink-lt); text-align: right; }
+.lp-hist-loading, .lp-hist-empty { font-size: 12px; color: var(--ink-lt); padding: 4px 0; }
+.lp-banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--gold-p); border: 1px solid #f0dcae; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+.lp-banner-text { font-size: 13px; color: var(--ink-mid); flex: 1; min-width: 180px; }
+.lp-banner-btns { display: flex; gap: 8px; }
+.lp-import-link { background: none; border: none; color: var(--navy); font-family: var(--sans); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0 0 12px; }
 .lp-item-edit, .lp-item-confirm { display: none; padding: 12px; border-top: 1px solid var(--rule); background: var(--paper-w); }
 .lp-item.lp-editing .lp-item-edit { display: block; }
 .lp-item.lp-confirming .lp-item-confirm { display: block; }
@@ -1632,6 +1647,7 @@ body.logged-in .nav-section-guest { display: none; }
 .aml-client-name { font-size: 13px; font-weight: 600; color: var(--navy); }
 .aml-client-meta { font-size: 11px; color: var(--ink-lt); }
 .aml-client-status { font-size: 11px; color: var(--gold-h); margin-top: 2px; }
+.aml-client-status--none { color: var(--ink-fnt); }
 
 /* Patička */
 .aml-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }

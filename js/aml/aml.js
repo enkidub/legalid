@@ -332,7 +332,35 @@ function handleAction(root, act, ds) {
 }
 
 // ── Start / resume / new ─────────────────────────────────────────────
+// Prefill z modulu Klienti (sessionStorage, jednorázově) — „Nová AML kontrola".
+function readAmlPrefill() {
+  try {
+    const raw = sessionStorage.getItem('legalid_aml_prefill');
+    if (!raw) return null;
+    sessionStorage.removeItem('legalid_aml_prefill');
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+async function applyClientPrefill(root, c) {
+  const map = {
+    client_name: c.name, client_surname: c.surname, client_birth_date: c.birth_date,
+    client_birth_place: c.birth_place, client_address: c.address, client_nationality: c.nationality,
+    client_doc_type: c.doc_type, client_doc_number: c.doc_number, client_rc: c.rc,
+    client_ico: c.ico, company_name: c.company_name,
+  };
+  Object.entries(map).forEach(([col, v]) => { if (v != null && v !== '') wiz.data[col] = v; });
+  if (c.subject_type) wiz.subject_type = c.subject_type;
+  wiz.source = 'manual';
+  const patch = { client_id: c.id, subject_type: wiz.subject_type };
+  DATA_COLS.forEach(col => { if (wiz.data[col] != null && wiz.data[col] !== '') patch[col] = wiz.data[col]; });
+  patchCase(patch);
+  renderStep(root);
+}
+
 async function startAml(root) {
+  const prefill = readAmlPrefill();
+  if (prefill) { await createNewCase(root); await applyClientPrefill(root, prefill); return; }
   if (wiz.caseId) { renderStep(root); return; }   // už rozpracováno v této relaci
   renderLoading('Načítám…');
   let cases = [];
@@ -711,7 +739,10 @@ function pickClient(root, key) {
     client_ico: c.ico, company_name: c.company_name,
   };
   Object.entries(map).forEach(([col, v]) => { if (v != null && v !== '') wiz.data[col] = v; });
-  if (c.subject_type) { wiz.subject_type = c.subject_type; patchCase({ subject_type: c.subject_type }); }
+  // Naváž případ na klienta z evidence (client_id) + subject_type.
+  const patch = { client_id: c.id };
+  if (c.subject_type) { wiz.subject_type = c.subject_type; patch.subject_type = c.subject_type; }
+  patchCase(patch);
   renderStep(root);
 }
 
@@ -1055,7 +1086,7 @@ function clientRowsHTML() {
       ? `<span class="aml-client-status">Poslední kontrola ${esc(fmtDateOnly(c.last_aml_date))}` +
         `${c.last_risk_level ? ' · ' + esc(lbl(RISK_LEVELS, c.last_risk_level)) + ' riziko' : ''}` +
         `${c.next_review_due ? ' · revalidace do ' + esc(fmtDateOnly(c.next_review_due)) : ''}</span>`
-      : '';
+      : `<span class="aml-client-status aml-client-status--none">AML kontrola zatím neproběhla</span>`;
     return `<button class="aml-client-row" data-act="pick-client" data-key="${esc(String(c.id))}">
       <span class="aml-client-name">${esc(name)}</span>
       <span class="aml-client-meta">${meta}</span>

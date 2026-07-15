@@ -5,6 +5,7 @@ import { state } from '../core/state.js';
 import { navigate } from '../core/router.js';
 import { openDolozkaPreview, updatePreview } from '../dolozka/dolozka.js';
 import { getKlienti, renderKlientiList, saveKlienti } from '../klienti/klienti.js';
+import { apiClientCreate } from '../core/api.js';
 import { esc, showActionToast, showToast } from '../core/ui.js';
 
 export function autoSaveRecord() {
@@ -30,6 +31,18 @@ export function autoSaveRecord() {
   // Save to Klienti (skip if no name)
   if (!jmeno) return;
   const cisloOp = v('fCisloOp');
+
+  // Přihlášený → centrální evidence v D1 (dedup ve workeru). Generování doložky se nemění.
+  if (state.loggedIn) {
+    apiClientCreate({
+      subject_type: 'fo', name: jmeno, birth_date: v('fDatumNar'), birth_place: v('fMistoNar'),
+      address: v('fAdresa'), doc_number: cisloOp, doc_type: cisloOp ? 'OP' : '',
+      created_from: 'dolozka',
+    }).catch(() => { /* selhání zápisu klienta nesmí ovlivnit doložku */ });
+    return;
+  }
+
+  // Host (nepřihlášený) — zachováno dnešní chování: localStorage.
   const klientData = {
     jmeno, datumNar: v('fDatumNar'), mistoNar: v('fMistoNar'),
     adresa: v('fAdresa'), cisloOp, posledniOvereni: v('fDatumOver'),

@@ -1134,9 +1134,10 @@ export default {
           let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
           const data = sanitizeClientInput(b);
           if (!data.name && !data.surname && !data.company_name) return json({ error: 'missing_name' }, 400);
-          const { id } = await upsertClient(env, userId, data, 'manual');
+          const source = ['dolozka', 'manual', 'import'].includes(b.created_from) ? b.created_from : 'manual';
+          const { id, created } = await upsertClient(env, userId, data, source);
           const row = await env.DB.prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?').bind(id, userId).first();
-          return json({ client: row });
+          return json({ client: row, created });
         }
         return json({ error: 'method_not_allowed' }, 405);
       }

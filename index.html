@@ -221,11 +221,10 @@
     <button class="btn-reg-close" onclick="closeRegistrationModal()" aria-label="Zavřít">×</button>
     <div id="regFormView">
       <div class="reg-modal-title">Přihlášení</div>
-      <div class="reg-modal-body">Nemáte účet? Vytvoří se automaticky.</div>
       <input class="reg-email-input" id="regEmail" type="email" placeholder="váš@email.cz">
       <div id="regEmailError" style="display:none;color:#dc2626;font-size:12px;margin-top:4px;margin-bottom:6px;"></div>
-      <label class="reg-remember"><input type="checkbox" id="regRemember"> Zůstat přihlášen</label>
-      <button class="btn-reg-submit" id="regSubmitBtn" onclick="submitRegEmail()">Odeslat</button>
+      <div class="reg-hint">Nemáte účet? Vytvoří se automaticky.</div>
+      <button class="btn-reg-submit" id="regSubmitBtn" onclick="submitRegEmail()">Odeslat odkaz na e-mail</button>
       <div id="regSendError" style="display:none;color:#dc2626;font-size:12px;margin-top:8px;text-align:center;"></div>
       <div class="reg-or"><span>nebo</span></div>
       <button class="btn-reg-google" onclick="loginWithGoogle()">

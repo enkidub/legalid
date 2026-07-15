@@ -6,10 +6,9 @@ import { state, CONFIG } from '../core/state.js';
 import { closeHamburger } from '../core/ui.js';
 
 // Přesměruje na worker OAuth start (celostránková navigace, ne fetch — browser musí
-// jít na Google). Volba „Zůstat přihlášen" se propíše přes ?remember=1.
+// jít na Google). Session je vždy dlouhá (90 dní) — řeší worker.
 export function loginWithGoogle() {
-  const remember = document.getElementById('regRemember')?.checked ? '1' : '0';
-  window.location.href = `${CONFIG.workerUrl}/api/auth/google?remember=${remember}`;
+  window.location.href = `${CONFIG.workerUrl}/api/auth/google`;
 }
 
 // Webová schránka podle domény e-mailu (tlačítko „Otevřít schránku"); null → tlačítko skryj.
@@ -26,10 +25,8 @@ export function openRegistrationModal() {
   document.getElementById('regSuccessView').style.display = 'none';
   const emailEl = document.getElementById('regEmail');
   if (emailEl) emailEl.value = '';
-  const remEl = document.getElementById('regRemember');
-  if (remEl) remEl.checked = false;   // default 7 dní (bezpečnější)
   const btn = document.getElementById('regSubmitBtn');
-  if (btn) { btn.disabled = false; btn.textContent = 'Odeslat'; }
+  if (btn) { btn.disabled = false; btn.textContent = 'Odeslat odkaz na e-mail'; }
   document.getElementById('regEmailError').style.display = 'none';
   document.getElementById('regSendError').style.display = 'none';
   document.getElementById('regOverlay').classList.add('open');
@@ -52,9 +49,8 @@ export async function submitRegEmail() {
   sendErrEl.style.display = 'none';
   btn.disabled = true;
   btn.textContent = 'Odesílám…';
-  const remember = !!document.getElementById('regRemember')?.checked;
   try {
-    const { ok, data } = await apiSendMagicLink(email, remember);
+    const { ok, data } = await apiSendMagicLink(email);
     if (!ok || !data.ok) throw new Error('failed');
     document.getElementById('regSuccessMsg').textContent =
       `Odkaz jsme poslali na ${email}. Zkontrolujte schránku (i spam), platí 15 minut.`;
@@ -68,7 +64,7 @@ export async function submitRegEmail() {
     document.getElementById('regSuccessView').style.display = 'block';
   } catch {
     btn.disabled = false;
-    btn.textContent = 'Odeslat';
+    btn.textContent = 'Odeslat odkaz na e-mail';
     sendErrEl.style.display = 'block';
     sendErrEl.textContent = 'Něco se nepovedlo, zkuste to znovu.';
   }

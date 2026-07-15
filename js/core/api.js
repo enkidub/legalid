@@ -178,13 +178,13 @@ export async function apiAmlTerminate(caseId, reason) {
   return r.json();
 }
 
-// remember: true → dlouhá session (90 dní), jinak 7 dní.
-export async function apiSendMagicLink(email, remember = false) {
+// Session je vždy dlouhá (90 dní) — řeší worker (bez volby „zůstat přihlášen").
+export async function apiSendMagicLink(email) {
   const r = await fetch(`${WORKER_URL}/auth/send`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, remember })
+    body: JSON.stringify({ email })
   });
   return { ok: r.ok, data: await r.json() };
 }

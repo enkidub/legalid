@@ -334,7 +334,7 @@ export default {
         });
       }
 
-      const { email, remember } = body;
+      const { email } = body;
       if (!isValidEmail(email)) {
         return new Response(JSON.stringify({ error: 'invalid_email' }), {
           status: 400,
@@ -342,15 +342,14 @@ export default {
         });
       }
 
-      // Magic link platí 15 min (bezpečnost). Délku SESSION zvolí uživatel přes remember.
+      // Magic link platí 15 min (bezpečnost). Session je po ověření vždy 90 dní (viz /auth/verify).
       const token = crypto.randomUUID();
       const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
       await env.DB.prepare(
         'INSERT INTO auth_tokens (token, user_id, expires_at, used) VALUES (?, NULL, ?, 0)'
       ).bind(token, expires).run();
 
-      const rememberParam = remember ? '&remember=1' : '';
-      const link = `https://legalid.kuba-houser.workers.dev/auth/verify?token=${token}&email=${encodeURIComponent(email)}${rememberParam}`;
+      const link = `https://legalid.kuba-houser.workers.dev/auth/verify?token=${token}&email=${encodeURIComponent(email)}`;
 
       const resendRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -421,10 +420,10 @@ export default {
         ).bind(email).first();
       }
 
-      // Délka session: remember=1 → 90 dní, jinak 7 dní (default, bezpečnější).
+      // Délka session: vždy 90 dní (bez volby „zůstat přihlášen").
       // SameSite=None je POVINNÉ — frontend (legalid.cz) a API (workers.dev) jsou různé
       // domény, cookie je cross-site a bez None by se u API volání vůbec neposílala.
-      const sessionDays = url.searchParams.get('remember') === '1' ? 90 : 7;
+      const sessionDays = 90;
       const maxAge = sessionDays * 24 * 3600;
       const jwt = await signJWT(
         { sub: user.id, email: user.email, exp: Math.floor(Date.now() / 1000) + maxAge },
@@ -504,13 +503,12 @@ export default {
       if (!env.GOOGLE_CLIENT_ID) return json({ error: 'oauth_not_configured' }, 500);
       // CSRF state — náhodný token uložený do krátkodobé cookie, ověříme v callbacku.
       const state = b64url(crypto.getRandomValues(new Uint8Array(16)).buffer);
-      const remember = url.searchParams.get('remember') === '1' ? '1' : '0';
       const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
       authUrl.searchParams.set('client_id', env.GOOGLE_CLIENT_ID);
       authUrl.searchParams.set('redirect_uri', GOOGLE_REDIRECT_URI);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('scope', 'openid email');
-      authUrl.searchParams.set('state', `${state}.${remember}`);   // stav + volba „zapamatovat"
+      authUrl.searchParams.set('state', state);
       authUrl.searchParams.set('prompt', 'select_account');
       return new Response(null, {
         status: 302,
@@ -531,7 +529,7 @@ export default {
       });
 
       const code = url.searchParams.get('code');
-      const [stateToken, rememberFlag] = (url.searchParams.get('state') || '').split('.');
+      const [stateToken] = (url.searchParams.get('state') || '').split('.');
       const cookie = request.headers.get('Cookie') || '';
       const cm = cookie.match(/(?:^|;\s*)oauth_state=([^;]+)/);
       const cookieState = cm ? cm[1] : null;
@@ -578,7 +576,7 @@ export default {
       }
 
       // Session identická s /auth/verify: JWT { sub, email, exp } + cookie SameSite=None.
-      const sessionDays = rememberFlag === '1' ? 90 : 7;
+      const sessionDays = 90;   // vždy dlouhá session
       const maxAge = sessionDays * 24 * 3600;
       const jwt = await signJWT(
         { sub: user.id, email: user.email, exp: Math.floor(Date.now() / 1000) + maxAge },

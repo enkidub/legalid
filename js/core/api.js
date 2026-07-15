@@ -73,6 +73,24 @@ export async function apiAmlRunLookup(caseId) {
   return r.json();
 }
 
+// Blok 3 — analýza podpůrného dokumentu (AI). Vrací { doc_type, parties, amounts, ..., sha256, document_id }.
+export async function apiAmlAnalyzeDocument(caseId, { filename, mime, data_base64 }) {
+  const r = await fetch(`${WORKER_URL}/api/aml/${caseId}/analyze-document`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename, mime, data_base64 })
+  });
+  return r.json();
+}
+
+// Blok 3 — kontrola konzistence účelu/zdroje s dokumenty. Vrací { consistency, signals, summary_cs }.
+export async function apiAmlCheckConsistency(caseId, payload) {
+  const r = await fetch(`${WORKER_URL}/api/aml/${caseId}/check-consistency`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+  });
+  return r.json();
+}
+
 // U4 — ukončení kontroly (§ 15): status='terminated' + důvod. Vrací { ok, completed_at }.
 export async function apiAmlTerminate(caseId, reason) {
   const r = await fetch(`${WORKER_URL}/api/aml/${caseId}/terminate`, {

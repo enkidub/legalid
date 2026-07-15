@@ -93,6 +93,44 @@ const METHODS = [
   { id: 'micropayment', enabled: false, title: 'Mikroplatba' },
 ];
 
+// ── Blok 3 — Účel obchodu (krok index 2) ──
+const RELATION_TYPES = [
+  ['jednorazovy', 'Jednorázový obchod'],
+  ['obchodni_vztah', 'Obchodní vztah (opakované služby, trvalá spolupráce)'],
+];
+const DEAL_BANDS = [
+  ['do_1k', 'do 1 000 €'],
+  ['1k_15k', '1 000 – 15 000 €'],
+  ['15k_plus', '15 000 € a více'],
+];
+const PURPOSE_CATEGORIES = [
+  ['', '—'],
+  ['prevod_nemovitosti', 'Převod nemovitosti'],
+  ['uschova', 'Úschova'],
+  ['korporatni', 'Korporátní transakce'],
+  ['rodinne_dedicke', 'Rodinné a dědické'],
+  ['jine', 'Jiné'],
+];
+const SOURCE_TYPES = [
+  ['', '—'],
+  ['plat', 'Plat či příjem ze zaměstnání'],
+  ['uspory', 'Úspory a investice'],
+  ['prodej_nemovitosti', 'Prodej nemovitosti'],
+  ['dedictvi', 'Dědictví'],
+  ['podnikani', 'Příjem z podnikání'],
+  ['penze', 'Penzijní fondy'],
+  ['jine', 'Jiné'],
+];
+// Datové sloupce kroku Účel (persistují se přes patchPurpose, načítají v resume).
+const PURPOSE_COLS = ['relation_type', 'deal_value_band', 'deal_countries', 'purpose_category',
+  'business_purpose', 'source_of_funds_type', 'source_of_funds'];
+const COUNTRIES_CS = ['Česko', 'Slovensko', 'Německo', 'Rakousko', 'Polsko', 'Maďarsko', 'Francie',
+  'Itálie', 'Španělsko', 'Nizozemsko', 'Belgie', 'Švýcarsko', 'Spojené království', 'Irsko',
+  'Ukrajina', 'Rusko', 'USA', 'Čína', 'Kypr', 'Lucembursko', 'Malta', 'Portugalsko', 'Řecko',
+  'Rumunsko', 'Bulharsko', 'Chorvatsko', 'Slovinsko', 'Litva', 'Lotyšsko', 'Estonsko',
+  'Spojené arabské emiráty', 'Turecko'];
+const MAX_PURPOSE_DOCS = 5;
+
 // U4 — důvody ukončení kontroly (radio v modalu).
 const TERMINATE_REASONS = [
   ['refused', 'Klient odmítl poskytnout součinnost při identifikaci (§ 15)'],
@@ -123,6 +161,9 @@ const wiz = {
   forceRun: false,          // true = na kroku Lustrace spustit nově (ne načíst uložené)
   verifierConfirmed: false, // U3: checkbox prohlášení ověřující osoby (osobní setkání)
   terminating: false,       // U4: probíhá ukončení kontroly
+  purposeDocs: [],          // Blok 3: podpůrné dokumenty (session paměť, neperzistují se)
+  consistency: null,        // Blok 3: výsledek kontroly konzistence
+  consistencyLoading: false,
 };
 
 // Popisky lustrací.
@@ -178,6 +219,9 @@ function bindRoot(root) {
   root.addEventListener('change', (e) => {
     if (e.target.id === 'amlUploadInput') {
       addUploadFiles(root, e.target.files); e.target.value = ''; return;
+    }
+    if (e.target.id === 'amlPurposeInput') {
+      addPurposeDocs(root, e.target.files); e.target.value = ''; return;
     }
     if (e.target.matches('input[type="file"]')) {   // kamera — jedna strana
       const side = e.target.dataset.side || 'front';
@@ -241,6 +285,11 @@ function handleAction(root, act, ds) {
     case 'close-terminate': closeTerminateModal(); break;
     case 'confirm-terminate': confirmTerminate(root); break;
     case 'go-archive': wiz.caseId = null; if (window.navigate) window.navigate('/archiv'); break;
+    case 'set-relation': readFieldsFromForm(); wiz.data.relation_type = ds.val; renderPurpose(root); break;
+    case 'set-band': readFieldsFromForm(); wiz.data.deal_value_band = ds.val; renderPurpose(root); break;
+    case 'add-purpose-doc': $('amlPurposeInput')?.click(); break;
+    case 'remove-purpose-doc': removePurposeDoc(root, +ds.idx); break;
+    case 'check-consistency': runConsistency(root); break;
     default: break;
   }
 }
@@ -269,6 +318,7 @@ async function createNewCase(root) {
     wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.clients = null; wiz.clientQuery = '';
     wiz.lookups = null; wiz.lookupStatus = 'idle'; wiz.maxStep = 0; wiz.forceRun = false;
     wiz.verifierConfirmed = false; wiz.terminating = false;
+    wiz.purposeDocs = []; wiz.consistency = null; wiz.consistencyLoading = false;
     if (wiz.source === 'list') loadClients(root);
     renderStep(root);
   } catch {
@@ -278,7 +328,8 @@ async function createNewCase(root) {
 
 // Všechny datové sloupce klienta (formulář + místo narození z OCR).
 const DATA_COLS = [...FORM_FIELDS.map(f => f.col), 'client_birth_place',
-  'company_name', 'company_address', 'acting_person_role', 'acting_person_note', 'esm_checked', 'esm_note'];
+  'company_name', 'company_address', 'acting_person_role', 'acting_person_note', 'esm_checked', 'esm_note',
+  ...PURPOSE_COLS];
 
 async function resumeCase(root, id) {
   renderLoading('Načítám případ…');
@@ -294,6 +345,8 @@ async function resumeCase(root, id) {
     DATA_COLS.forEach(col => { if (c[col] != null && c[col] !== '') wiz.data[col] = c[col]; });
     try { const vj = c.verifier_declaration_json ? JSON.parse(c.verifier_declaration_json) : null; wiz.verifierConfirmed = !!(vj && vj.confirmed); }
     catch { wiz.verifierConfirmed = false; }
+    try { wiz.consistency = c.consistency_json ? JSON.parse(c.consistency_json) : null; } catch { wiz.consistency = null; }
+    wiz.purposeDocs = []; wiz.consistencyLoading = false;
     wiz.step = c.current_step || 0;   // DB je již v novém schématu (migrace v4)
     wiz.maxStep = wiz.step; wiz.forceRun = false;
     wiz.source = hasClientData() ? 'manual' : 'camera';   // s daty rovnou ukaž formulář
@@ -357,6 +410,12 @@ async function patchCase(fields) {
 
 // Kroky 1–4 (Lustrace, Účel, Riziko, Hotovo). Krok 0 vede vlastní tlačítko v kartě.
 async function goNext(root) {
+  // Krok Účel (2): validace povinných polí + uložení před přechodem na Riziko.
+  if (wiz.step === 2) {
+    readFieldsFromForm();
+    if (!purposeValid()) { showToast('Vyplňte prosím povinná pole: typ vztahu, hodnotu obchodu, popis a zdroj prostředků.'); return; }
+    await patchPurpose();
+  }
   if (wiz.step >= 1 && wiz.step <= 3) {
     wiz.step += 1;
     wiz.maxStep = Math.max(wiz.maxStep, wiz.step);
@@ -704,6 +763,7 @@ function renderStep(root) {
   renderSteps();
   if (wiz.step === 0) renderClientStep(root);
   else if (wiz.step === 1) renderLustrace(root);
+  else if (wiz.step === 2) renderPurpose(root);
   else renderPlaceholder();
   renderFoot();
 }
@@ -944,6 +1004,211 @@ function renderPlaceholder() {
     <div class="aml-h">${wiz.step + 1} — ${esc(STEP_LABELS[wiz.step] || '')}</div>
     <div class="aml-ai-note">Tento krok bude doplněn v dalších týdnech vývoje.</div>
   </div>`;
+}
+
+// ── Krok 3 (index 2) — Účel obchodu ──────────────────────────────────
+const DOC_TYPE_LABELS = {
+  kupni_smlouva: 'Kupní smlouva', vypis_uctu: 'Výpis z účtu', darovaci_smlouva: 'Darovací smlouva',
+  potvrzeni: 'Potvrzení', danove_priznani: 'Daňové přiznání', jine: 'Jiný dokument',
+};
+const CONSISTENCY_VIEW = {
+  consistent: { label: 'Konzistentní', cls: 'ok', icon: '✓' },
+  partial: { label: 'Částečně konzistentní', cls: 'warn', icon: '⚠' },
+  inconsistent: { label: 'Nekonzistentní', cls: 'match', icon: '⚠' },
+};
+
+function purposeValid() {
+  return !!(wiz.data.relation_type && wiz.data.deal_value_band
+    && String(wiz.data.business_purpose || '').trim() && wiz.data.source_of_funds_type);
+}
+
+function renderPurpose(root) {
+  if (!wiz.data.deal_countries) wiz.data.deal_countries = 'Česko';   // default dle zadání
+
+  const relTiles = RELATION_TYPES.map(([v, l]) =>
+    `<button class="aml-opt${wiz.data.relation_type === v ? ' aml-opt--on' : ''}" data-act="set-relation" data-val="${v}">${esc(l)}</button>`
+  ).join('');
+  const bandTiles = DEAL_BANDS.map(([v, l]) =>
+    `<button class="aml-opt aml-opt-band${wiz.data.deal_value_band === v ? ' aml-opt--on' : ''}" data-act="set-band" data-val="${v}">${esc(l)}</button>`
+  ).join('');
+  const catOpts = PURPOSE_CATEGORIES.map(([v, l]) => `<option value="${esc(v)}"${v === (wiz.data.purpose_category || '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
+  const srcOpts = SOURCE_TYPES.map(([v, l]) => `<option value="${esc(v)}"${v === (wiz.data.source_of_funds_type || '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
+  const countryList = COUNTRIES_CS.map(c => `<option value="${esc(c)}">`).join('');
+
+  const showBanner = wiz.data.deal_value_band === '15k_plus' && wiz.purposeDocs.length === 0;
+  const banner = showBanner
+    ? `<div class="aml-warn-banner">Nedostupnost podpůrných dokumentů k původu prostředků je faktorem zvýšeného rizika (§ 9a, § 13 zákona č. 253/2008 Sb.). Doporučujeme doložit.</div>`
+    : '';
+
+  $('amlMain').innerHTML = `<div class="aml-card">
+    <div class="aml-h">Účel obchodu</div>
+    <div class="aml-sub">Popište povahu a účel zamýšleného obchodu a původ prostředků. AI vám pomůže posoudit doklady.</div>
+
+    <div class="aml-pfield">
+      <div class="aml-plabel">Typ vztahu <span class="aml-req">*</span></div>
+      <div class="aml-opts">${relTiles}</div>
+    </div>
+
+    <div class="aml-pfield">
+      <div class="aml-plabel">Hodnota obchodu (EUR) <span class="aml-req">*</span></div>
+      <div class="aml-opts aml-opts-band">${bandTiles}</div>
+    </div>
+
+    <label class="aml-field">
+      <span>Kterých zemí se obchod týká</span>
+      <input id="aml_f_deal_countries" list="amlCountryList" value="${esc(wiz.data.deal_countries || '')}" placeholder="Česko (více zemí oddělte čárkou)">
+      <datalist id="amlCountryList">${countryList}</datalist>
+    </label>
+
+    <label class="aml-field">
+      <span>Kategorie obchodu</span>
+      <select id="aml_f_purpose_category">${catOpts}</select>
+    </label>
+
+    <label class="aml-field">
+      <span>Popis obchodu <span class="aml-req">*</span></span>
+      <textarea id="aml_f_business_purpose" rows="3" placeholder="Stručně popište, co je předmětem obchodu.">${esc(wiz.data.business_purpose || '')}</textarea>
+    </label>
+
+    <label class="aml-field">
+      <span>Zdroj prostředků <span class="aml-req">*</span></span>
+      <select id="aml_f_source_of_funds_type">${srcOpts}</select>
+    </label>
+    <label class="aml-field">
+      <span>Upřesnění zdroje</span>
+      <textarea id="aml_f_source_of_funds" rows="2" placeholder="např. prodej podílu ve společnosti XY, 12 mil. Kč">${esc(wiz.data.source_of_funds || '')}</textarea>
+    </label>
+
+    <div class="aml-pfield">
+      <div class="aml-plabel">Podpůrné dokumenty <span class="aml-plabel-sub">(nepovinné, 0–5 · PDF, JPG, PNG · max 10 MB)</span></div>
+      ${banner}
+      ${purposeDocsHTML()}
+    </div>
+
+    ${consistencyHTML()}
+  </div>`;
+}
+
+function purposeDocsHTML() {
+  const cards = wiz.purposeDocs.map((d, i) => {
+    const remove = `<button class="aml-doc-x" data-act="remove-purpose-doc" data-idx="${i}" aria-label="Odebrat">${SVG.close}</button>`;
+    if (d.status === 'analyzing') {
+      return `<div class="aml-doc-card"><div class="aml-doc-head"><span class="aml-doc-name">${esc(d.name)}</span>${remove}</div>
+        <div class="aml-ai-loading"><span class="aml-spinner"></span> AI analyzuje dokument…</div></div>`;
+    }
+    if (d.status === 'error') {
+      return `<div class="aml-doc-card aml-doc-err"><div class="aml-doc-head"><span class="aml-doc-name">${esc(d.name)}</span>${remove}</div>
+        <div class="aml-doc-note">Analýza selhala. Dokument zůstává přiložen, můžete jej odebrat a zkusit znovu.</div></div>`;
+    }
+    const typeLabel = DOC_TYPE_LABELS[d.doc_type] || 'Dokument';
+    const parties = (d.parties || []).map(p => [p.name, p.role].filter(Boolean).join(' — ')).filter(Boolean);
+    const amounts = (d.amounts || []).map(a => [a.value, a.currency].filter(Boolean).join(' ') + (a.context ? ` (${a.context})` : '')).filter(Boolean);
+    const flags = (d.red_flags || []).filter(Boolean);
+    const rowP = parties.length ? `<div class="aml-doc-row"><span class="aml-doc-k">Strany:</span> ${esc(parties.join('; '))}</div>` : '';
+    const rowA = amounts.length ? `<div class="aml-doc-row"><span class="aml-doc-k">Částky:</span> ${esc(amounts.join('; '))}</div>` : '';
+    const rowS = d.summary ? `<div class="aml-doc-summary">${esc(d.summary)}</div>` : '';
+    const rowF = flags.length ? `<div class="aml-doc-flags">${flags.map(f => `<span class="aml-doc-flag">${esc(f)}</span>`).join('')}</div>` : '';
+    return `<div class="aml-doc-card">
+      <div class="aml-doc-head"><span class="aml-doc-type">${esc(typeLabel)}</span><span class="aml-doc-name">${esc(d.name)}</span>${remove}</div>
+      ${rowS}${rowP}${rowA}${rowF}</div>`;
+  }).join('');
+  const canAdd = wiz.purposeDocs.length < MAX_PURPOSE_DOCS;
+  const add = canAdd
+    ? `<button class="aml-doc-add" data-act="add-purpose-doc"><span class="aml-dz-ico">${SVG.upload}</span><span>Nahrát dokument</span></button>
+       <input type="file" id="amlPurposeInput" accept="image/*,application/pdf" multiple hidden>`
+    : '';
+  return `<div class="aml-docs">${cards}${add}</div>`;
+}
+
+function consistencyHTML() {
+  const hasDocs = wiz.purposeDocs.some(d => d.status === 'done');
+  const btnDis = (!hasDocs || wiz.consistencyLoading) ? ' disabled' : '';
+  let result = '';
+  if (wiz.consistencyLoading) {
+    result = `<div class="aml-ai-loading"><span class="aml-spinner"></span> AI porovnává účel a zdroj s dokumenty…</div>`;
+  } else if (wiz.consistency) {
+    const v = CONSISTENCY_VIEW[wiz.consistency.consistency] || { label: wiz.consistency.consistency || '—', cls: 'warn', icon: '•' };
+    const signals = (wiz.consistency.signals || []).map(s =>
+      `<div class="aml-sig aml-sig-${esc(s.severity || 'low')}"><span class="aml-sig-dot"></span><span>${esc(s.description_cs || s.type || '')}</span></div>`
+    ).join('');
+    const summary = wiz.consistency.summary_cs ? `<div class="aml-cons-summary">${esc(wiz.consistency.summary_cs)}</div>` : '';
+    result = `<div class="aml-cons-result">
+      <div class="aml-cons-badge aml-lk-${v.cls}"><span class="aml-lk-ico">${v.icon}</span> ${esc(v.label)}</div>
+      ${summary}${signals}</div>`;
+  }
+  return `<div class="aml-pfield aml-cons">
+    <button class="aml-btn aml-btn-sm" data-act="check-consistency"${btnDis}>Zkontrolovat konzistenci</button>
+    ${result}</div>`;
+}
+
+// Přidá podpůrné dokumenty (max 5) a spustí AI analýzu každého zvlášť.
+async function addPurposeDocs(root, fileList) {
+  const files = Array.from(fileList || []);
+  for (const f of files) {
+    if (wiz.purposeDocs.length >= MAX_PURPOSE_DOCS) { showToast(`Max. ${MAX_PURPOSE_DOCS} dokumentů.`); break; }
+    const isPdf = f.type === 'application/pdf';
+    const isImg = f.type.startsWith('image/');
+    if (!isPdf && !isImg) { showToast('Podporujeme jen JPG, PNG a PDF.'); continue; }
+    if (f.size > MAX_UPLOAD_BYTES) { showToast(`${f.name}: přesahuje 10 MB.`); continue; }
+    const dataUrl = await new Promise((res, rej) => {
+      const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f);
+    }).catch(() => null);
+    if (!dataUrl) { showToast('Soubor se nepodařilo načíst.'); continue; }
+    const small = isPdf ? dataUrl : await downscale(dataUrl);
+    const doc = { name: f.name, mime: isPdf ? 'application/pdf' : 'image/jpeg', dataUrl: small, isPdf, status: 'analyzing' };
+    wiz.purposeDocs.push(doc);
+    renderPurpose(root);
+    analyzePurposeDoc(root, doc);
+  }
+}
+
+async function analyzePurposeDoc(root, doc) {
+  try {
+    const res = await apiAmlAnalyzeDocument(wiz.caseId, { filename: doc.name, mime: doc.mime, data_base64: doc.dataUrl.split(',')[1] });
+    if (!res || res.error) throw new Error(res?.message || 'analyze_failed');
+    doc.status = 'done';
+    doc.sha256 = res.sha256; doc.doc_type = res.doc_type;
+    doc.parties = res.parties || []; doc.amounts = res.amounts || [];
+    doc.summary = res.summary_cs || ''; doc.red_flags = res.red_flags || [];
+    doc.document_id = res.document_id; doc.extracted = res;
+  } catch {
+    doc.status = 'error';
+  }
+  if (wiz.step === 2) renderPurpose(root);
+}
+
+function removePurposeDoc(root, idx) {
+  wiz.purposeDocs.splice(idx, 1);
+  wiz.consistency = null;   // odebrání dokumentu zneplatní konzistenci
+  renderPurpose(root);
+}
+
+async function runConsistency(root) {
+  readFieldsFromForm();
+  const docs = wiz.purposeDocs.filter(d => d.status === 'done');
+  if (!docs.length) { showToast('Nejdřív nahrajte alespoň jeden dokument.'); return; }
+  wiz.consistencyLoading = true; renderPurpose(root);
+  let res;
+  try {
+    res = await apiAmlCheckConsistency(wiz.caseId, {
+      purpose: wiz.data.business_purpose || '',
+      source_of_funds_type: wiz.data.source_of_funds_type || '',
+      source_of_funds: wiz.data.source_of_funds || '',
+      documents: docs.map(d => ({ doc_type: d.doc_type, summary: d.summary, extracted: d.extracted })),
+    });
+  } catch { res = null; }
+  wiz.consistencyLoading = false;
+  if (!res || res.error) { showToast('Kontrola konzistence selhala, zkuste to znovu.'); renderPurpose(root); return; }
+  wiz.consistency = res;
+  renderPurpose(root);
+}
+
+// Uloží pole kroku Účel (přes patchCase) — volá se při přechodu na krok Riziko.
+async function patchPurpose() {
+  const patch = {};
+  PURPOSE_COLS.forEach(col => { patch[col] = (wiz.data[col] === '' || wiz.data[col] == null) ? null : wiz.data[col]; });
+  patch.consistency_json = wiz.consistency ? JSON.stringify(wiz.consistency) : null;
+  await patchCase(patch);
 }
 
 // ── Krok 2 — automatická lustrace ────────────────────────────────────

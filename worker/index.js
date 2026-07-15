@@ -112,6 +112,37 @@ function genCaseNumber() {
   return `AML-${ym}-${rand}`;
 }
 
+// SHA-256 (hex) z base64 řetězce (Web Crypto).
+async function sha256Hex(base64) {
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Zavolá Anthropic a vrátí naparsovaný JSON. Při chybě parsování 1× zopakuje, pak vyhodí.
+async function anthropicJson(env, { system, userContent, max_tokens = 1400 }) {
+  const payload = { model: 'claude-sonnet-4-6', max_tokens, system, messages: [{ role: 'user', content: userContent }] };
+  let lastErr = 'unknown';
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let res;
+    try {
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) { lastErr = `network ${e?.message || e}`; continue; }
+    if (!res.ok) { lastErr = `anthropic ${res.status}`; continue; }
+    const data = await res.json();
+    let text = (data?.content?.[0]?.text || '').trim();
+    text = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+    try { return JSON.parse(text); } catch { lastErr = 'parse'; }
+  }
+  throw new Error(lastErr);
+}
+
 // U2 — když klient má jméno v originále (azbuka…), sankce+PEP běží i na tuto variantu.
 // Vrátí závažnější (příp. vyšší skóre) ze dvou výsledků.
 const LOOKUP_SEVERITY = { match: 3, warning: 2, manual: 1, clean: 0, error: -1 };
@@ -649,6 +680,69 @@ export default {
           "UPDATE aml_cases SET status = 'terminated', terminated_reason = ?, completed_at = ? WHERE id = ? AND user_id = ?"
         ).bind(reason, completedAt, caseId, userId).run();
         return json({ ok: true, completed_at: completedAt });
+      }
+
+      // POST /api/aml/:caseId/analyze-document — AI analýza podpůrného dokumentu (Blok 3)
+      const anaM = url.pathname.match(/^\/api\/aml\/(\d+)\/analyze-document$/);
+      if (anaM) {
+        if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+        const caseId = anaM[1];
+        let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+        const owner = await env.DB.prepare('SELECT id FROM aml_cases WHERE id = ? AND user_id = ?').bind(caseId, userId).first();
+        if (!owner) return json({ error: 'not_found' }, 404);
+        const { filename, mime, data_base64 } = b;
+        if (!data_base64) return json({ error: 'missing_data' }, 400);
+        const mt = mime || 'application/octet-stream';
+        const block = mt === 'application/pdf'
+          ? { type: 'document', source: { type: 'base64', media_type: mt, data: data_base64 } }
+          : { type: 'image', source: { type: 'base64', media_type: mt, data: data_base64 } };
+        const system = 'Jsi asistent AML kontroly v ČR. Analyzuj dokument. Vrať POUZE validní JSON bez markdownu: {"doc_type":"kupni_smlouva|vypis_uctu|darovaci_smlouva|potvrzeni|danove_priznani|jine","parties":[{"name","role"}],"amounts":[{"value","currency","context"}],"dates":[],"subject":"","source_indicators":[],"red_flags":[],"summary_cs":"2-3 věty"}. Red flags: zahraniční jurisdikce, hotovost, třetí strany, nesoulad částek, offshore, krypto.';
+        let analysis;
+        try {
+          analysis = await anthropicJson(env, { system, userContent: [block, { type: 'text', text: 'Analyzuj přiložený dokument dle instrukcí a vrať JSON.' }], max_tokens: 1500 });
+        } catch (e) {
+          return json({ error: 'analyze_failed', message: String(e.message || e) }, 502);
+        }
+        const sha256 = await sha256Hex(data_base64);
+        try {
+          const r = await env.DB.prepare(
+            `INSERT INTO aml_documents (case_id, doc_type, filename, mime_type, sha256, extracted_json, ai_summary, content_base64, content_size_bytes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)`
+          ).bind(caseId, analysis.doc_type || 'jine', filename || null, mt, sha256,
+                 JSON.stringify(analysis), analysis.summary_cs || null,
+                 Math.floor(data_base64.length * 3 / 4)).run();
+          return json({ ...analysis, sha256, document_id: r.meta.last_row_id });
+        } catch (e) {
+          return json({ error: 'db_failed', message: String(e.message || e) }, 500);
+        }
+      }
+
+      // POST /api/aml/:caseId/check-consistency — AI porovnání účelu/zdroje s dokumenty (Blok 3)
+      const consM = url.pathname.match(/^\/api\/aml\/(\d+)\/check-consistency$/);
+      if (consM) {
+        if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+        const caseId = consM[1];
+        let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+        const owner = await env.DB.prepare('SELECT id FROM aml_cases WHERE id = ? AND user_id = ?').bind(caseId, userId).first();
+        if (!owner) return json({ error: 'not_found' }, 404);
+        const context = {
+          declared_purpose: b.purpose || '',
+          source_of_funds_type: b.source_of_funds_type || '',
+          source_of_funds_detail: b.source_of_funds || '',
+          documents: Array.isArray(b.documents) ? b.documents : [],
+        };
+        const system = 'Porovnej deklarovaný účel a zdroj prostředků s daty z dokumentů. POUZE JSON: {"consistency":"consistent|partial|inconsistent","signals":[{"type","severity":"low|medium|high","description_cs"}],"summary_cs"}. Konzervativně: dokumenty nepokrývající zdroj = partial.';
+        let result;
+        try {
+          result = await anthropicJson(env, { system, userContent: [{ type: 'text', text: JSON.stringify(context) }], max_tokens: 1000 });
+        } catch (e) {
+          return json({ error: 'consistency_failed', message: String(e.message || e) }, 502);
+        }
+        try {
+          await env.DB.prepare('UPDATE aml_cases SET consistency_json = ? WHERE id = ? AND user_id = ?')
+            .bind(JSON.stringify(result), caseId, userId).run();
+        } catch { /* uložení konzistence nesmí shodit odpověď */ }
+        return json(result);
       }
 
       // POST /api/aml/case/create — založí nový případ

@@ -1631,6 +1631,7 @@ body.logged-in .nav-section-guest { display: none; }
 .aml-client-row:hover { border-color: var(--navy); background: var(--paper-w); }
 .aml-client-name { font-size: 13px; font-weight: 600; color: var(--navy); }
 .aml-client-meta { font-size: 11px; color: var(--ink-lt); }
+.aml-client-status { font-size: 11px; color: var(--gold-h); margin-top: 2px; }
 
 /* Patička */
 .aml-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }

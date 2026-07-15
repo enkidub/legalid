@@ -109,6 +109,13 @@ export async function apiAmlRiskDecision(caseId, payload) {
   return r.json();
 }
 
+// Centrální evidence klientů — fulltext hledání (GET /api/clients?q=).
+export async function apiClientsSearch(q = '') {
+  const url = q ? `${WORKER_URL}/api/clients?q=${encodeURIComponent(q)}` : `${WORKER_URL}/api/clients`;
+  const r = await fetch(url, { credentials: 'include' });
+  return r.json();
+}
+
 // Blok 5 — dokončení kontroly: status='completed' + next_review_due + record_sha256.
 export async function apiAmlComplete(caseId, record_sha256) {
   const r = await fetch(`${WORKER_URL}/api/aml/${caseId}/complete`, {

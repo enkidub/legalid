@@ -7,7 +7,7 @@ import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, ap
 import { state } from '../core/state.js';
 import { showToast, esc } from '../core/ui.js';
 import { openRegistrationModal } from '../auth/auth.js';
-import { apiAmlComplete, apiAmlGetDocuments } from '../core/api.js';
+import { apiAmlComplete, apiAmlGetDocuments, apiClientsSearch } from '../core/api.js';
 import { buildTerminationPdf, buildRecordPdf } from './pdf.js';
 
 // Wizard: 5 kroků (0-index), zobrazeno jako 1–5. Krátké labely pro mobil (<640px).
@@ -68,7 +68,7 @@ const SOURCES = [
   { id: 'camera', svg: SVG.camera, title: 'Vyfotit doklad' },
   { id: 'upload', svg: SVG.upload, title: 'Nahrát soubor' },
   { id: 'manual', svg: SVG.manual, title: 'Zadat ručně' },
-  { id: 'list', svg: SVG.list, title: 'Ze seznamu' },
+  { id: 'list', svg: SVG.list, title: 'Existující klient' },
 ];
 const LAST_METHOD_KEY = 'legalid_aml_lastMethod';
 function loadLastMethod() {
@@ -270,7 +270,7 @@ function bindRoot(root) {
   // Live validace formuláře + průběžné čtení do wiz.data (bez re-renderu → nezahodí fokus).
   root.addEventListener('input', (e) => {
     if (e.target.id && e.target.id.startsWith('aml_f_')) { readFieldsFromForm(); refreshContinue(); }
-    if (e.target.id === 'amlClientSearch') { wiz.clientQuery = e.target.value; renderClientList(); }
+    if (e.target.id === 'amlClientSearch') { wiz.clientQuery = e.target.value; debouncedClientSearch(root); }
     if (e.target.id === 'amlRiskJust') { wiz.riskDecision.justification = e.target.value; updateDecideBtn(); }
   });
   // Drag & drop na dropzóny (source 'upload').
@@ -685,22 +685,33 @@ async function saveDoc(type, img, extracted) {
 }
 
 // ── Ze seznamu (uložení klienti z předchozích případů) ───────────────
-async function loadClients(root) {
+// Centrální evidence: hledání klientů přes GET /api/clients?q= (server-side fulltext).
+async function loadClients(root, q = '') {
   try {
-    const r = await apiAmlListClients();
+    const r = await apiClientsSearch(q);
     wiz.clients = r.clients || [];
   } catch { wiz.clients = []; }
-  if (wiz.step === 0 && wiz.source === 'list') renderStep(root);
+  if (wiz.step === 0 && wiz.source === 'list') renderClientList();
 }
 
-function clientKey(c) {
-  return (c.client_doc_number || '') || `${c.client_name}|${c.client_surname}|${c.client_birth_date || ''}`;
+let _clientSearchTimer = null;
+function debouncedClientSearch(root) {
+  clearTimeout(_clientSearchTimer);
+  _clientSearchTimer = setTimeout(() => loadClients(root, wiz.clientQuery.trim()), 250);
 }
 
+// Namapuje záznam z clients (D1) na sloupce wiz.data a předvyplní formulář.
 function pickClient(root, key) {
-  const c = (wiz.clients || []).find(x => clientKey(x) === key);
+  const c = (wiz.clients || []).find(x => String(x.id) === String(key));
   if (!c) return;
-  DATA_COLS.forEach(col => { if (c[col]) wiz.data[col] = c[col]; });
+  const map = {
+    client_name: c.name, client_surname: c.surname, client_birth_date: c.birth_date,
+    client_birth_place: c.birth_place, client_address: c.address, client_nationality: c.nationality,
+    client_doc_type: c.doc_type, client_doc_number: c.doc_number, client_rc: c.rc,
+    client_ico: c.ico, company_name: c.company_name,
+  };
+  Object.entries(map).forEach(([col, v]) => { if (v != null && v !== '') wiz.data[col] = v; });
+  if (c.subject_type) { wiz.subject_type = c.subject_type; patchCase({ subject_type: c.subject_type }); }
   renderStep(root);
 }
 
@@ -1023,28 +1034,32 @@ function clientFormHTML() {
 
 // Seznam uložených klientů (source 'list').
 function clientListHTML() {
-  if (wiz.clients === null) return `<div class="aml-src-hint"><span class="aml-spinner"></span> Načítám uložené klienty…</div>`;
-  if (wiz.clients.length === 0) return `<div class="aml-src-hint">Zatím nemáte uložené klienty. Použijte jinou cestu.</div>`;
+  if (wiz.clients === null) return `<div class="aml-src-hint"><span class="aml-spinner"></span> Načítám klienty…</div>`;
   return `<input class="aml-client-search" id="amlClientSearch" placeholder="Hledat jméno, IČO nebo číslo dokladu…" value="${esc(wiz.clientQuery)}">
     <div class="aml-client-list" id="amlClientList">${clientRowsHTML()}</div>`;
 }
 
 function clientRowsHTML() {
-  const q = wiz.clientQuery.trim().toLowerCase();
-  const list = (wiz.clients || []).filter(c => {
-    if (!q) return true;
-    return [c.client_name, c.client_surname, c.client_ico, c.client_doc_number]
-      .filter(Boolean).some(v => String(v).toLowerCase().includes(q));
-  });
-  if (!list.length) return `<div class="aml-src-hint">Nic nenalezeno.</div>`;
+  const list = wiz.clients || [];
+  if (!list.length) return `<div class="aml-src-hint">${wiz.clientQuery ? 'Nic nenalezeno.' : 'Zatím nemáte uložené klienty. Použijte jinou cestu.'}</div>`;
   return list.map(c => {
-    const name = [c.client_name, c.client_surname].filter(Boolean).join(' ') || 'bez jména';
-    const meta = [c.client_birth_date && `nar. ${esc(c.client_birth_date)}`,
-      c.client_doc_number && `doklad ${esc(c.client_doc_number)}`,
-      c.client_ico && `IČO ${esc(c.client_ico)}`].filter(Boolean).join(' · ');
-    return `<button class="aml-client-row" data-act="pick-client" data-key="${esc(clientKey(c))}">
+    const name = c.subject_type === 'po'
+      ? (c.company_name || 'firma bez názvu')
+      : ([c.name, c.surname].filter(Boolean).join(' ') || 'bez jména');
+    const meta = [
+      c.birth_date && `nar. ${esc(c.birth_date)}`,
+      c.ico && `IČO ${esc(c.ico)}`,
+      c.doc_number && `doklad ${esc(c.doc_number)}`,
+    ].filter(Boolean).join(' · ');
+    const aml = c.last_aml_date
+      ? `<span class="aml-client-status">Poslední kontrola ${esc(fmtDateOnly(c.last_aml_date))}` +
+        `${c.last_risk_level ? ' · ' + esc(lbl(RISK_LEVELS, c.last_risk_level)) + ' riziko' : ''}` +
+        `${c.next_review_due ? ' · revalidace do ' + esc(fmtDateOnly(c.next_review_due)) : ''}</span>`
+      : '';
+    return `<button class="aml-client-row" data-act="pick-client" data-key="${esc(String(c.id))}">
       <span class="aml-client-name">${esc(name)}</span>
       <span class="aml-client-meta">${meta}</span>
+      ${aml}
     </button>`;
   }).join('');
 }

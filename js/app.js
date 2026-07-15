@@ -1,7 +1,7 @@
 // legalid.cz — js/app.js
 // Vygenerováno refaktoringem z původního monolitického index.html.
 
-import { checkSession, closeCenikModal, closeRegistrationModal, closeUpgradeModal, handleLogout, loginWithGoogle, openCenikModal, openRegistrationModal, selectPlan, submitRegEmail } from './auth/auth.js';
+import { checkSession, closeCenikModal, closeRegistrationModal, closeUpgradeModal, handleLogout, loginWithGoogle, openCenikModal, openRegistrationModal, selectPlan, submitRegEmail, consumeLoginRedirect } from './auth/auth.js';
 import { activeResetPmSettings, cfgUpdateAdvokat, clearAdvokatStorage, closeCfgPanel, closeCfgPanelToMenu, closeFormatPanel, closePrintModal, closeSplitMenu, diagramClick, handleFiles, hideOcrSuccess, onKomboSettingsInput, onPmSettingsInput, onSettingsInput, openCfgPanel, openDolozkaPreview, openSettings, pmDiagramClick, prefillDates, removePhoto, resetSettings, saveAndPrint, saveSettings, selectCustomFormat, selectFormat, switchPmTab, toggleAdvokat, toggleCfgSection, togglePreview, toggleSplitMenu, triggerUpload, updateAdvokat, updatePreview, zmenFormat } from './dolozka/dolozka.js';
 import { buildDolozkaPreviewContent, closePostPrintToast, downloadDocx, noveOvereni, printDolozka, printStitky, scalePrintPreview } from './dolozka/generate.js';
 import { closeKlientiPanel, klientiDeleteConfirm, klientiDeleteDismiss, klientiDeleteDo, klientiEditCancel, klientiEditSave, klientiEditStart, klientiLoad, openKlientiPanel, renderKlientiList, renderKlientiPage, klientiSearch, klientiToggle, klientiNewAml, klientiImport, klientiImportDismiss } from './klienti/klienti.js';
@@ -200,7 +200,9 @@ function mountRoute(path) {
 window.addEventListener('authchange', () => {
   document.body.classList.toggle('logged-in', state.loggedIn);
   reloadProfile();   // natáhni profil povinné osoby (D1 po přihlášení / localStorage host)
-  mountRoute(currentPath());
+  const target = consumeLoginRedirect();   // login-gate: návrat na cílovou routu
+  if (target && target !== currentPath()) navigate(target);
+  else mountRoute(currentPath());
 });
 
 // ── Bootstrap ────────────────────────────────────────────────────────

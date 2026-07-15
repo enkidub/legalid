@@ -3,7 +3,24 @@
 
 import { apiCheckSession, apiLogout, apiSendMagicLink, apiTrackUsage } from '../core/api.js';
 import { state, CONFIG } from '../core/state.js';
-import { closeHamburger } from '../core/ui.js';
+import { closeHamburger, showToast } from '../core/ui.js';
+import { navigate } from '../core/router.js';
+
+const REDIRECT_KEY = 'postLoginRedirect';
+
+// Login-gate: uloží cílovou routu, kam se má uživatel po přihlášení vrátit.
+export function markLoginRedirect() {
+  try { sessionStorage.setItem(REDIRECT_KEY, location.pathname + location.search); } catch {}
+}
+// Po přihlášení: vrátí uloženou cílovou routu (a smaže ji), jinak null.
+export function consumeLoginRedirect() {
+  if (!state.loggedIn) return null;
+  try {
+    const t = sessionStorage.getItem(REDIRECT_KEY);
+    if (t) { sessionStorage.removeItem(REDIRECT_KEY); return t; }
+  } catch {}
+  return null;
+}
 
 // Přesměruje na worker OAuth start (celostránková navigace, ne fetch — browser musí
 // jít na Google). Session je vždy dlouhá (90 dní) — řeší worker.
@@ -167,8 +184,9 @@ export async function checkSession() {
 
 
 export async function handleLogout() {
-  try {
-    await apiLogout();
-  } catch {}
-  checkSession();
+  try { await apiLogout(); } catch {}
+  try { sessionStorage.removeItem(REDIRECT_KEY); } catch {}
+  await checkSession();
+  navigate('/');                     // odhlášení vede VŽDY na landing
+  showToast('Byli jste odhlášeni');
 }

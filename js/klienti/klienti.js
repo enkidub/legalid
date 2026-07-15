@@ -7,6 +7,7 @@ import { updatePreview } from '../dolozka/dolozka.js';
 import { esc, showToast } from '../core/ui.js';
 import { state } from '../core/state.js';
 import { apiClientsSearch, apiClientGet, apiClientUpdate, apiClientDelete, apiClientsImport } from '../core/api.js';
+import { markLoginRedirect } from '../auth/auth.js';
 
 // Klienti jsou plná stránka (route /klienti) — open/close jen přepínají route.
 export function openKlientiPanel() { navigate('/klienti'); }
@@ -55,8 +56,9 @@ export async function renderKlientiList() {
   const list = document.getElementById('klientiList');
   if (!list) return;
   if (!state.loggedIn) {
-    list.innerHTML = `<div class="lp-empty"><div class="lp-empty-title">Pro evidenci klientů se přihlaste.</div>
-      <div class="lp-empty-sub">Klienti se ukládají k vašemu účtu a jsou dostupní na všech zařízeních.</div></div>`;
+    markLoginRedirect();
+    list.innerHTML = `<div class="lp-empty"><div class="lp-empty-title">Pro pokračování se přihlaste — data se ukládají k vašemu účtu.</div>
+      <button class="aml-btn aml-btn-primary" style="margin-top:14px" onclick="openRegistrationModal()">Přihlásit se / Registrovat</button></div>`;
     const b = document.getElementById('klientiBadge'); if (b) b.textContent = '';
     return;
   }

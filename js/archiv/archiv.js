@@ -4,6 +4,7 @@ import { apiAmlListCases, apiAmlGetCase, apiAmlGetLookups, apiAmlGetDocuments } 
 import { buildRecordPdf, buildTerminationPdf, fmtDateCs } from '../aml/pdf.js';
 import { state } from '../core/state.js';
 import { showToast, esc } from '../core/ui.js';
+import { markLoginRedirect } from '../auth/auth.js';
 
 let _cases = [];   // cache načtených případů
 
@@ -15,10 +16,12 @@ export function initArchiv() {
   const root = document.getElementById('archivRoot');
   if (!root) return;
   if (!state.loggedIn) {
+    markLoginRedirect();
     root.innerHTML = `<div class="view-placeholder">
       <div class="view-placeholder-icon"><i class="ti ti-archive"></i></div>
       <h1 class="view-placeholder-title">Archiv</h1>
-      <p class="view-placeholder-text">Pro zobrazení archivu AML kontrol se prosím přihlaste.</p></div>`;
+      <p class="view-placeholder-text">Pro pokračování se přihlaste — data se ukládají k vašemu účtu.</p>
+      <button class="aml-btn aml-btn-primary" style="margin-top:14px" onclick="openRegistrationModal()">Přihlásit se / Registrovat</button></div>`;
     return;
   }
   root.addEventListener('click', (e) => {

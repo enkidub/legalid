@@ -6,7 +6,7 @@
 import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, apiAmlListCases, apiAmlListClients, apiAmlAres, apiAmlGetLookups, apiAmlRunLookup, apiAmlTerminate, apiAmlAnalyzeDocument, apiAmlCheckConsistency, apiAmlRiskSuggest, apiAmlRiskDecision, apiOcr } from '../core/api.js';
 import { state } from '../core/state.js';
 import { showToast, esc } from '../core/ui.js';
-import { openRegistrationModal } from '../auth/auth.js';
+import { openRegistrationModal, markLoginRedirect } from '../auth/auth.js';
 import { apiAmlComplete, apiAmlGetDocuments, apiClientsSearch } from '../core/api.js';
 import { buildTerminationPdf, buildRecordPdf } from './pdf.js';
 import { getProfile, ensureProfileLoaded, profileIsFilled } from '../profile/profile.js';
@@ -791,12 +791,13 @@ function renderLoading(msg) { const m = $('amlMain'); if (m) m.innerHTML = `<div
 function renderError(msg) { const m = $('amlMain'); if (m) m.innerHTML = `<div class="aml-card"><div class="aml-ai-note">${esc(msg)}</div><button class="aml-btn aml-btn-primary" data-act="new">Začít novou kontrolu</button></div>`; }
 
 function renderLoginRequired() {
+  markLoginRedirect();
   const steps = $('amlSteps'); if (steps) steps.innerHTML = '';
   const foot = $('amlFoot'); if (foot) foot.innerHTML = '';
   const m = $('amlMain');
   if (m) m.innerHTML = `<div class="aml-card aml-login">
     <div class="aml-h">AML kontrola</div>
-    <div class="aml-ai-note">Pro vedení AML kontroly klienta se přihlaste — případy se ukládají k vašemu účtu.</div>
+    <div class="aml-ai-note">Pro pokračování se přihlaste — data se ukládají k vašemu účtu.</div>
     <button class="aml-btn aml-btn-primary" data-act="login">Přihlásit se / Registrovat</button>
   </div>`;
 }

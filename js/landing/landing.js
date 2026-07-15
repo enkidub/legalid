@@ -183,7 +183,7 @@ export function renderLanding() {
         <div class="lnd-about-text">
           <!-- TODO: nahradit placeholder reálným textem (2–3 věty) a fotem. -->
           Legalid staví praktikující právník a vývojář — z frustrace z ručního papírování kolem AML.
-          Cílem je nástroj, který advokátovi ušetří čas a přitom drží zákonné náležitosti.
+          Cílem je nástroj, který povinné osobě ušetří čas a přitom drží zákonné náležitosti.
         </div>
       </div>
     </div>

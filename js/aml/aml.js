@@ -1567,7 +1567,7 @@ const OS_DATASETS = {
   un_ga_protocol: 'OSN – protokol Valného shromáždění', everypolitician: 'EveryPolitician',
   eu_meps: 'Europarlament (poslanci)', gb_hmt_sanctions: 'HM Treasury (UK)',
 };
-// Interní/technické datasety OpenSanctions — pro advokáta bez hodnoty, skryjeme.
+// Interní/technické datasety OpenSanctions — pro povinnou osobu bez hodnoty, skryjeme.
 const OS_DATASET_NOISE = new Set(['wd_categories', 'ann_pep_positions', 'wd_positions', 'ext_wikidata', 'wikidata_categories']);
 const OS_TOPICS = {
   'role.pep': 'politicky exponovaná osoba', 'role.pol': 'politik',
@@ -1609,7 +1609,7 @@ function translatePosition(p) {
   return normYears(String(p));
 }
 
-// Speciální, advokátovi srozumitelný detail PEP shody z OpenSanctions.
+// Speciální, povinné osobě srozumitelný detail PEP shody z OpenSanctions.
 function pepDetailHTML(lk) {
   const d = lk.details || {};
   const row = (label, val) => val && val.length
@@ -1646,7 +1646,7 @@ const ISIR_STAV = {
 };
 const isirStav = s => s ? (ISIR_STAV[s] || String(s).toLowerCase().replace(/_/g, ' ')) : '';
 
-// ISIR — seznam nalezených insolvenčních řízení, hodnotný pro advokáta:
+// ISIR — seznam nalezených insolvenčních řízení, hodnotný pro povinnou osobu:
 // probíhající řízení nahoře + zvýrazněná, český stav, formátovaná data.
 function isirDetailHTML(lk) {
   const d = lk.details || {};
@@ -1821,7 +1821,7 @@ function toggleLookupDetail(type) {
 }
 
 // ── U4 — Ukončit kontrolu (§ 15) ─────────────────────────────────────
-// Povinná osoba z uložených údajů advokáta (localStorage), pro záhlaví PDF.
+// Povinná osoba z uložených údajů profilu (localStorage), pro záhlaví PDF.
 function loadPovinnaOsoba() {
   try {
     const s = JSON.parse(localStorage.getItem('legalid_advokat') || 'null');

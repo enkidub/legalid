@@ -374,7 +374,15 @@ async function applyClientPrefill(root, c) {
   renderStep(root);
 }
 
+// „Pokračovat" z archivu → sessionStorage, jednorázově.
+function readResumeCaseId() {
+  try { const v = sessionStorage.getItem('legalid_aml_resume'); if (v) { sessionStorage.removeItem('legalid_aml_resume'); return +v; } } catch {}
+  return null;
+}
+
 async function startAml(root) {
+  const resumeId = readResumeCaseId();
+  if (resumeId) { await resumeCase(root, resumeId); return; }
   const prefill = readAmlPrefill();
   if (prefill) { await createNewCase(root); await applyClientPrefill(root, prefill); return; }
   if (wiz.caseId) { renderStep(root); return; }   // už rozpracováno v této relaci
@@ -816,18 +824,50 @@ function renderLoginRequired() {
   </div>`;
 }
 
+// Relativní čas: „dnes 14:32" / „včera" / „před 3 dny" / jinak datum.
+function relTimeCs(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) {
+    try { return `dnes ${d.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}`; } catch { return 'dnes'; }
+  }
+  const y = new Date(now); y.setDate(now.getDate() - 1);
+  if (d.toDateString() === y.toDateString()) return 'včera';
+  const days = Math.floor((now - d) / 86400000);
+  if (days >= 2 && days <= 4) return `před ${days} dny`;
+  if (days >= 5 && days <= 6) return `před ${days} dny`;
+  try { return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' }); } catch { return ''; }
+}
+
 function renderResume(root, c) {
-  renderSteps();
-  const name = [c.client_name, c.client_surname].filter(Boolean).join(' ') || 'bez jména';
-  $('amlMain').innerHTML = `<div class="aml-card">
-    <div class="aml-h">Rozdělaná kontrola</div>
-    <div class="aml-ai-note">Máte rozpracovaný případ #${c.id} (${esc(name)}, krok ${(c.current_step || 0) + 1}). Chcete pokračovat, nebo začít novou?</div>
-    <div class="aml-upload-btns">
-      <button class="aml-btn aml-btn-primary" data-act="resume" data-id="${c.id}">Pokračovat v rozdělané kontrole</button>
-      <button class="aml-btn" data-act="new">Začít novou</button>
+  // Bez step indikátoru (patří až do otevřeného případu) a bez kontextového panelu.
+  const steps = $('amlSteps'); if (steps) steps.innerHTML = '';
+  const cn = $('amlCaseNum'); if (cn) cn.innerHTML = '';
+  const ctx = $('amlContext'); if (ctx) ctx.style.display = 'none';
+  const foot = $('amlFoot'); if (foot) foot.innerHTML = '';
+
+  const name = c.subject_type === 'po'
+    ? (c.company_name || 'bez názvu')
+    : ([c.client_name, c.client_surname].filter(Boolean).join(' ') || 'bez jména');
+  const step = c.current_step || 0;
+  const stepLabel = STEP_LABELS[step] || '';
+  const num = c.case_number || 'bez čísla';
+  const edited = relTimeCs(c.created_at);   // aml_cases nemá updated_at → created_at
+
+  $('amlMain').innerHTML = `<div class="aml-resume">
+    <div class="aml-card aml-resume-card">
+      <div class="aml-h">Rozpracovaná kontrola</div>
+      <div class="aml-resume-line"><b>${esc(num)}</b> · ${esc(name)} · krok ${step + 1} z 5 (${esc(stepLabel)})</div>
+      ${edited ? `<div class="aml-resume-meta">Naposledy upraveno ${esc(edited)}</div>` : ''}
+      <div class="aml-resume-btns">
+        <button class="aml-btn aml-btn-primary" data-act="resume" data-id="${c.id}">Pokračovat v rozpracované kontrole</button>
+        <button class="aml-btn" data-act="new">Začít novou</button>
+      </div>
+      <div class="aml-resume-note">Rozpracovaná kontrola zůstane uložená — najdete ji v Archivu.</div>
     </div>
   </div>`;
-  $('amlFoot').innerHTML = '';
 }
 
 function renderSteps() {
@@ -876,6 +916,7 @@ function copyCaseNum() {
 function renderContext() {
   const el = $('amlContext');
   if (!el) return;
+  el.style.display = '';   // zruš případné skrytí z obrazovky Rozpracovaná kontrola
   const subj = SUBJECT_TYPES.find(([v]) => v === wiz.subject_type);
   const clientName = wiz.subject_type === 'po'
     ? (wiz.data.company_name || '')

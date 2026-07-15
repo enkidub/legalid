@@ -148,7 +148,7 @@ export async function klientiToggle(id) {
       const risk = k.final_risk_level ? ` · ${esc(RISK_CS[k.final_risk_level] || k.final_risk_level)} riziko` : '';
       const st = k.status === 'completed' ? 'dokončeno' : (k.status === 'terminated' ? 'ukončeno' : k.status);
       const when = k.completed_at || k.created_at;
-      return `<div class="lp-hist-row"><span class="lp-hist-num">${esc(k.case_number || ('#' + k.id))}</span>
+      return `<div class="lp-hist-row"><span class="lp-hist-num">${esc(k.case_number || 'bez čísla')}</span>
         <span class="lp-hist-meta">${esc(st)} ${esc(fmtDate(when))}${risk}</span></div>`;
     }).join('') + `<button class="btn-lp-action" onclick="navigate('/archiv')" style="margin-top:8px">Otevřít archiv</button>`;
   } catch { box.innerHTML = `<div class="lp-hist-empty">Historii se nepodařilo načíst.</div>`; }

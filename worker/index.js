@@ -959,12 +959,10 @@ export default {
       }
 
       // POST /api/aml/case/create — založí nový případ
+      // Pozn.: rozpracované (in_progress) případy se NEZAHAZUJÍ — zůstávají uložené
+      // a jsou dostupné v Archivu (sekce Rozpracované) k dokončení.
       if (url.pathname === '/api/aml/case/create') {
         if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
-        // Rozdělané případy uzavři jako 'abandoned', ať se nehromadí in_progress.
-        await env.DB.prepare(
-          "UPDATE aml_cases SET status = 'abandoned' WHERE user_id = ? AND status = 'in_progress'"
-        ).bind(userId).run();
         const caseNumber = genCaseNumber();
         const r = await env.DB.prepare(
           "INSERT INTO aml_cases (user_id, status, current_step, case_number) VALUES (?, 'in_progress', 0, ?)"

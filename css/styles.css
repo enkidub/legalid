@@ -1823,6 +1823,16 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 
 .aml-done { text-align: center; align-items: center; }
 
+/* Obrazovka „Rozpracovaná kontrola" — kompaktní vycentrovaný dialog */
+.aml-resume { display: flex; align-items: center; justify-content: center; min-height: 55vh; }
+.aml-resume-card { max-width: 560px; width: 100%; text-align: center; align-items: center; gap: 12px; }
+.aml-resume-line { font-size: 15px; color: var(--ink); line-height: 1.6; }
+.aml-resume-line b { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; color: var(--navy); font-weight: 700; }
+.aml-resume-meta { font-size: 13px; color: var(--ink-lt); margin-top: -4px; }
+.aml-resume-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+.aml-resume-btns .aml-btn { flex: 0 0 auto; }
+.aml-resume-note { font-size: 12px; color: var(--ink-fnt); margin-top: 2px; }
+
 /* ── Blok 3: Účel obchodu ── */
 .aml-pfield { display: flex; flex-direction: column; gap: 8px; }
 .aml-plabel { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-lt); }
@@ -1922,6 +1932,9 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .arch-badge { font-size: 10px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
 .arch-badge-done { color: #1a8a4a; background: #eefaf2; }
 .arch-badge-term { color: #8a5a12; background: #fff8ec; }
+.arch-badge-prog { color: #3d6bb3; background: #eef3fb; }
+.arch-section-title { font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-lt); margin: 18px 0 8px; }
+.arch-section-title:first-of-type { margin-top: 6px; }
 .arch-risk { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
 .arch-risk-nizke { color: #1a8a4a; background: #eefaf2; }
 .arch-risk-stredni { color: #b8791a; background: #fff8ec; }

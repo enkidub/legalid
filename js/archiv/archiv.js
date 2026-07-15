@@ -29,6 +29,10 @@ export function initArchiv() {
     if (!t) return;
     if (t.dataset.act === 'regen') regenerate(root, +t.dataset.id);
     if (t.dataset.act === 'new-check' && window.navigate) window.navigate('/aml');
+    if (t.dataset.act === 'resume-aml') {
+      try { sessionStorage.setItem('legalid_aml_resume', t.dataset.id); } catch {}
+      if (window.navigate) window.navigate('/aml');
+    }
   });
   loadArchiv(root);
 }
@@ -36,21 +40,47 @@ export function initArchiv() {
 async function loadArchiv(root) {
   try { const r = await apiAmlListCases(); _cases = r.cases || []; }
   catch { _cases = []; }
+  const inprog = _cases.filter(c => c.status === 'in_progress');
   const done = _cases.filter(c => c.status === 'completed' || c.status === 'terminated');
-  root.innerHTML = archivHTML(done);
+  root.innerHTML = archivHTML(inprog, done);
 }
 
 const RISK_CS = { nizke: 'Nízké', stredni: 'Střední', vysoke: 'Vysoké' };
+const STEP_LABELS = ['Údaje klienta', 'Lustrace', 'Účel obchodu', 'Riziko', 'Záznam'];
 
-function archivHTML(list) {
+function caseName(c) {
+  return c.subject_type === 'po'
+    ? (c.company_name || 'firma bez názvu')
+    : ([c.client_name, c.client_surname].filter(Boolean).join(' ') || 'bez jména');
+}
+
+function progressRows(list) {
+  return list.map(c => {
+    const step = c.current_step || 0;
+    const meta = [c.case_number, `krok ${step + 1} z 5 (${STEP_LABELS[step] || ''})`,
+      c.created_at && `založeno ${fmtDateCs(c.created_at)}`].filter(Boolean).join(' · ');
+    return `<div class="arch-row">
+      <div class="arch-main">
+        <div class="arch-name">${esc(caseName(c))} <span class="arch-badge arch-badge-prog">rozpracováno</span></div>
+        <div class="arch-meta">${esc(meta)}</div>
+      </div>
+      <button class="aml-btn aml-btn-sm aml-btn-primary" data-act="resume-aml" data-id="${c.id}">Pokračovat</button>
+    </div>`;
+  }).join('');
+}
+
+function archivHTML(inprog, list) {
   const head = `<div class="view-lp-head">
     <div class="view-lp-title">Archiv AML kontrol</div>
     <button class="aml-btn aml-btn-sm" data-act="new-check" style="margin-left:auto">Nová kontrola</button>
   </div>`;
-  if (!list.length) {
+  const progSection = inprog.length
+    ? `<div class="arch-section-title">Rozpracované</div><div class="arch-list">${progressRows(inprog)}</div>` : '';
+  if (!list.length && !inprog.length) {
     return `<div class="view-archiv-wrap">${head}
-      <div class="aml-card"><div class="aml-ai-note">Zatím nemáte žádné dokončené ani ukončené kontroly. Po dokončení kontroly se záznam objeví zde.</div></div></div>`;
+      <div class="aml-card"><div class="aml-ai-note">Zatím nemáte žádné kontroly. Rozpracované i dokončené kontroly se objeví zde.</div></div></div>`;
   }
+  const doneTitle = list.length ? `<div class="arch-section-title">Dokončené a ukončené</div>` : '';
   const rows = list.map(c => {
     const name = c.subject_type === 'po'
       ? (c.company_name || 'firma bez názvu')
@@ -74,7 +104,8 @@ function archivHTML(list) {
       <button class="aml-btn aml-btn-sm" data-act="regen" data-id="${c.id}">Regenerovat PDF</button>
     </div>`;
   }).join('');
-  return `<div class="view-archiv-wrap">${head}<div class="arch-list">${rows}</div></div>`;
+  const doneSection = list.length ? `${doneTitle}<div class="arch-list">${rows}</div>` : '';
+  return `<div class="view-archiv-wrap">${head}${progSection}${doneSection}</div>`;
 }
 
 function loadPovinnaOsoba() {

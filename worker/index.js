@@ -101,6 +101,17 @@ async function requireUserId(request, env) {
   return payload ? payload.sub : null;
 }
 
+// Vygeneruje číslo kontroly 'AML-YYYYMM-XXXXXX' (6 náhodných znaků A-Z0-9).
+function genCaseNumber() {
+  const now = new Date();
+  const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  let rand = '';
+  for (const b of bytes) rand += alphabet[b % alphabet.length];
+  return `AML-${ym}-${rand}`;
+}
+
 // Spustí všech 5 lustrací paralelně nad daty případu, uloží každou do aml_lookups
 // a vrátí pole výsledků. Každá lustrace je odolná (interní try/catch → status 'error'),
 // takže selhání jedné nikdy nebrání ostatním.
@@ -606,10 +617,11 @@ export default {
         await env.DB.prepare(
           "UPDATE aml_cases SET status = 'abandoned' WHERE user_id = ? AND status = 'in_progress'"
         ).bind(userId).run();
+        const caseNumber = genCaseNumber();
         const r = await env.DB.prepare(
-          "INSERT INTO aml_cases (user_id, status, current_step) VALUES (?, 'in_progress', 0)"
-        ).bind(userId).run();
-        return json({ case_id: r.meta.last_row_id });
+          "INSERT INTO aml_cases (user_id, status, current_step, case_number) VALUES (?, 'in_progress', 0, ?)"
+        ).bind(userId, caseNumber).run();
+        return json({ case_id: r.meta.last_row_id, case_number: caseNumber });
       }
 
       // GET /api/aml/ares/:ico — předvyplnění firmy z ARES (subject_type='po')
@@ -727,6 +739,12 @@ export default {
             'business_purpose', 'ai_risk_suggestion',
             'ai_risk_reasoning', 'final_risk_level', 'risk_decided_at',
             'final_pdf_generated', 'completed_at', 'next_review_due',
+            // Týden 4 (aml_v6): kroky Účel / Riziko / Záznam + originál jména (kromě case_number, record_sha256).
+            'client_name_original', 'client_occupation',
+            'relation_type', 'deal_value_band', 'deal_countries', 'purpose_category',
+            'source_of_funds_type', 'source_of_funds',
+            'consistency_json', 'client_declaration_json', 'verifier_declaration_json',
+            'risk_justification', 'terminated_reason',
           ];
           const keys = Object.keys(b).filter(k => ALLOWED.includes(k));
           if (keys.length === 0) return json({ ok: true, updated: 0 });

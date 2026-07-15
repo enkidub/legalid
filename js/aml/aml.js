@@ -84,6 +84,7 @@ const METHODS = [
 // Pracovní stav wizardu (v paměti, persistuje se přes PATCH na server).
 const wiz = {
   caseId: null,
+  case_number: null,   // 'AML-YYYYMM-XXXXXX' (číslo kontroly, zobrazeno v hlavičce)
   step: 0,
   source: 'camera',    // krok 0: 'camera' | 'upload' | 'manual' | 'list'
   subject_type: 'fo',  // 'fo' | 'fo_podnikatel' | 'po'
@@ -233,6 +234,7 @@ async function createNewCase(root) {
     const r = await apiAmlCreateCase();
     if (!r.case_id) throw new Error(r.error || 'create_failed');
     wiz.caseId = r.case_id; state.amlCurrentCaseId = r.case_id;
+    wiz.case_number = r.case_number || null;
     wiz.step = 0; wiz.source = loadLastMethod(); wiz.method = 'personal'; wiz.data = {};
     wiz.subject_type = 'fo'; wiz.aresStatus = null; wiz.aresLoading = false;
     wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
@@ -256,6 +258,7 @@ async function resumeCase(root, id) {
     const c = r.case;
     if (!c) throw new Error('not_found');
     wiz.caseId = c.id; state.amlCurrentCaseId = c.id;
+    wiz.case_number = c.case_number || null;
     wiz.method = c.identification_method || 'personal';
     wiz.subject_type = c.subject_type || 'fo';
     wiz.data = {};

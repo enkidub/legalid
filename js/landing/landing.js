@@ -3,6 +3,10 @@
 // CTA volají window-bridged funkce: openRegistrationModal, navigate, selectPlan, openPrivacyModal, openAboutModal.
 
 import { navigate } from '../core/router.js';
+import { initExitIntentDemo } from '../demo/demo.js';
+
+// Exit-intent demo popup (Blok B4) — VYPNUTO. Zapni změnou na true (žádný popup při načtení).
+const EXIT_INTENT_DEMO = false;
 
 // Skok na sekci landingu z hlavičky/patičky/hamburgeru (i z jiné routy).
 // anchor: 'howto' → .lnd-howto | 'pricing' → #lnd-pricing
@@ -32,7 +36,7 @@ export function renderLanding() {
       <p class="lnd-sub">Splňte AML povinnosti podle zákona č. 253/2008 Sb. — bez tabulek a papírování.</p>
       <div class="lnd-cta-row">
         <button class="lnd-btn lnd-btn-primary" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
-        <button class="lnd-btn lnd-btn-ghost" onclick="navigate('/povinne-osoby')">Kdo je povinná osoba? →</button>
+        <button class="lnd-btn lnd-btn-ghost" onclick="openDemoModal()">Domluvit ukázku</button>
       </div>
       <div class="lnd-hero-trust">Záznam s náležitostmi § 8 a násl. · Archiv dle § 16 · Lustrace s časovým razítkem</div>
       <div class="lnd-hero-ai">AI rozpozná doklad · lustrace v 5 rejstřících · AML záznam k archivaci</div>
@@ -185,6 +189,17 @@ export function renderLanding() {
     </div>
   </section>
 
+  <!-- DEMO CTA sekce (Blok B) -->
+  <section class="lnd-section lnd-demo">
+    <div class="lnd-wrap lnd-wrap--narrow">
+      <div class="lnd-demo-inner">
+        <h2 class="lnd-h2">Chcete to vidět naživo?</h2>
+        <p class="lnd-sub">20 minut online, ukážeme vám celý průběh AML kontroly na reálném příkladu.</p>
+        <button class="lnd-btn lnd-btn-primary" onclick="openDemoModal()">Domluvit ukázku</button>
+      </div>
+    </div>
+  </section>
+
   <!-- Patička je globální (index.html #siteFooter) — sdílená s aplikací. -->
 
   <!-- Sticky CTA (jen mobil, zobrazí se po odscrollování hero) -->
@@ -208,6 +223,8 @@ export function initLanding() {
     const p = video.play();
     if (p && typeof p.catch === 'function') p.catch(() => {});   // ignoruj block autoplay
   }
+
+  initExitIntentDemo(EXIT_INTENT_DEMO);   // default false → žádný listener
 
   if (_stickyIo) { _stickyIo.disconnect(); _stickyIo = null; }
   const hero = document.querySelector('.lnd-hero');

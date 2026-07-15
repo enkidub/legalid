@@ -241,6 +241,29 @@
   </div>
 </div>
 
+<!-- Demo request modal (Blok B) -->
+<div class="reg-overlay" id="demoOverlay" onclick="if(event.target===this)closeDemoModal()">
+  <div class="reg-modal" id="demoModal">
+    <button class="btn-reg-close" onclick="closeDemoModal()" aria-label="Zavřít">×</button>
+    <div id="demoFormView">
+      <div class="reg-modal-title">Domluvit ukázku</div>
+      <div class="reg-modal-body">20 minut online — ukážeme vám celý průběh AML kontroly na reálném příkladu.</div>
+      <input class="reg-email-input" id="demoName" type="text" placeholder="Jméno *" autocomplete="name">
+      <input class="reg-email-input" id="demoEmail" type="email" placeholder="E-mail *" autocomplete="email">
+      <input class="reg-email-input" id="demoPhone" type="tel" placeholder="Telefon (nepovinné)" autocomplete="tel">
+      <textarea class="reg-email-input" id="demoMessage" rows="3" placeholder="Zpráva (nepovinné)" style="resize:vertical;"></textarea>
+      <div id="demoError" style="display:none;color:#dc2626;font-size:12px;margin-top:2px;margin-bottom:6px;"></div>
+      <button class="btn-reg-submit" id="demoSubmitBtn" onclick="submitDemoRequest()">Odeslat žádost</button>
+    </div>
+    <div id="demoSuccessView" style="display:none;text-align:center;padding:12px 0 4px;">
+      <div style="font-size:48px;color:#16a34a;margin-bottom:12px;">✓</div>
+      <div class="reg-modal-title" style="margin-bottom:8px;">Díky!</div>
+      <div class="reg-modal-body">Ozveme se do 24 hodin.</div>
+      <button class="btn-reg-text" onclick="closeDemoModal()">Zavřít</button>
+    </div>
+  </div>
+</div>
+
 <!-- Upgrade modal -->
 <div class="upgrade-overlay" id="upgradeOverlay" onclick="if(event.target===this)closeUpgradeModal()">
   <div class="upgrade-modal">

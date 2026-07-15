@@ -11,6 +11,7 @@ import { initRouter, navigate, currentPath } from './core/router.js';
 import { renderLanding, initLanding, gotoLandingSection } from './landing/landing.js';
 import { renderPovinneOsoby, initPovinneOsoby, togglePoCard, gotoProfese } from './povinne-osoby/povinne-osoby.js';
 import { renderSoukromi } from './soukromi/soukromi.js';
+import { openDemoModal, closeDemoModal, submitDemoRequest } from './demo/demo.js';
 import { renderAml, initAml } from './aml/aml.js';
 import { renderArchiv } from './archiv/archiv.js';
 import { actionToastOk, closeAboutModal, closeActionToast, closeHamburger, closePrivacyModal, openAboutModal, openHamburger, openPrivacyModal, showToast } from './core/ui.js';
@@ -217,6 +218,9 @@ window.applyUpdate = applyUpdate; // <button class="ub-btn" onclick="applyUpdate
 window.handleLogout = handleLogout; // <button id="headerLogoutBtn" style="display:none;font-size:12px;color:var(--ink-lt);background:n
 window.openRegistrationModal = openRegistrationModal; // <button id="headerLoginBtn" style="font-size:12px;font-weight:500;color:var(--navy);background:n
 window.loginWithGoogle = loginWithGoogle; // <button class="btn-reg-google" onclick="loginWithGoogle()">Pokračovat s Google</button>
+window.openDemoModal = openDemoModal; // landing hero + sekce „Chcete to vidět naživo?": onclick="openDemoModal()"
+window.closeDemoModal = closeDemoModal; // <div id="demoOverlay" onclick="...closeDemoModal()">
+window.submitDemoRequest = submitDemoRequest; // <button id="demoSubmitBtn" onclick="submitDemoRequest()">Odeslat žádost</button>
 window.openHamburger = openHamburger; // <button class="btn-hamburger" style="margin-left:0" onclick="openHamburger()" aria-label="Nabídk
 window.closeHamburger = closeHamburger; // <div class="nav-overlay" id="navOverlay" onclick="closeHamburger()"></div>
 window.openKnihaPanel = openKnihaPanel; // <button class="nav-item" onclick="openKnihaPanel()">

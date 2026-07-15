@@ -100,3 +100,13 @@ export async function apiCheckSession() {
 export async function apiLogout() {
   await fetch(`${WORKER_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
 }
+
+// Žádost o demo (Blok B) — bez session; worker pošle e-mail majiteli a uloží do D1.
+export async function apiDemoRequest(payload) {
+  const r = await fetch(`${WORKER_URL}/api/demo-request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return { ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) };
+}

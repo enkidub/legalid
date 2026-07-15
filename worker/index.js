@@ -450,6 +450,62 @@ export default {
       return new Response(null, { status: 302, headers });
     }
 
+    // --- POST /api/demo-request --- (žádost o demo → e-mail majiteli + D1, rate limit 3/IP/hod)
+    if (url.pathname === '/api/demo-request') {
+      if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+      let body;
+      try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+      const name = (body.name || '').trim();
+      const email = (body.email || '').trim();
+      const phone = (body.phone || '').trim();
+      const message = (body.message || '').trim();
+      const utmSource = ((body.utm_source || '').trim().slice(0, 120)) || null;
+      if (!name || !isValidEmail(email)) return json({ error: 'invalid_input' }, 400);
+      if (name.length > 200 || phone.length > 60 || message.length > 4000) return json({ error: 'too_long' }, 400);
+
+      // Rate limit: max 3 žádosti / IP / hodinu.
+      const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+      const hourAgo = new Date(Date.now() - 3600 * 1000).toISOString();
+      try {
+        const rl = await env.DB.prepare(
+          'SELECT COUNT(*) AS c FROM demo_requests WHERE ip = ? AND created_at > ?'
+        ).bind(ip, hourAgo).first();
+        if (rl && rl.c >= 3) return json({ error: 'rate_limited' }, 429);
+      } catch { /* tabulka ještě neexistuje (před migrací) → pokračuj */ }
+
+      const createdAt = new Date().toISOString();
+      try {
+        await env.DB.prepare(
+          'INSERT INTO demo_requests (name, email, phone, message, utm_source, ip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).bind(name, email, phone || null, message || null, utmSource, ip, createdAt).run();
+      } catch (e) {
+        return json({ error: 'db_failed', detail: String(e?.message || e) }, 500);
+      }
+
+      // E-mail majiteli (Resend). Selhání e-mailu neshodí uložení — vrať ok.
+      try {
+        const esc = (s) => (s || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: 'LegalID <login@legalid.cz>',
+            reply_to: email,
+            to: ['kuba.houser@gmail.com'],
+            subject: `Legalid: žádost o demo od ${name}`,
+            html: `<p><strong>Nová žádost o demo</strong></p>
+              <p><strong>Jméno:</strong> ${esc(name)}<br>
+              <strong>E-mail:</strong> ${esc(email)}<br>
+              <strong>Telefon:</strong> ${esc(phone) || '—'}<br>
+              <strong>utm_source:</strong> ${esc(utmSource) || '—'}</p>
+              <p><strong>Zpráva:</strong><br>${esc(message) || '—'}</p>`,
+          }),
+        });
+      } catch (e) { console.log('demo-request resend fail:', e?.message || e); }
+
+      return json({ ok: true });
+    }
+
     // --- POST /api/admin/sanctions/reimport (jen správce) ---
     if (url.pathname === '/api/admin/sanctions/reimport') {
       if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);

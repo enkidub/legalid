@@ -1761,6 +1761,12 @@ body.logged-in .nav-section-guest { display: none; }
 }
 .lnd-about-text { font-size: 15px; color: var(--ink-mid); line-height: 1.5; }
 
+/* Demo CTA sekce (Blok B) */
+.lnd-demo { background: linear-gradient(180deg, var(--gold-p), var(--paper)); }
+.lnd-demo-inner { text-align: center; }
+.lnd-demo-inner .lnd-h2 { margin-bottom: 12px; }
+.lnd-demo-inner .lnd-sub { margin: 0 auto 24px; }
+
 /* Buttons */
 .lnd-btn {
   font-family: var(--sans); font-size: 15px; font-weight: 600; cursor: pointer;

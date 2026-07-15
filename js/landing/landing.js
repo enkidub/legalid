@@ -9,13 +9,14 @@ export function renderLanding() {
   <!-- HERO -->
   <section class="lnd-hero">
     <div class="lnd-wrap">
-      <div class="lnd-eyebrow">AML pro advokáty</div>
+      <div class="lnd-eyebrow">AML pro povinné osoby</div>
       <h1 class="lnd-h1">AML kontrola klientů za 3 minuty</h1>
       <p class="lnd-sub">Splňte AML povinnosti podle zákona č. 253/2008 Sb. — bez tabulek a papírování.</p>
       <div class="lnd-cta-row">
         <button class="lnd-btn lnd-btn-primary" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
         <button class="lnd-btn lnd-btn-ghost" onclick="navigate('/dolozka')">Vyzkoušet ověřovací doložku →</button>
       </div>
+      <div class="lnd-hero-trust">Záznam s náležitostmi § 8 a násl. · Archiv dle § 16 · Lustrace s časovým razítkem</div>
       <div class="lnd-hero-ai">AI rozpozná doklad · lustrace v 5 rejstřících · AML záznam k archivaci</div>
 
       <!-- Product proof — rámeček ve stylu prohlížečového okna.
@@ -80,8 +81,8 @@ export function renderLanding() {
   <section class="lnd-section" id="lnd-pricing">
     <div class="lnd-wrap lnd-wrap--narrow">
       <div class="lnd-section-label">Cena</div>
-      <h2 class="lnd-h2">Zdarma pro prvních 10 advokátů</h2>
-      <p class="lnd-sub">Pilotní přístup zdarma pro první advokáty. Napište: <a href="mailto:info@legalid.cz">info@legalid.cz</a></p>
+      <h2 class="lnd-h2">Zdarma pro prvních 10 povinných osob</h2>
+      <p class="lnd-sub">Pilotní přístup zdarma pro první povinné osoby. Napište: <a href="mailto:info@legalid.cz">info@legalid.cz</a></p>
     </div>
     <!-- Ceníkové karty zakomentovány do spuštění Stripe (nemazat, vrátíme se k nim):
       <div class="lnd-price-cards">
@@ -131,11 +132,11 @@ export function renderLanding() {
       <div class="lnd-faq">
         <div class="lnd-faq-item">
           <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Kdo potřebuje AML kontrolu?<span class="lnd-faq-icon">+</span></button>
-          <div class="lnd-faq-a">Advokáti jsou povinnými osobami podle zákona č. 253/2008 Sb. u řady úkonů — např. při správě majetku, zakládání společností, transakcích s nemovitostmi. AML kontrola klienta je u těchto úkonů povinná.</div>
+          <div class="lnd-faq-a">Povinné osoby podle zákona č. 253/2008 Sb. musí u řady úkonů provést AML kontrolu klienta — např. při správě majetku, zakládání společností nebo transakcích s nemovitostmi. Kdo přesně je povinná osoba, najdete na stránce <a href="/povinne-osoby" onclick="event.preventDefault();navigate('/povinne-osoby')">Povinné osoby</a>.</div>
         </div>
         <div class="lnd-faq-item">
           <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Který zákon Legalid řeší?<span class="lnd-faq-icon">+</span></button>
-          <div class="lnd-faq-a">Zákon č. 253/2008 Sb. o AML pro advokáty a AML směrnice EU.</div>
+          <div class="lnd-faq-a">Zákon č. 253/2008 Sb. (AML zákon) a související AML směrnice EU.</div>
         </div>
         <div class="lnd-faq-item">
           <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Jak Legalid používá AI?<span class="lnd-faq-icon">+</span></button>
@@ -143,7 +144,7 @@ export function renderLanding() {
         </div>
         <div class="lnd-faq-item">
           <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Co když AI něco přehlédne?<span class="lnd-faq-icon">+</span></button>
-          <div class="lnd-faq-a">AI je asistent, ne rozhodovatel. Advokát nese odpovědnost za AML kontrolu. Fuzzy matching a globální PEP databáze snižují riziko, ale nikdy nezaručují 100 %.</div>
+          <div class="lnd-faq-a">AI je asistent, ne rozhodovatel. Odpovědnost za AML kontrolu nesete vy jako povinná osoba. Fuzzy matching a globální PEP databáze snižují riziko, ale nikdy nezaručují 100 %.</div>
         </div>
         <div class="lnd-faq-item">
           <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Jak chráníte data klientů?<span class="lnd-faq-icon">+</span></button>
@@ -151,7 +152,7 @@ export function renderLanding() {
         </div>
         <div class="lnd-faq-item">
           <button class="lnd-faq-q" onclick="this.parentElement.classList.toggle('open')">Kdy bude Legalid veřejně dostupný?<span class="lnd-faq-icon">+</span></button>
-          <div class="lnd-faq-a">Pilotní přístup pro prvních 10 advokátů teď. Veřejné spuštění a ceník do konce Q4 2026.</div>
+          <div class="lnd-faq-a">Pilotní přístup pro prvních 10 povinných osob teď. Veřejné spuštění a ceník do konce Q4 2026.</div>
         </div>
       </div>
     </div>

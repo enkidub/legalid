@@ -3,6 +3,7 @@
   "short_name": "Legalid",
   "description": "AML kontrola klientů a ověřovací doložky pro advokáty",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#0b1929",

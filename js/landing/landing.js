@@ -70,7 +70,7 @@ export function renderLanding() {
           <div class="lnd-card-icon"><i class="ti ti-cloud-lock"></i></div>
           <div class="lnd-card-title">Archivace</div>
           <div class="lnd-card-text">AML záznamy s náležitostmi podle § 8 a násl. k dispozici pro pozdější dohledání a export.</div>
-          <button class="lnd-btn lnd-btn-ghost lnd-btn-sm" disabled>Součást AML kontroly</button>
+          <span class="lnd-card-badge">✓ Součást AML kontroly</span>
         </div>
       </div>
     </div>

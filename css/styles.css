@@ -1796,6 +1796,15 @@ body.logged-in .nav-section-guest { display: none; }
 .lnd-card-text { font-size: 14px; color: var(--ink-lt); line-height: 1.4; flex: 1; }
 .lnd-card .lnd-btn { margin-top: 6px; align-self: flex-start; }
 .lnd-card--soon .lnd-btn { align-self: stretch; }
+/* Stavový badge pro karty bez akce (např. Archivace) — ne tlačítko, žádná falešná
+   affordance. Krémový pill jako hero badge; sedí na spodku karty jako tlačítka. */
+.lnd-card-badge {
+  align-self: flex-start; margin-top: 6px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 14px; border-radius: 20px;
+  background: var(--gold-p); color: var(--gold-h);
+  font-size: 13px; font-weight: 600; line-height: 1;
+}
 .lnd-soon-tag {
   font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
   color: var(--gold-h); background: var(--gold-p); padding: 2px 7px; border-radius: 10px;
@@ -1873,26 +1882,18 @@ body.logged-in .nav-section-guest { display: none; }
   .lnd-section { padding: 46px 0; }
   .lnd-h2 { margin-bottom: 26px; }
 
-  /* Karty (Co umíme + Ceník) vedle sebe jako full-bleed scroll-snap karusel —
-     peek další karty napoví swipe a výrazně zkrátí stránku */
+  /* Karty (Co umíme + Ceník) mají 2–3 položky → na mobilu stack pod sebe,
+     plná šířka, mezera 16px. Žádný horizontální scroll ani ořez první karty.
+     (Pro 4+ karet by se místo toho ponechal scroll-snap karusel + tečky.) */
   .lnd-cards, .lnd-price-cards {
     display: flex;
-    grid-template-columns: none;
-    gap: 12px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scroll-padding-left: var(--pad);
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    margin: 0 calc(-1 * var(--pad));
-    padding: 16px var(--pad) 4px;       /* horní prostor pro badge featured karty */
+    flex-direction: column;
+    gap: 16px;
   }
-  .lnd-cards::-webkit-scrollbar,
-  .lnd-price-cards::-webkit-scrollbar { display: none; }
+  .lnd-cards--duo { justify-content: normal; }   /* zruš desktopové centrování */
   .lnd-card, .lnd-price-card {
-    flex: 0 0 80%;
-    max-width: 300px;
-    scroll-snap-align: start;
+    width: 100%;
+    max-width: none;
   }
   .lnd-price-card { padding: 24px 20px; }
 

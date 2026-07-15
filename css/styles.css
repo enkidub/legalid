@@ -1867,34 +1867,36 @@ body.logged-in .nav-section-guest { display: none; }
 .lnd { color: var(--ink); }
 .lnd-wrap { max-width: 1080px; margin: 0 auto; padding: 0 var(--pad); }
 .lnd-wrap--narrow { max-width: 720px; }
-.lnd-section { padding: clamp(32px, 4vw, 56px) 0; }
-.lnd-section--alt { background: var(--paper-w); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.lnd-section { padding: clamp(44px, 5.5vw, 84px) 0; }
+.lnd-section--alt { background: linear-gradient(180deg, #f8f4ec 0%, #f5efe2 100%); border-top: 1px solid #ece3d1; border-bottom: 1px solid #ece3d1; }
 .lnd-section-label {
-  font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-  color: var(--gold); margin-bottom: 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 2.4px; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 12px;
 }
-.lnd-h2 { font-family: var(--serif); font-size: clamp(26px, 4vw, 36px); font-weight: 700; color: var(--navy); margin-bottom: 20px; }
+.lnd-h2 { font-family: var(--serif); font-size: clamp(28px, 4vw, 44px); font-weight: 700; color: var(--navy); line-height: 1.12; letter-spacing: -0.4px; margin-bottom: 20px; }
+/* Levý úvodní odstavec pod nadpisem sekce (grid, právní ukotvení) */
+.lnd-lead { font-size: clamp(15px, 1.8vw, 18px); color: var(--ink-mid); line-height: 1.55; max-width: 62ch; margin-bottom: clamp(24px, 3vw, 40px); }
 
 /* Jak to funguje — jeden centrovaný sloupec */
 .lnd-howto { max-width: 680px; margin: 0 auto; }
 
 /* Hero */
 .lnd-hero {
-  padding: clamp(40px, 6vw, 64px) 0;
+  padding: clamp(52px, 7vw, 92px) 0;
   background:
-    radial-gradient(1200px 400px at 70% -10%, rgba(139,96,20,.07), transparent 60%),
-    linear-gradient(180deg, #fbfaf7 0%, var(--paper) 100%);
+    radial-gradient(1200px 460px at 72% -12%, rgba(139,96,20,.10), transparent 60%),
+    linear-gradient(180deg, #faf7f0 0%, #f6f1e6 100%);
   text-align: center;
 }
 .lnd-eyebrow {
-  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 2.4px;
   text-transform: uppercase; color: var(--gold-h); background: var(--gold-p);
-  padding: 5px 13px; border-radius: 20px; margin-bottom: 22px;
+  padding: 6px 14px; border-radius: 20px; margin-bottom: 24px; border: 1px solid #efe3c6;
 }
 .lnd-h1 {
   font-family: var(--serif); font-weight: 700; color: var(--navy);
-  font-size: clamp(34px, 6vw, 58px); line-height: 1.08; letter-spacing: -0.5px;
-  max-width: 16ch; margin: 0 auto 18px;
+  font-size: clamp(38px, 6.2vw, 70px); line-height: 1.06; letter-spacing: -0.8px;
+  max-width: 16ch; margin: 0 auto 20px;
 }
 .lnd-sub { font-size: clamp(16px, 2.2vw, 19px); color: var(--ink-mid); line-height: 1.4; max-width: 56ch; margin: 0 auto 24px; }
 .lnd-cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
@@ -1978,6 +1980,40 @@ body.logged-in .nav-section-guest { display: none; }
   color: var(--gold-h); background: var(--gold-p); padding: 2px 7px; border-radius: 10px;
   vertical-align: middle; margin-left: 6px;
 }
+.lnd-card { transition: transform .16s, box-shadow .16s, border-color .16s; }
+.lnd-card:hover { transform: translateY(-2px); box-shadow: 0 12px 34px rgba(11,25,41,.10); }
+
+/* 8 KONTROL — grid rejstříků */
+.lnd-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.lnd-gcard {
+  background: var(--paper-w); border: 1px solid #e7ddca; border-radius: 16px;
+  padding: 20px; display: flex; flex-direction: column; gap: 9px;
+  box-shadow: 0 1px 2px rgba(11,25,41,.04); transition: transform .16s, box-shadow .16s, border-color .16s;
+}
+.lnd-gcard:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(11,25,41,.10); border-color: var(--gold); }
+.lnd-gcard--soon { background: #fbf8f1; }
+.lnd-gcard-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.lnd-gcard-icon {
+  width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--gold-p); color: var(--gold); font-size: 22px; border: 1px solid #efe3c6;
+}
+.lnd-gcard-state { font-size: 10px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+.lnd-gcard-state.is-active { color: #1a8a4a; background: #eaf7ef; border: 1px solid #c3e6d0; }
+.lnd-gcard-state.is-soon { color: var(--gold-h); background: var(--gold-p); border: 1px solid #efe3c6; }
+.lnd-gcard-title { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--navy); line-height: 1.25; margin-top: 2px; }
+.lnd-gcard-text { font-size: 13.5px; color: var(--ink-lt); line-height: 1.5; }
+
+/* PRÁVNÍ UKOTVENÍ — § karty */
+.lnd-legal { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.lnd-lcard {
+  background: var(--paper-w); border: 1px solid #e7ddca; border-radius: 16px;
+  padding: 22px 24px; border-left: 3px solid var(--gold);
+  box-shadow: 0 1px 2px rgba(11,25,41,.04); transition: transform .16s, box-shadow .16s;
+}
+.lnd-lcard:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(11,25,41,.10); }
+.lnd-lcard-tag { font-family: var(--serif); font-size: 17px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+.lnd-lcard-text { font-size: 14px; color: var(--ink-mid); line-height: 1.6; }
 
 /* Jak to funguje — kroky */
 .lnd-steps { list-style: none; display: flex; flex-direction: column; gap: 18px; max-width: 680px; }
@@ -2041,6 +2077,15 @@ body.logged-in .nav-section-guest { display: none; }
 
 /* Sticky mobilní CTA — skrytá na desktopu */
 .lnd-sticky-cta { display: none; }
+
+/* Grid 8 kontrol: 3 → 2 sloupce (tablet). Právní ukotvení zůstává 2 sloupce. */
+@media (max-width: 900px) {
+  .lnd-grid { grid-template-columns: repeat(2, 1fr); }
+}
+/* Mobil: vše na jeden sloupec, žádný horizontální scroll. */
+@media (max-width: 600px) {
+  .lnd-grid, .lnd-legal { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 720px) {
   .lnd-cta-row { flex-direction: column; }

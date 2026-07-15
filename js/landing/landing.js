@@ -39,7 +39,7 @@ export function renderLanding() {
         <button class="lnd-btn lnd-btn-ghost" onclick="openDemoModal()">Domluvit ukázku</button>
       </div>
       <div class="lnd-hero-trust">Záznam s náležitostmi § 8 a násl. · Archiv dle § 16 · Lustrace s časovým razítkem</div>
-      <div class="lnd-hero-ai">AI rozpozná doklad · lustrace v 5 rejstřících · AML záznam k archivaci</div>
+      <div class="lnd-hero-ai">AI rozpozná doklad · 8 kontrol v jedné lustraci · AML záznam k archivaci</div>
 
       <!-- Product proof — rámeček ve stylu prohlížečového okna.
            Autoplay je řízen z initLanding() (respektuje prefers-reduced-motion);
@@ -76,8 +76,59 @@ export function renderLanding() {
     </div>
   </section>
 
-  <!-- JAK TO FUNGUJE (jeden centrovaný sloupec, AI features integrované do kroků) -->
+  <!-- 8 KONTROL — grid rejstříků a sankčních seznamů -->
   <section class="lnd-section lnd-section--alt">
+    <div class="lnd-wrap">
+      <div class="lnd-section-label">Kontroly a rejstříky</div>
+      <h2 class="lnd-h2">8 kontrol v jedné lustraci</h2>
+      <p class="lnd-lead">Jedním kliknutím prověříme klienta ve veřejných rejstřících a sankčních seznamech — s časovým razítkem.</p>
+      <div class="lnd-grid">
+        <div class="lnd-gcard">
+          <div class="lnd-gcard-top"><span class="lnd-gcard-icon"><i class="ti ti-id-badge-2"></i></span><span class="lnd-gcard-state is-active">Aktivní</span></div>
+          <div class="lnd-gcard-title">Neplatné doklady (MVČR)</div>
+          <div class="lnd-gcard-text">Odhalí ztracený nebo odcizený průkaz totožnosti.</div>
+        </div>
+        <div class="lnd-gcard">
+          <div class="lnd-gcard-top"><span class="lnd-gcard-icon"><i class="ti ti-gavel"></i></span><span class="lnd-gcard-state is-active">Aktivní</span></div>
+          <div class="lnd-gcard-title">Insolvenční rejstřík (ISIR)</div>
+          <div class="lnd-gcard-text">Insolvence klienta i firmy dřív, než uzavřete obchod.</div>
+        </div>
+        <div class="lnd-gcard">
+          <div class="lnd-gcard-top"><span class="lnd-gcard-icon"><i class="ti ti-building-community"></i></span><span class="lnd-gcard-state is-active">Aktivní</span></div>
+          <div class="lnd-gcard-title">ARES (podnikatelské subjekty)</div>
+          <div class="lnd-gcard-text">Existence a stav podnikatelského subjektu.</div>
+        </div>
+        <div class="lnd-gcard">
+          <div class="lnd-gcard-top"><span class="lnd-gcard-icon"><i class="ti ti-user-cancel"></i></span><span class="lnd-gcard-state is-active">Aktivní</span></div>
+          <div class="lnd-gcard-title">Sankční seznam EU — osoby</div>
+          <div class="lnd-gcard-text">4 400+ sankcionovaných osob, denní aktualizace.</div>
+        </div>
+        <div class="lnd-gcard">
+          <div class="lnd-gcard-top"><span class="lnd-gcard-icon"><i class="ti ti-building-bank"></i></span><span class="lnd-gcard-state is-active">Aktivní</span></div>
+          <div class="lnd-gcard-title">Sankční seznam EU — společnosti</div>
+          <div class="lnd-gcard-text">Sankcionované firmy a entity, denní aktualizace.</div>
+        </div>
+        <div class="lnd-gcard">
+          <div class="lnd-gcard-top"><span class="lnd-gcard-icon"><i class="ti ti-user-star"></i></span><span class="lnd-gcard-state is-active">Aktivní</span></div>
+          <div class="lnd-gcard-title">PEP databáze (ČR + globální)</div>
+          <div class="lnd-gcard-text">Politicky exponované osoby vč. globálního pokrytí (OpenSanctions).</div>
+        </div>
+        <div class="lnd-gcard lnd-gcard--soon">
+          <div class="lnd-gcard-top"><span class="lnd-gcard-icon"><i class="ti ti-world"></i></span><span class="lnd-gcard-state is-soon">Připravujeme</span></div>
+          <div class="lnd-gcard-title">Sankce OSN + národní seznam MZV ČR</div>
+          <div class="lnd-gcard-text">Kompletní sankční pokrytí: EU, OSN i ČR.</div>
+        </div>
+        <div class="lnd-gcard lnd-gcard--soon">
+          <div class="lnd-gcard-top"><span class="lnd-gcard-icon"><i class="ti ti-news"></i></span><span class="lnd-gcard-state is-soon">Připravujeme</span></div>
+          <div class="lnd-gcard-title">Negativní média s AI posouzením</div>
+          <div class="lnd-gcard-text">Zmínky v médiích s AI vyhodnocením, zda jde skutečně o vašeho klienta a zda je zmínka relevantní.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- JAK TO FUNGUJE (jeden centrovaný sloupec, AI features integrované do kroků) -->
+  <section class="lnd-section">
     <div class="lnd-wrap">
       <div class="lnd-howto">
         <div class="lnd-section-label">Jak to funguje</div>
@@ -89,6 +140,33 @@ export function renderLanding() {
           <li class="lnd-step"><span class="lnd-step-num">4</span><div><div class="lnd-step-title">Riziko</div><div class="lnd-step-text">AI navrhne rizikový profil (nízké / střední / vysoké). Vy rozhodujete závazně.</div></div></li>
           <li class="lnd-step"><span class="lnd-step-num">5</span><div><div class="lnd-step-title">Záznam k archivaci</div><div class="lnd-step-text">Vygenerovaný PDF AML záznam si stáhnete a uložíte do vlastní evidence. PDF záznam s náležitostmi podle § 8 a násl. zákona č. 253/2008 Sb.</div></div></li>
         </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRÁVNÍ UKOTVENÍ — mapování na § zákona č. 253/2008 Sb. -->
+  <section class="lnd-section lnd-section--alt">
+    <div class="lnd-wrap">
+      <div class="lnd-section-label">Právní ukotvení</div>
+      <h2 class="lnd-h2">Postaveno na zákoně č. 253/2008 Sb.</h2>
+      <p class="lnd-lead">Každý krok kontroly odpovídá konkrétní zákonné povinnosti.</p>
+      <div class="lnd-legal">
+        <div class="lnd-lcard">
+          <div class="lnd-lcard-tag">§ 7–8 · Identifikace klienta</div>
+          <div class="lnd-lcard-text">Povinnost identifikace při obchodu nad 1 000 EUR i u podezřelého obchodu. Legalid vede identifikaci krok za krokem a vytvoří záznam se všemi náležitostmi.</div>
+        </div>
+        <div class="lnd-lcard">
+          <div class="lnd-lcard-tag">§ 9 · Kontrola klienta</div>
+          <div class="lnd-lcard-text">Zjištění účelu obchodu, přezkoumání zdrojů prostředků a průběžné sledování obchodního vztahu. V Legalid včetně AI kontroly konzistence s doloženými dokumenty.</div>
+        </div>
+        <div class="lnd-lcard">
+          <div class="lnd-lcard-tag">§ 16 · Uchovávání záznamů</div>
+          <div class="lnd-lcard-text">Údaje a doklady o obchodech se uchovávají 10 let. Legalid generuje PDF záznam s časovými razítky a hashem pro důkazní integritu.</div>
+        </div>
+        <div class="lnd-lcard">
+          <div class="lnd-lcard-tag">§ 21 a § 21a · Vnitřní zásady a hodnocení rizik</div>
+          <div class="lnd-lcard-text">Povinná osoba uplatňuje systém vnitřních zásad a písemné hodnocení rizik. Záznamy z Legalid slouží jako podklad rizikově orientovaného přístupu.</div>
+        </div>
       </div>
     </div>
   </section>
@@ -175,7 +253,7 @@ export function renderLanding() {
   </section>
 
   <!-- KDO ZA LEGALID STOJÍ (TODO: doplnit reálný text a foto) -->
-  <section class="lnd-section lnd-section--alt">
+  <section class="lnd-section">
     <div class="lnd-wrap lnd-wrap--narrow">
       <div class="lnd-section-label">Kdo za Legalid stojí</div>
       <div class="lnd-about">

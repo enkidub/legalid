@@ -1,22 +1,25 @@
 // scripts/record-landing-demo.mjs
 // Nahraje demo video celého AML wizardu (5 kroků) na legalid.cz (Playwright + Chromium)
-// a rovnou ho zkonvertuje ffmpeg-em na assets/landing/wizard-demo.mp4 + poster .png.
+// a rovnou ho sestříhá + zkonvertuje ffmpeg-em na assets/landing/wizard-demo.mp4 + poster.
 //
 // Spuštění:
 //   LEGALID_SESSION="<hodnota cookie session>" node scripts/record-landing-demo.mjs
 //
 // Cookie viz README-record-demo.md. Skript NIC nemaže — jen vytvoří jeden testovací
 // AML case (jeho číslo vypíše na konci, ať ho v archivu poznáš a smažeš).
+//
+// Video: řízené scrollování (aby bylo vidět to podstatné), skrytá patička/hlavička,
+// vystřižené mrtvé čekání (lustrace/AI/PDF → zůstane jen krátký záblesk spinneru).
 
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { mkdirSync, statSync, existsSync, rmSync } from 'node:fs';
+import { mkdirSync, statSync, existsSync, writeFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const FFMPEG = require('ffmpeg-static');   // cesta k bundlenému ffmpeg.exe
+const FFMPEG = require('ffmpeg-static');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -25,7 +28,7 @@ const ASSETS = join(ROOT, 'assets', 'landing');
 const MP4 = join(ASSETS, 'wizard-demo.mp4');
 const POSTER = join(ASSETS, 'wizard-demo.png');
 const SITE = 'https://legalid.cz/';
-const WORKER_HOST = 'legalid.kuba-houser.workers.dev';   // doména session cookie (viz core/state.js)
+const WORKER_HOST = 'legalid.kuba-houser.workers.dev';
 
 const SESSION = process.env.LEGALID_SESSION;
 if (!SESSION) {
@@ -34,47 +37,67 @@ if (!SESSION) {
   process.exit(1);
 }
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const jitter = (base, spread = 150) => base + Math.floor(Math.random() * spread);
+const KEEP_LEAD = 1.0;   // kolik s záblesku spinneru nechat na začátku čekání
+const KEEP_TAIL = 0.4;   // kolik s nechat na konci (odhalení výsledku)
 
-// Lidsky vypadající vyplnění pole: klik + psaní po znacích s prodlevou 35 ms.
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const jitter = (base, spread = 120) => base + Math.floor(Math.random() * spread);
+
 async function humanFill(page, selector, value) {
   const el = page.locator(selector);
+  await el.scrollIntoViewIfNeeded().catch(() => {});
   await el.click();
   await el.fill('');
   await el.pressSequentially(value, { delay: 35 });
-  await sleep(jitter(450));   // pauza 400–600 ms mezi poli
+  await sleep(jitter(400));
+}
+
+// Plynulý scroll na prvek (aby divák viděl, co se děje).
+async function scrollTo(page, selector, block = 'center') {
+  try { await page.locator(selector).first().evaluate((el, b) => el.scrollIntoView({ behavior: 'smooth', block: b }), block); } catch {}
+  await sleep(550);
+}
+async function scrollTop(page) {
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'smooth' })).catch(() => {});
+  await sleep(550);
 }
 
 async function main() {
   mkdirSync(OUT_DIR, { recursive: true });
   mkdirSync(ASSETS, { recursive: true });
+  // úklid starých segmentů
+  for (const f of readdirSync(OUT_DIR)) if (/^seg_\d+\.mp4$|^concat\.txt$/.test(f)) try { unlinkSync(join(OUT_DIR, f)); } catch {}
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     locale: 'cs-CZ',
     timezoneId: 'Europe/Prague',
-    acceptDownloads: true,   // krok Záznam stahuje PDF přes blob → povolit, ať flow pokračuje
+    acceptDownloads: true,
     recordVideo: { dir: OUT_DIR, size: { width: 1440, height: 900 } },
   });
 
-  // Session cookie (cross-site — pro doménu workeru, kam míří API volání).
   await context.addCookies([{
     name: 'session', value: SESSION, domain: WORKER_HOST, path: '/',
     httpOnly: true, secure: true, sameSite: 'None',
   }]);
-
-  // Install banner nikdy nezobrazovat.
-  await context.addInitScript(() => {
-    try { localStorage.setItem('installBannerDismissed', '1'); } catch {}
-  });
+  await context.addInitScript(() => { try { localStorage.setItem('installBannerDismissed', '1'); } catch {} });
 
   const page = await context.newPage();
-  const videoStart = Date.now();   // ~začátek nahrávání (pro ořez úvodu, než se wizard namontuje)
+  const videoStart = Date.now();
+  const vt = () => (Date.now() - videoStart) / 1000;   // čas v ose videa (s)
   let trimSec = 0;
+  const cuts = [];   // [start,end] úseky k vystřižení (mrtvé čekání)
 
-  // Zachyť číslo/ID vytvořeného AML case z odpovědi /api/aml/case/create.
+  // Čeká na výsledek a zaznamená mrtvý úsek čekání k vystřižení (nechá lead+tail).
+  async function waitCut(label, fn) {
+    const s = vt();
+    await fn();
+    const e = vt();
+    if (e - s > KEEP_LEAD + KEEP_TAIL) cuts.push([s + KEEP_LEAD, e - KEEP_TAIL]);
+    console.log(`  · ${label}: ${(e - s).toFixed(1)} s`);
+  }
+
   let createdCaseId = null, createdCaseNumber = null;
   page.on('response', async (res) => {
     if (res.url().includes('/api/aml/case/create') && res.request().method() === 'POST') {
@@ -84,160 +107,167 @@ async function main() {
 
   console.log('→ Otevírám', SITE);
   await page.goto(SITE, { waitUntil: 'domcontentloaded' });
+  // Skryj pravou část hlavičky (e-mail) i globální patičku (rušivá tmavá plocha).
+  await page.addStyleTag({ content: '#headerAuth{display:none!important}#siteFooter{display:none!important}' });
 
-  // Skryj pravou část hlavičky s e-mailem uživatele (navigaci ponech).
-  await page.addStyleTag({ content: '#headerAuth{display:none!important}' });
-
-  // Počkej, až se po ověření session namontuje AML wizard.
   await page.waitForSelector('#amlRoot .aml-card', { timeout: 30000 });
-
-  // Pokud naskočila „Rozdělaná kontrola", začni novou.
   const newBtn = page.locator('[data-act="new"]');
   if (await newBtn.count()) { await newBtn.first().click(); }
 
   // ── Krok 1/5 — Údaje klienta ──
   await page.waitForSelector('.aml-tile-src[data-source="manual"]', { timeout: 20000 });
-  // Wizard je vidět (krok 0) → od tohoto času nechat video; úvod (landing, než checkSession
-  // namontuje wizard) se ořízne. Malý lead-in 0,4 s, ať video „začíná step indikátorem".
-  trimSec = Math.max(0, (Date.now() - videoStart) / 1000 - 0.4);
-  await sleep(600);
-  await page.locator('.aml-seg[data-subject="fo"]').click();           // typ: Fyzická osoba
-  await sleep(400);
-  await page.locator('.aml-tile-src[data-source="manual"]').click();   // cesta: Zadat ručně
-  await page.waitForSelector('#aml_f_client_name', { timeout: 10000 });
+  trimSec = Math.max(0, vt() - 0.4);   // od tohoto času nechat video (úvod = landing se ořízne)
+  await scrollTop(page);
   await sleep(500);
+  await page.locator('.aml-seg[data-subject="fo"]').click();
+  await sleep(350);
+  await page.locator('.aml-tile-src[data-source="manual"]').click();
+  await page.waitForSelector('#aml_f_client_name', { timeout: 10000 });
+  await sleep(400);
 
   await humanFill(page, '#aml_f_client_name', 'Jan');
   await humanFill(page, '#aml_f_client_surname', 'Novák');
   await humanFill(page, '#aml_f_client_birth_date', '15.03.1985');
   await page.selectOption('#aml_f_client_doc_type', 'OP');
-  await sleep(400);
+  await sleep(300);
   await humanFill(page, '#aml_f_client_doc_number', '123456789');
   await humanFill(page, '#aml_f_client_doc_valid_until', '01.01.2030');
   await humanFill(page, '#aml_f_client_nationality', 'Česká republika');
-  // U2 — pohlaví je povinné, není-li vyplněno rodné číslo (§ 5 odst. 1 písm. a).
-  await page.selectOption('#aml_f_client_gender', 'M');
+  await page.selectOption('#aml_f_client_gender', 'M');   // U2: povinné bez rodného čísla
+  await sleep(400);
+  await scrollTo(page, '#amlVerifierCheck');
+  await page.locator('#amlVerifierCheck').check();         // U3: prohlášení ověřující osoby
   await sleep(500);
-
-  // U3 — prohlášení ověřující osoby (osobní setkání) je povinné pro odemčení tlačítka.
-  await page.locator('#amlVerifierCheck').check();
-  await sleep(600);
-
-  // Pokračovat na lustraci (počkej, až se tlačítko odemkne).
+  await scrollTo(page, '#amlContinue');
   await page.waitForSelector('#amlContinue:not([disabled])', { timeout: 15000 });
-  await sleep(1000);   // pauza po dokončení kroku
+  await sleep(700);
   await page.locator('#amlContinue').click();
 
   // ── Krok 2/5 — Lustrace ──
-  console.log('→ Čekám na dokončení lustrace…');
-  await page.waitForSelector('[data-act="rerun-lookups"]', { timeout: 60000 });
-  await sleep(2000);   // pauza na výsledku
+  console.log('→ Lustrace…');
+  await scrollTop(page);
+  await waitCut('lustrace', () => page.waitForSelector('[data-act="rerun-lookups"]', { timeout: 60000 }));
+  await scrollTo(page, '.aml-lookups', 'start');
+  await sleep(1600);   // divák vidí výsledky
+  await scrollTo(page, '#amlFoot [data-act="next"]');
   await page.locator('#amlFoot [data-act="next"]:not([disabled])').click();
 
   // ── Krok 3/5 — Účel obchodu ──
   await page.waitForSelector('[data-act="set-relation"][data-val="jednorazovy"]', { timeout: 15000 });
-  await sleep(500);
-  await page.locator('[data-act="set-relation"][data-val="jednorazovy"]').click();
-  await sleep(jitter(500));
-  await page.locator('[data-act="set-band"][data-val="1k_15k"]').click();
-  await sleep(jitter(500));
-  await humanFill(page, '#aml_f_deal_countries', 'Česko');            // default je Česko; vypíšeme explicitně
-  await page.selectOption('#aml_f_purpose_category', 'prevod_nemovitosti');
+  await scrollTop(page);
   await sleep(400);
+  await page.locator('[data-act="set-relation"][data-val="jednorazovy"]').click();
+  await sleep(jitter(450));
+  await page.locator('[data-act="set-band"][data-val="1k_15k"]').click();
+  await sleep(jitter(450));
+  await humanFill(page, '#aml_f_deal_countries', 'Česko');
+  await page.selectOption('#aml_f_purpose_category', 'prevod_nemovitosti');
+  await sleep(350);
   await humanFill(page, '#aml_f_business_purpose', 'Zprostředkování prodeje bytu 2+kk, Praha');
+  await scrollTo(page, '#aml_f_source_of_funds_type');
   await page.selectOption('#aml_f_source_of_funds_type', 'uspory');
-  await sleep(1500);   // pauza na vyplněném kroku (BEZ dokumentů)
+  await sleep(1200);
+  await scrollTo(page, '#amlFoot [data-act="next"]');
   await page.locator('#amlFoot [data-act="next"]:not([disabled])').click();
 
   // ── Krok 4/5 — Riziko ──
-  console.log('→ Čekám na AI návrh rizika…');
-  await page.waitForSelector('.aml-ai-card .aml-risk-badge', { timeout: 60000 });
-  await sleep(2500);   // divák čte faktory
-  await page.locator('input[name="amlPep"][value="not"]').check();    // klient NENÍ PEP
+  console.log('→ AI návrh rizika…');
+  await scrollTop(page);
+  await waitCut('AI návrh', () => page.waitForSelector('.aml-ai-card .aml-risk-badge', { timeout: 60000 }));
+  await scrollTo(page, '.aml-ai-card', 'start');
+  await sleep(2200);   // divák čte AI kartu a faktory
+  await scrollTo(page, '.aml-decl', 'start');
+  await sleep(500);
+  await page.locator('input[name="amlPep"][value="not"]').check();
   await sleep(300);
-  // Změna PEP re-spustí návrh — počkej, než se karta znovu ustálí.
-  await page.waitForSelector('.aml-ai-card .aml-risk-badge', { timeout: 60000 });
+  await waitCut('AI přepočet', () => page.waitForSelector('.aml-ai-card .aml-risk-badge', { timeout: 60000 }));
   await page.locator('#amlDeclSanctions').check();
   await sleep(300);
   await page.locator('#amlDeclSource').check();
-  await sleep(300);
-  // Ponech navrženou úroveň, odůvodnění přeskoč.
+  await sleep(400);
+  await scrollTo(page, '.aml-decision', 'start');
+  await sleep(600);
   await page.waitForSelector('#amlDecideBtn:not([disabled])', { timeout: 10000 });
   await page.locator('#amlDecideBtn').click();
-  await sleep(1000);
+  await sleep(900);
+  await scrollTo(page, '#amlFoot [data-act="next"]');
   await page.locator('#amlFoot [data-act="next"]:not([disabled])').click();
 
   // ── Krok 5/5 — Záznam ──
   await page.waitForSelector('#amlGenBtn', { timeout: 15000 });
-  await sleep(1500);   // rekapitulace
-  console.log('→ Generuji PDF záznam…');
-  await page.locator('#amlGenBtn').click();
-  await page.waitForSelector('.aml-done', { timeout: 45000 });   // úspěchová obrazovka
-  await sleep(2500);
+  await scrollTop(page);
+  await sleep(1300);   // rekapitulace
+  console.log('→ Generuji PDF…');
+  await scrollTo(page, '#amlGenBtn');
+  await waitCut('PDF', async () => { await page.locator('#amlGenBtn').click(); await page.waitForSelector('.aml-done', { timeout: 45000 }); });
+  await scrollTop(page);
+  await sleep(2500);   // úspěchová obrazovka
 
-  // Výška hlavičky aplikace (pro ořez horního okraje ve videu).
   const hb = await page.locator('.app-header').boundingBox();
-  const headerH = Math.max(0, Math.round((hb?.height || 56)));
+  const headerH = Math.max(0, Math.round(hb?.height || 56));
 
-  // Ukončení nahrávky.
   const video = page.video();
   await context.close();
   await browser.close();
 
   const srcVideo = video ? await video.path() : null;
-  console.log('\n✓ Nahrávání hotovo.');
-  console.log('Zdrojové video:', srcVideo);
-  console.log('Výška hlavičky k ořezu:', headerH, 'px');
+  console.log('\n✓ Nahrávání hotovo. Header k ořezu:', headerH, 'px. Vystřižené úseky:', cuts.length);
+  if (!srcVideo || !existsSync(srcVideo)) { console.error('Video se nenahrálo.'); printSummary(null, null, createdCaseNumber, createdCaseId); return; }
 
-  if (!srcVideo || !existsSync(srcVideo)) {
-    console.error('Video se nenahrálo — přeskočen post-processing.');
-    printSummary(null, null, createdCaseNumber, createdCaseId);
-    return;
-  }
+  // ── Post-processing: crop headeru + vystřižení mrtvých úseků (concat) + scale/fps ──
+  const videoEnd = ffDuration(srcVideo);
+  const keep = computeKeep(trimSec, videoEnd, cuts);
+  const vf = `crop=iw:ih-${headerH}:0:${headerH},scale=1280:-2,fps=24`;
 
-  // ── Post-processing (ffmpeg-static) ──
-  // crop headeru → scale 1280 → 24 fps → bez zvuku → faststart. Cíl < 3 MB (jinak crf 30).
-  const encode = (crf) => {
-    execFileSync(FFMPEG, [
-      '-y', '-ss', trimSec.toFixed(2), '-i', srcVideo,
-      '-vf', `crop=iw:ih-${headerH}:0:${headerH},scale=1280:-2,fps=24`,
-      '-c:v', 'libx264', '-crf', String(crf), '-pix_fmt', 'yuv420p',
-      '-an', '-movflags', '+faststart', MP4,
-    ], { stdio: ['ignore', 'ignore', 'pipe'] });
+  const build = (crf) => {
+    const segs = keep.map((r, i) => {
+      const f = join(OUT_DIR, `seg_${i}.mp4`);
+      execFileSync(FFMPEG, ['-y', '-ss', r[0].toFixed(2), '-i', srcVideo, '-t', (r[1] - r[0]).toFixed(2),
+        '-vf', vf, '-c:v', 'libx264', '-crf', String(crf), '-pix_fmt', 'yuv420p', '-an', f],
+        { stdio: ['ignore', 'ignore', 'pipe'] });
+      return f;
+    });
+    const list = join(OUT_DIR, 'concat.txt');
+    writeFileSync(list, segs.map(s => `file '${s.replace(/\\/g, '/')}'`).join('\n'));
+    execFileSync(FFMPEG, ['-y', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', MP4],
+      { stdio: ['ignore', 'ignore', 'pipe'] });
   };
-  console.log('→ Konvertuji (crf 28)…');
-  encode(28);
+
+  console.log('→ Stříhám a konvertuji (crf 28)…');
+  build(28);
   let sizeMB = statSync(MP4).size / (1024 * 1024);
-  if (sizeMB > 3) {
-    console.log(`  ${sizeMB.toFixed(2)} MB > 3 MB → překóduji crf 30…`);
-    encode(30);
-    sizeMB = statSync(MP4).size / (1024 * 1024);
-  }
+  if (sizeMB > 3) { console.log(`  ${sizeMB.toFixed(2)} MB > 3 MB → crf 30…`); build(30); sizeMB = statSync(MP4).size / (1024 * 1024); }
 
-  // Poster z framu úspěchové obrazovky (2 s před koncem).
-  console.log('→ Extrahuji poster…');
-  execFileSync(FFMPEG, ['-y', '-sseof', '-2', '-i', MP4, '-frames:v', '1', '-q:v', '2', POSTER],
-    { stdio: ['ignore', 'ignore', 'pipe'] });
+  console.log('→ Poster z úspěchové obrazovky…');
+  execFileSync(FFMPEG, ['-y', '-sseof', '-2', '-i', MP4, '-frames:v', '1', '-q:v', '2', POSTER], { stdio: ['ignore', 'ignore', 'pipe'] });
 
-  // Ověřovací framy (začátek / střed / konec) — vizuální kontrola: žádný e-mail, karta neořízlá.
-  const dur = ffprobeDuration(MP4);
+  const dur = ffDuration(MP4);
   const frames = [];
-  for (const [label, t] of [['start', '0.5'], ['mid', String(Math.max(1, (dur / 2)).toFixed(1))], ['end', String(Math.max(1, dur - 1).toFixed(1))]]) {
+  for (const [label, t] of [['start', '0.5'], ['mid', (dur / 2).toFixed(1)], ['end', Math.max(1, dur - 1).toFixed(1)]]) {
     const f = join(OUT_DIR, `verify_${label}.png`);
     try { execFileSync(FFMPEG, ['-y', '-ss', t, '-i', MP4, '-frames:v', '1', '-q:v', '2', f], { stdio: ['ignore', 'ignore', 'pipe'] }); frames.push(f); } catch {}
   }
-
   printSummary(dur, sizeMB, createdCaseNumber, createdCaseId, frames);
 }
 
-// Délka videa (s) přes ffmpeg (parsuje Duration ze stderr; ffmpeg-static nemá ffprobe).
-function ffprobeDuration(file) {
-  try {
-    execFileSync(FFMPEG, ['-i', file], { stdio: ['ignore', 'ignore', 'pipe'] });
-  } catch (e) {
-    const m = String(e.stderr || '').match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
-    if (m) return (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
+// Doplněk keep-úseků = [start,end] mimo vystřižené cuts.
+function computeKeep(start, end, cuts) {
+  const sorted = cuts.filter(c => c[1] > c[0]).sort((a, b) => a[0] - b[0]);
+  const keep = []; let cur = start;
+  for (const [cs, ce] of sorted) {
+    if (ce <= cur) continue;
+    if (cs > cur) keep.push([cur, Math.min(cs, end)]);
+    cur = Math.max(cur, ce);
+    if (cur >= end) break;
   }
+  if (cur < end) keep.push([cur, end]);
+  return keep.filter(r => r[1] - r[0] > 0.15);
+}
+
+// Délka (s) přes ffmpeg (parsuje Duration ze stderr; ffmpeg-static nemá ffprobe).
+function ffDuration(file) {
+  try { execFileSync(FFMPEG, ['-i', file], { stdio: ['ignore', 'ignore', 'pipe'] }); }
+  catch (e) { const m = String(e.stderr || '').match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/); if (m) return (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]); }
   return 0;
 }
 
@@ -248,7 +278,7 @@ function printSummary(dur, sizeMB, caseNumber, caseId, frames) {
   console.log('Poster:', POSTER);
   console.log('Číslo testovacího případu (smaž v archivu):', caseNumber || '(nezachyceno)');
   console.log('Case ID:', caseId ?? '(nezachyceno)');
-  if (frames?.length) { console.log('Ověřovací framy (zkontroluj: žádný e-mail, karta neořízlá):'); frames.forEach(f => console.log('  ', f)); }
+  if (frames?.length) { console.log('Ověřovací framy:'); frames.forEach(f => console.log('  ', f)); }
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

@@ -1452,19 +1452,37 @@ body.logged-in .nav-section-guest { display: none; }
 .aml { width: min(860px, 94vw); margin: 0; padding: clamp(16px, 3vw, 28px) 0 96px; }
 
 /* Kontextový panel — jen ≥1440px, sticky, vizuálně tišší než karta. */
-.aml-context { display: none; width: 300px; flex-shrink: 0; position: sticky; top: 84px; align-self: flex-start; padding-top: clamp(16px, 3vw, 28px); }
+.aml-context { display: none; width: 300px; flex-shrink: 0; position: sticky; top: 84px; align-self: flex-start; padding-top: clamp(16px, 3vw, 28px); max-height: calc(100vh - 96px); overflow-y: auto; }
 @media (min-width: 1200px) { .aml-context { display: block; } }   /* snížen práh, ať se panel ukáže i při zvětšeném zobrazení (150 % scaling) */
 .aml-ctx-card { background: var(--gold-p); border: 1px solid #efe6d4; border-radius: 14px; padding: 16px 18px; }
 .aml-ctx-title { font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-lt); margin-bottom: 10px; }
 .aml-ctx-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--ink-lt); padding: 3px 0; }
 .aml-ctx-row b { color: var(--ink); font-weight: 600; text-align: right; }
-.aml-ctx-steps { list-style: none; margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid #efe6d4; display: flex; flex-direction: column; gap: 7px; }
-.aml-ctx-step { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-lt); }
-.aml-ctx-mark { width: 18px; height: 18px; border-radius: 50%; background: var(--rule); color: var(--ink-lt); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.aml-ctx-step.is-done .aml-ctx-mark { background: var(--gold); color: #fff; }
-.aml-ctx-step.is-active { color: var(--navy); font-weight: 600; }
-.aml-ctx-step.is-active .aml-ctx-mark { background: var(--navy); color: #fff; }
-.aml-ctx-help { font-size: 12px; color: var(--ink-lt); line-height: 1.6; padding: 14px 4px 0; }
+/* Sekce panelu (Lustrace / Další zjištění) */
+.aml-ctx-sec { margin-top: 14px; }
+.aml-ctx-sec-title { font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-lt); margin-bottom: 8px; }
+.aml-ctx-empty { font-size: 12px; color: var(--ink-lt); font-style: italic; padding: 2px 0; }
+/* Lustrace: nálezy nahoře (řadí JS) vždy vidět; clean se odscrolluje uvnitř sekce */
+.aml-ctx-sec-lustrace .aml-ctx-lookups { display: flex; flex-direction: column; gap: 5px; max-height: 42vh; overflow-y: auto; }
+.aml-ctx-lk { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink); padding: 5px 8px; border: 1px solid transparent; border-radius: 8px; }
+.aml-ctx-lk-ico { font-size: 14px; width: 18px; }
+.aml-ctx-lk-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aml-ctx-lk-right { font-size: 11.5px; font-weight: 700; flex-shrink: 0; }
+.aml-ctx-lk.aml-lk-match .aml-ctx-lk-right, .aml-ctx-lk.aml-lk-warn .aml-ctx-lk-right, .aml-ctx-lk.aml-lk-manual .aml-ctx-lk-right { color: inherit; }
+.aml-ctx-lk.aml-lk-match { color: #c0392b; }
+.aml-ctx-lk.aml-lk-warn { color: #b8791a; }
+.aml-ctx-lk.aml-lk-manual { color: #3d6bb3; }
+.aml-ctx-lk--click { cursor: pointer; }
+.aml-ctx-lk--click:hover { filter: brightness(.97); }
+/* Další zjištění — badge konzistence + řádky rizika */
+.aml-ctx-badge { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; padding: 6px 10px; border: 1px solid transparent; border-radius: 8px; margin-bottom: 6px; }
+.aml-ctx-badge.aml-lk-ok { color: #1a8a4a; background: #eefaf2; border-color: #bfe6cd; }
+.aml-ctx-badge.aml-lk-warn { color: #b8791a; background: #fff8ec; border-color: #f0dcae; }
+.aml-ctx-badge.aml-lk-match { color: #c0392b; background: #fdeeec; border-color: #f0c0b8; }
+.aml-ctx-badge-k { font-size: 11px; font-weight: 700; color: var(--ink-lt); text-transform: none; letter-spacing: 0; flex-shrink: 0; }
+.aml-ctx-riskrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 0; }
+.aml-ctx-riskrow .aml-risk-badge { font-size: 11.5px; padding: 2px 9px; }
+.aml-ctx-help { font-size: 12px; color: var(--ink-lt); line-height: 1.6; padding: 14px 4px 0; margin-top: 14px; border-top: 1px solid #efe6d4; }
 
 /* Na širší kartě (>700px) větší mezera mezi sloupci polí. */
 @media (min-width: 760px) { .aml-fields { column-gap: 30px; row-gap: 14px; } }

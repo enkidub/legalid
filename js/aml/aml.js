@@ -260,6 +260,12 @@ function bindRoot(root) {
     if (!t || !root.contains(t)) return;
     handleAction(root, t.dataset.act, t.dataset);
   });
+  // Kontextový panel je sourozenec #amlRoot (mimo něj) → vlastní delegace kliknutí.
+  const ctxPanel = document.getElementById('amlContext');
+  if (ctxPanel) ctxPanel.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-act]');
+    if (t) handleAction(root, t.dataset.act, t.dataset);
+  });
   root.addEventListener('change', (e) => {
     if (e.target.id === 'amlUploadInput') {
       addUploadFiles(root, e.target.files); e.target.value = ''; return;
@@ -328,6 +334,7 @@ function handleAction(root, act, ds) {
     case 'back': goBack(root); break;
     case 'goto-step': goToStep(root, +ds.idx); break;
     case 'toggle-detail': toggleLookupDetail(ds.type); break;
+    case 'ctx-lookup': openLookupDetail(root, ds.type); break;
     case 'rerun-lookups': wiz.lookupStatus = 'idle'; wiz.lookups = null; renderLustrace(root); break;
     case 'copy-casenum': copyCaseNum(); break;
     case 'open-terminate': openTerminateModal(root); break;
@@ -912,7 +919,37 @@ function copyCaseNum() {
   }
 }
 
-// Kontextový panel vpravo (jen ≥1440px) — mini souhrn případu + nápověda ke kroku.
+// Řádek jedné lustrace v panelu — sdílí stavové třídy s kartami kroku 2 (aml-lk-*).
+function ctxLookupRow(lk) {
+  const v = lookupView(lk);
+  const name = LOOKUP_LABELS[lk.lookup_type] || lk.lookup_type;
+  let right = '';
+  if (lk.status === 'warning') right = lk.match_score ? `možná shoda ${Math.round(lk.match_score * 100)} %` : 'ke kontrole';
+  else if (lk.status === 'match') right = 'SHODA';
+  else if (lk.status === 'manual') right = 'ověřte ručně';
+  else if (lk.status === 'error') right = 'nedostupné';
+  // clean → jen ikona+název (bez textu vpravo, šetří místo)
+  const finding = ['match', 'warning', 'manual'].includes(lk.status);
+  const attrs = finding ? ` data-act="ctx-lookup" data-type="${lk.lookup_type}" role="button" tabindex="0"` : '';
+  return `<div class="aml-ctx-lk aml-lk-${v.cls}${finding ? ' aml-ctx-lk--click' : ''}"${attrs}>
+    <span class="aml-lk-ico aml-ctx-lk-ico">${v.icon}</span>
+    <span class="aml-ctx-lk-name">${esc(name)}</span>
+    ${right ? `<span class="aml-ctx-lk-right">${esc(right)}</span>` : ''}
+  </div>`;
+}
+
+// Dotáhne uložené lustrace pro panel (když nejsou v paměti — např. po resume).
+async function fetchContextLookups() {
+  if (wiz._ctxLookupsLoading || !wiz.caseId) return;
+  wiz._ctxLookupsLoading = true;
+  try { const r = await apiAmlGetLookups(wiz.caseId); if (r.results?.length) wiz.lookups = r.results; } catch {}
+  wiz._ctxLookupsLoading = false;
+  renderContext();
+}
+
+// Kontextový panel vpravo (jen ≥1440px) — živý stav případu: souhrn, lustrace,
+// další zjištění, nápověda ke kroku. Kroky (0-index): 0=Údaje, 1=Lustrace, 2=Účel,
+// 3=Riziko, 4=Záznam. Lustrace se ukazuje od kroku Lustrace (index 1) dál.
 function renderContext() {
   const el = $('amlContext');
   if (!el) return;
@@ -926,16 +963,46 @@ function renderContext() {
     subj && ['Typ klienta', subj[1]],
     clientName && ['Klient', clientName],
   ].filter(Boolean).map(([k, v]) => `<div class="aml-ctx-row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('');
-  const steps = STEP_LABELS.map((label, i) => {
-    const cls = i === wiz.step ? 'is-active' : (i < wiz.step ? 'is-done' : '');
-    const mark = i < wiz.step ? '✓' : String(i + 1);
-    return `<li class="aml-ctx-step ${cls}"><span class="aml-ctx-mark">${mark}</span>${esc(label)}</li>`;
-  }).join('');
+
+  // Lustrace: krok 0 (Údaje) → placeholder; od kroku 1 dál → řádky (nálezy nahoře).
+  if (wiz.step >= 2 && (!wiz.lookups || !wiz.lookups.length) && !wiz._ctxLookupsLoading) fetchContextLookups();
+  let lustraceHTML;
+  if (wiz.step < 1) {
+    lustraceHTML = `<div class="aml-ctx-empty">Lustrace zatím neproběhla</div>`;
+  } else if (!wiz.lookups || !wiz.lookups.length) {
+    lustraceHTML = `<div class="aml-ctx-empty">Načítám lustrace…</div>`;
+  } else {
+    const RANK = { match: 4, warning: 3, manual: 2, clean: 1, pending: 0, error: 0 };
+    const sorted = [...wiz.lookups].sort((a, b) => (RANK[b.status] ?? 0) - (RANK[a.status] ?? 0));
+    lustraceHTML = `<div class="aml-ctx-lookups">${sorted.map(ctxLookupRow).join('')}</div>`;
+  }
+
+  // Další zjištění: konzistence (od kroku Účel), AI riziko + rozhodnutí (od kroku Riziko).
+  const extra = [];
+  if (wiz.step >= 2 && wiz.consistency) {
+    const cv = CONSISTENCY_VIEW[wiz.consistency.consistency] || { label: wiz.consistency.consistency || '—', cls: 'warn' };
+    extra.push(`<div class="aml-ctx-badge aml-lk-${cv.cls}"><span class="aml-ctx-badge-k">Konzistence dokumentů</span><span>${esc(cv.label)}</span></div>`);
+  }
+  if (wiz.step >= 3 && wiz.riskSuggestion) {
+    const sl = wiz.riskSuggestion.suggested_level;
+    extra.push(`<div class="aml-ctx-riskrow"><span class="aml-ctx-badge-k">AI návrh</span><span class="aml-risk-badge aml-risk-${esc(sl)}">${esc(lbl(RISK_LEVELS, sl))}</span></div>`);
+    if (wiz.riskDecided && wiz.riskDecision.level) {
+      const dl = wiz.riskDecision.level;
+      extra.push(`<div class="aml-ctx-riskrow"><span class="aml-ctx-badge-k">Rozhodnuto</span><span class="aml-risk-badge aml-risk-${esc(dl)}">${esc(lbl(RISK_LEVELS, dl))}</span></div>`);
+    }
+  }
+  const extraHTML = extra.length
+    ? `<div class="aml-ctx-sec"><div class="aml-ctx-sec-title">Další zjištění</div>${extra.join('')}</div>` : '';
+
   el.innerHTML = `<div class="aml-ctx-card">
       <div class="aml-ctx-title">Souhrn kontroly</div>
       ${rows}
-      <ul class="aml-ctx-steps">${steps}</ul>
     </div>
+    <div class="aml-ctx-sec aml-ctx-sec-lustrace">
+      <div class="aml-ctx-sec-title">Lustrace</div>
+      ${lustraceHTML}
+    </div>
+    ${extraHTML}
     <div class="aml-ctx-help">${esc(CONTEXT_HELP[wiz.step] || '')}</div>`;
 }
 
@@ -1389,7 +1456,7 @@ async function runConsistency(root) {
   wiz.consistencyLoading = false;
   if (!res || res.error) { showToast('Kontrola konzistence selhala, zkuste to znovu.'); renderPurpose(root); return; }
   wiz.consistency = res;
-  renderPurpose(root);
+  renderPurpose(root); renderContext();
 }
 
 // Uloží pole kroku Účel (přes patchCase) — volá se při přechodu na krok Riziko.
@@ -1507,6 +1574,7 @@ async function runRiskSuggest(root) {
   wiz.riskSuggestion = res;
   if (!wiz.riskDecision.level) wiz.riskDecision.level = res.suggested_level;
   if (wiz.step === 3) renderRisk(root);
+  renderContext();
 }
 
 async function runRiskDecision(root) {
@@ -1531,7 +1599,7 @@ async function runRiskDecision(root) {
   wiz.riskDecided = true;
   wiz.riskDecision.decided_at = res.risk_decided_at;
   wiz.maxStep = Math.max(wiz.maxStep, 4);
-  renderRisk(root); renderSteps(); renderFoot();
+  renderRisk(root); renderSteps(); renderFoot(); renderContext();
 }
 
 // ── Krok 5 (index 4) — Záznam ────────────────────────────────────────
@@ -1906,6 +1974,7 @@ function renderLustrace(root) {
     ${rerun}
   </div>`;
   if (wiz.lookupStatus === 'idle') initLustrace(root);
+  else if (wiz.lookupStatus === 'done' && wiz._expandLookup) applyPendingExpand();
 }
 
 // Vstup na krok Lustrace: čerstvý běh (po zadání dat) NEBO načtení uložených výsledků.
@@ -1927,6 +1996,7 @@ async function loadStoredLookups(root) {
       || { lookup_type: t, status: 'error', details: 'Bez odpovědi.' });
     wiz.lookupStatus = 'done';
     if (wiz.step === 1) { renderLustrace(root); renderFoot(); }
+    renderContext();
     return true;
   } catch { wiz.lookupStatus = 'idle'; return false; }
 }
@@ -1955,11 +2025,27 @@ async function runLookups(root) {
   }
   wiz.lookupStatus = 'done';
   if (wiz.step === 1) { renderLustrace(root); renderFoot(); }
+  renderContext();
 }
 
 function toggleLookupDetail(type) {
   const el = document.getElementById(`aml-lk-det-${type}`);
   if (el) el.hidden = !el.hidden;
+}
+
+// Klik na nález v panelu → skok na krok Lustrace s rozbaleným detailem dané lustrace.
+function openLookupDetail(root, type) {
+  wiz._expandLookup = type;
+  if (wiz.step === 1) { applyPendingExpand(); return; }
+  goToStep(root, 1);   // po načtení lustrace (renderLustrace, stav done) se detail rozbalí
+}
+
+// Rozbalí detail čekající lustrace (nastavený z panelu) a odscrolluje k němu.
+function applyPendingExpand() {
+  const type = wiz._expandLookup; wiz._expandLookup = null;
+  if (!type) return;
+  const el = document.getElementById(`aml-lk-det-${type}`);
+  if (el) { el.hidden = false; try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {} }
 }
 
 // ── U4 — Ukončit kontrolu (§ 15) ─────────────────────────────────────

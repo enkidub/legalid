@@ -1,5 +1,6 @@
 import { lookupMvcr, lookupIsir, lookupIsirCompany, lookupAres, fetchAresSubject, lookupSanctions, lookupSanctionsEntity, lookupPep } from './utils/lookups.js';
 import { importEuSanctions } from './utils/sanctions.js';
+import { normalizeName } from './utils/fuzzy.js';
 
 const SYSTEM_PROMPT = `Jsi asistent pro extrakci dat z českých občanských průkazů.
 Vrať POUZE validní JSON bez markdown formátování, bez backtick bloků, bez jakéhokoliv preamble.
@@ -99,6 +100,73 @@ async function requireUserId(request, env) {
   if (!token) return null;
   const payload = await verifyJWT(token, env.JWT_SECRET);
   return payload ? payload.sub : null;
+}
+
+// ── Centrální evidence klientů (tabulka clients) ──
+const CLIENT_COLS = ['subject_type', 'name', 'surname', 'company_name', 'ico', 'birth_date',
+  'birth_place', 'rc', 'doc_type', 'doc_number', 'address', 'nationality', 'email', 'phone',
+  'last_aml_case_id', 'last_aml_date', 'last_risk_level', 'next_review_due'];
+const CLIENT_INPUT = ['subject_type', 'name', 'surname', 'company_name', 'ico', 'birth_date',
+  'birth_place', 'rc', 'doc_type', 'doc_number', 'address', 'nationality', 'email', 'phone'];
+
+// Ořízne a whitelistuje vstup klienta (manual create / import) na známé sloupce.
+function sanitizeClientInput(b) {
+  const d = {};
+  for (const k of CLIENT_INPUT) if (b[k] != null && String(b[k]) !== '') d[k] = String(b[k]).slice(0, 300);
+  return d;
+}
+
+// Mapování aml_cases → data klienta pro upsert.
+function amlCaseToClient(c) {
+  return {
+    subject_type: c.subject_type, name: c.client_name, surname: c.client_surname,
+    company_name: c.company_name, ico: c.client_ico, birth_date: c.client_birth_date,
+    birth_place: c.client_birth_place, rc: c.client_rc, doc_type: c.client_doc_type,
+    doc_number: c.client_doc_number, address: c.client_address, nationality: c.client_nationality,
+  };
+}
+
+// Dedup + upsert klienta. Match v pořadí: rc → doc_number → ico(PO) → jméno+příjmení+narození
+// (case-insensitive, bez diakritiky). Match → UPDATE prázdných/změněných polí; jinak INSERT.
+// Vrací { id, created }.
+async function upsertClient(env, userId, d, source) {
+  const now = new Date().toISOString();
+  const findBy = async (col, val) => (val ? await env.DB.prepare(`SELECT * FROM clients WHERE user_id = ? AND ${col} = ? LIMIT 1`).bind(userId, val).first() : null);
+  let existing = await findBy('rc', d.rc) || await findBy('doc_number', d.doc_number) || (d.ico ? await findBy('ico', d.ico) : null);
+  if (!existing && (d.name || d.surname) && d.birth_date) {
+    const { results } = await env.DB.prepare('SELECT * FROM clients WHERE user_id = ? AND birth_date = ?').bind(userId, d.birth_date).all();
+    const target = normalizeName(`${d.name || ''} ${d.surname || ''}`);
+    existing = (results || []).find(r => normalizeName(`${r.name || ''} ${r.surname || ''}`) === target) || null;
+  }
+  if (existing) {
+    const sets = [], vals = [];
+    for (const c of CLIENT_COLS) {
+      const nv = d[c];
+      if (nv == null || nv === '') continue;
+      if (existing[c] == null || existing[c] === '' || String(existing[c]) !== String(nv)) { sets.push(`${c} = ?`); vals.push(nv); }
+    }
+    sets.push('updated_at = ?'); vals.push(now);
+    await env.DB.prepare(`UPDATE clients SET ${sets.join(', ')} WHERE id = ? AND user_id = ?`).bind(...vals, existing.id, userId).run();
+    return { id: existing.id, created: false };
+  }
+  const insCols = CLIENT_COLS.filter(c => d[c] != null && d[c] !== '');
+  const ph = insCols.map(() => '?').join(', ');
+  const r = await env.DB.prepare(
+    `INSERT INTO clients (user_id, created_from, created_at, updated_at${insCols.length ? ', ' + insCols.join(', ') : ''}) VALUES (?, ?, ?, ?${insCols.length ? ', ' + ph : ''})`
+  ).bind(userId, source, now, now, ...insCols.map(c => d[c])).run();
+  return { id: r.meta.last_row_id, created: true };
+}
+
+// Po uložení identity klienta v AML případu propíše klienta do clients a uloží client_id na case.
+async function syncAmlClient(env, userId, caseId, extra) {
+  try {
+    const full = await env.DB.prepare('SELECT * FROM aml_cases WHERE id = ? AND user_id = ?').bind(caseId, userId).first();
+    if (!full) return;
+    const data = { ...amlCaseToClient(full), ...(extra || {}) };
+    if (!data.name && !data.surname && !data.company_name && !data.rc && !data.doc_number && !data.ico) return;
+    const { id } = await upsertClient(env, userId, data, 'aml');
+    if (id && id !== full.client_id) await env.DB.prepare('UPDATE aml_cases SET client_id = ? WHERE id = ? AND user_id = ?').bind(id, caseId, userId).run();
+  } catch { /* sync klienta nesmí shodit hlavní operaci */ }
 }
 
 // Vygeneruje číslo kontroly 'AML-YYYYMM-XXXXXX' (6 náhodných znaků A-Z0-9).
@@ -865,6 +933,8 @@ export default {
         await env.DB.prepare(
           "UPDATE aml_cases SET status = 'completed', final_pdf_generated = 1, completed_at = ?, next_review_due = ?, record_sha256 = ? WHERE id = ? AND user_id = ?"
         ).bind(completedAt, nextReview, sha, caseId, userId).run();
+        // Centrální evidence: dokončený případ zapíše last_aml_* na klienta.
+        await syncAmlClient(env, userId, caseId, { last_aml_case_id: Number(caseId), last_aml_date: completedAt, last_risk_level: c.final_risk_level, next_review_due: nextReview });
         return json({ ok: true, completed_at: completedAt, next_review_due: nextReview });
       }
 
@@ -1025,9 +1095,99 @@ export default {
           await env.DB.prepare(
             `UPDATE aml_cases SET ${setClause} WHERE id = ? AND user_id = ?`
           ).bind(...values, caseId, userId).run();
+          // Centrální evidence: při uložení identity klienta propiš do clients + client_id na case.
+          const IDENTITY = ['client_name', 'client_surname', 'client_rc', 'client_doc_number', 'client_ico', 'company_name'];
+          if (keys.some(k => IDENTITY.includes(k))) await syncAmlClient(env, userId, caseId);
           return json({ ok: true, updated: keys.length });
         }
 
+        return json({ error: 'method_not_allowed' }, 405);
+      }
+
+      return json({ error: 'not_found' }, 404);
+    }
+
+    // ════════════════ Centrální evidence klientů ════════════════
+    if (url.pathname.startsWith('/api/clients')) {
+      const userId = await requireUserId(request, env);
+      if (!userId) return json({ error: 'unauthorized' }, 401);
+
+      // GET /api/clients?q=  |  POST /api/clients (manual)
+      if (url.pathname === '/api/clients') {
+        if (request.method === 'GET') {
+          const q = (url.searchParams.get('q') || '').trim();
+          let rows;
+          if (q) {
+            const like = `%${q}%`;
+            rows = await env.DB.prepare(
+              `SELECT * FROM clients WHERE user_id = ? AND (
+                 name LIKE ? OR surname LIKE ? OR company_name LIKE ? OR ico LIKE ? OR doc_number LIKE ?
+                 OR (COALESCE(name,'') || ' ' || COALESCE(surname,'')) LIKE ?)
+               ORDER BY updated_at DESC, created_at DESC LIMIT 50`
+            ).bind(userId, like, like, like, like, like, like).all();
+          } else {
+            rows = await env.DB.prepare('SELECT * FROM clients WHERE user_id = ? ORDER BY updated_at DESC, created_at DESC LIMIT 50').bind(userId).all();
+          }
+          return json({ clients: rows.results || [] });
+        }
+        if (request.method === 'POST') {
+          let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+          const data = sanitizeClientInput(b);
+          if (!data.name && !data.surname && !data.company_name) return json({ error: 'missing_name' }, 400);
+          const { id } = await upsertClient(env, userId, data, 'manual');
+          const row = await env.DB.prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?').bind(id, userId).first();
+          return json({ client: row });
+        }
+        return json({ error: 'method_not_allowed' }, 405);
+      }
+
+      // POST /api/clients/import — bulk import (dedup), vrací { created, merged }
+      if (url.pathname === '/api/clients/import') {
+        if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+        let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+        const arr = Array.isArray(b.clients) ? b.clients : [];
+        let created = 0, merged = 0;
+        for (const item of arr) {
+          const data = sanitizeClientInput(item);
+          if (!data.name && !data.surname && !data.company_name && !data.doc_number && !data.rc) continue;
+          try {
+            const r = await upsertClient(env, userId, data, item.created_from === 'dolozka' ? 'dolozka' : 'import');
+            if (r.created) created++; else merged++;
+          } catch { /* přeskoč vadný záznam */ }
+        }
+        return json({ ok: true, created, merged });
+      }
+
+      // GET/PATCH/DELETE /api/clients/:id
+      const cm = url.pathname.match(/^\/api\/clients\/(\d+)$/);
+      if (cm) {
+        const id = cm[1];
+        const owner = await env.DB.prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?').bind(id, userId).first();
+        if (!owner) return json({ error: 'not_found' }, 404);
+
+        if (request.method === 'GET') {
+          const { results: cases } = await env.DB.prepare(
+            'SELECT id, case_number, status, final_risk_level, completed_at, next_review_due, created_at FROM aml_cases WHERE client_id = ? AND user_id = ? ORDER BY created_at DESC'
+          ).bind(id, userId).all();
+          return json({ client: owner, aml_cases: cases || [] });
+        }
+        if (request.method === 'PATCH') {
+          let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+          const keys = Object.keys(b).filter(k => CLIENT_INPUT.includes(k));
+          if (!keys.length) return json({ ok: true, updated: 0 });
+          const sets = keys.map(k => `${k} = ?`).join(', ');
+          const vals = keys.map(k => (b[k] === '' ? null : b[k]));
+          await env.DB.prepare(`UPDATE clients SET ${sets}, updated_at = ? WHERE id = ? AND user_id = ?`)
+            .bind(...vals, new Date().toISOString(), id, userId).run();
+          const row = await env.DB.prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?').bind(id, userId).first();
+          return json({ client: row });
+        }
+        if (request.method === 'DELETE') {
+          const { results: cases } = await env.DB.prepare('SELECT id FROM aml_cases WHERE client_id = ? AND user_id = ?').bind(id, userId).all();
+          if ((cases || []).length) return json({ error: 'has_aml_cases', message: 'Klienta nelze smazat — má navázané AML kontroly.' }, 409);
+          await env.DB.prepare('DELETE FROM clients WHERE id = ? AND user_id = ?').bind(id, userId).run();
+          return json({ ok: true });
+        }
         return json({ error: 'method_not_allowed' }, 405);
       }
 

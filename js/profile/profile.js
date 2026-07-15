@@ -15,6 +15,7 @@ const LS_OLD = 'legalid_advokat';            // starý doložkový profil (pro m
 let _profile = null;   // aktuální centrální profil (poslední načtený/uložený)
 let _logo = { base64: null, mime: null };
 let _loaded = false;
+let _sigUserSet = false;   // uživatel explicitně přepnul toggle podpisů (→ neřídí se entity_type)
 
 const $ = id => document.getElementById(id);
 const val = id => ($(id)?.value || '').trim();
@@ -65,9 +66,24 @@ export async function reloadProfile() {
 export function resolvedSigTools() {
   const p = _profile;
   if (p && typeof p.resolved_signature_tools === 'boolean') return p.resolved_signature_tools;
+  if (p && (p.show_signature_tools === 0 || p.show_signature_tools === 1)) return p.show_signature_tools === 1;
   const t = p?.entity_type;
   if (!t) return true;
   return t === 'advokat' || t === 'notar';
+}
+
+// C3 — upoutávka: klik otevře Nastavení a zvýrazní toggle; křížek odmítne (localStorage).
+export function sigHintOpen() {
+  if (window.openCfgPanel) window.openCfgPanel('advokat');
+  setTimeout(() => {
+    const el = document.getElementById('podpisy');
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('cfg-highlight'); setTimeout(() => el.classList.remove('cfg-highlight'), 2200); }
+  }, 400);
+}
+export function sigHintDismiss(ev) {
+  if (ev) ev.stopPropagation();
+  try { localStorage.setItem('sigToolsHintDismissed', '1'); } catch {}
+  applyPanelState();
 }
 
 // Nastaví stav bočního panelu (tečka u Nastavení, viditelnost sekce podpisů, odmítnutí upoutávky).
@@ -101,6 +117,11 @@ export function profileSectionHTML() {
       <div class="form-group full">
         <label class="form-label" for="cfg_entity_type">Typ povinné osoby</label>
         <select class="form-input" id="cfg_entity_type" onchange="profileEntityChange()">${ENTITY_OPTIONS}</select>
+      </div>
+      <div class="form-group full" id="podpisy">
+        <label class="cfg-toggle"><input type="checkbox" id="cfg_sig_tools" onchange="profileSigToggle()">
+          <span>Zobrazovat nástroje pro ověřování podpisů (doložka, kniha prohlášení)</span></label>
+        <div class="cfg-toggle-note">Nastavení můžete kdykoli změnit nezávisle na typu povinné osoby.</div>
       </div>
       <div class="form-group full">
         <label class="form-label" for="cfg_display_name">Jméno / název kanceláře *</label>
@@ -181,11 +202,17 @@ export async function initProfileForm() {
   set('cfg_aRole', extra.role);
   set('cfg_aCisloKnihy', extra.cislo_knihy);
   _logo = { base64: p.logo_base64 || null, mime: p.logo_mime || null };
+  // Toggle podpisů: uživatel „nastavil", jen když je show_signature_tools 0/1.
+  _sigUserSet = (p.show_signature_tools === 0 || p.show_signature_tools === 1);
+  const sig = $('cfg_sig_tools'); if (sig) sig.checked = resolvedSigTools();
   renderLogoPreview();
   profileEntityChange();
   refreshBanner();
   maybeOfferOldMigration();
 }
+
+// Uživatel explicitně přepnul toggle → od teď se neřídí typem povinné osoby.
+export function profileSigToggle() { _sigUserSet = true; }
 
 // C2 — pokud existuje starý doložkový profil a nový je prázdný, nabídni převzetí.
 function maybeOfferOldMigration() {
@@ -209,6 +236,11 @@ export function profileEntityChange() {
   const t = val('cfg_entity_type');
   const label = $('cfg_reg_label');
   if (label) label.textContent = regLabel(t) + (regIsOptional(t) ? ' (nepovinné)' : '');
+  // Dokud uživatel toggle sám nepřepnul, náhled reaguje na typ (advokát/notář/nevyplněno → zapnuto).
+  if (!_sigUserSet) {
+    const sig = $('cfg_sig_tools');
+    if (sig) sig.checked = (!t || t === 'advokat' || t === 'notar');
+  }
 }
 
 export function refreshBanner() {
@@ -278,6 +310,8 @@ export async function profileSave() {
     contact_phone: val('cfg_contact_phone'),
     logo_base64: _logo.base64,
     logo_mime: _logo.mime,
+    // Uloží 0/1 jen když uživatel toggle explicitně přepnul; jinak null (odvozuje se z typu).
+    show_signature_tools: _sigUserSet ? ($('cfg_sig_tools')?.checked ? 1 : 0) : null,
   };
   const extra = { role: val('cfg_aRole'), cislo_knihy: val('cfg_aCisloKnihy') };
   localStorage.setItem(LS_EXTRA, JSON.stringify(extra));

@@ -1125,6 +1125,11 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .cfg-save-status { font-size: 12px; color: var(--ink-lt); }
 .cfg-save-status.is-ok { color: #1a8a4a; }
 .cfg-save-status.is-err { color: #c0392b; }
+.cfg-toggle { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--ink); cursor: pointer; line-height: 1.4; }
+.cfg-toggle input { accent-color: var(--gold-h); width: 16px; height: 16px; margin-top: 1px; cursor: pointer; flex-shrink: 0; }
+.cfg-toggle-note { font-size: 11px; color: var(--ink-fnt); margin-top: 4px; padding-left: 24px; }
+#podpisy { scroll-margin-top: 20px; border-radius: 8px; transition: background .3s; }
+#podpisy.cfg-highlight { background: var(--gold-p); box-shadow: 0 0 0 6px var(--gold-p); }
 .cfg-edit-link {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 12px; color: var(--gold); background: none; border: none;

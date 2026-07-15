@@ -14,7 +14,7 @@ import { renderSoukromi } from './soukromi/soukromi.js';
 import { openDemoModal, closeDemoModal, submitDemoRequest } from './demo/demo.js';
 import { renderAml, initAml } from './aml/aml.js';
 import { renderArchiv, initArchiv } from './archiv/archiv.js';
-import { profileEntityChange, profileLogoSelect, profileLogoRemove, profileSave, reloadProfile } from './profile/profile.js';
+import { profileEntityChange, profileLogoSelect, profileLogoRemove, profileSave, reloadProfile, profileSigToggle, sigHintOpen, sigHintDismiss } from './profile/profile.js';
 import { actionToastOk, closeAboutModal, closeActionToast, closeHamburger, closePrivacyModal, openAboutModal, openHamburger, openPrivacyModal, showToast } from './core/ui.js';
 
 
@@ -233,6 +233,9 @@ window.profileEntityChange = profileEntityChange; // <select id="cfg_entity_type
 window.profileLogoSelect = profileLogoSelect; // <input id="cfg_logo" onchange="profileLogoSelect(event)">
 window.profileLogoRemove = profileLogoRemove; // <button id="cfg_logo_remove" onclick="profileLogoRemove()">
 window.profileSave = profileSave; // <button id="cfg_save_btn" onclick="profileSave()">
+window.profileSigToggle = profileSigToggle; // <input id="cfg_sig_tools" onchange="profileSigToggle()">
+window.sigHintOpen = sigHintOpen; // <button class="nav-sig-hint-main" onclick="sigHintOpen()">
+window.sigHintDismiss = sigHintDismiss; // <button class="nav-sig-hint-x" onclick="sigHintDismiss(event)">
 window.openAboutModal = openAboutModal; // <button class="nav-footer-link" onclick="closeHamburger();openAboutModal()">O aplikaci · Verze 1
 window.openPrivacyModal = openPrivacyModal; // <button class="nav-footer-link" onclick="closeHamburger();openPrivacyModal()">Ochrana dat</butto
 window.closeAboutModal = closeAboutModal; // <div class="about-overlay" id="aboutOverlay" onclick="if(event.target===this)closeAboutModal()">

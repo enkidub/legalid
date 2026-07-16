@@ -1894,6 +1894,7 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .aml-src-state--err { color: #b23b30; }
 
 .aml-field-note { font-size: var(--fs-meta); color: var(--ink-fnt); line-height: 1.4; margin-top: 2px; }
+.aml-field-note--warn { color: #b4530e; font-weight: var(--fw-semibold); }
 
 /* U3 — prohlášení ověřující osoby */
 .aml-verifier { border: 1px solid #f0dcae; background: var(--gold-p); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }

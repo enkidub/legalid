@@ -61,23 +61,76 @@ const FORM_FIELDS = [
 ];
 // Pohlaví je povinné, jen když není vyplněné rodné číslo (§ 5 odst. 1 písm. a).
 function genderRequired() { return !String(wiz.data.client_rc || '').trim(); }
-// Pohlaví z rodného čísla: ženy mají měsíc +50 (51–62), příp. +70 při přetečení dne
-// (71–82); muži 01–12 nebo +20 (21–32) u novějších přidělení. Vrací 'M' | 'Ž' | ''.
-function genderFromRc(rc) {
+// Rozbor českého rodného čísla → { valid, gender 'M'|'Ž', birthDate 'DD.MM.RRRR', hasChecksum }.
+// Ženy: měsíc +50 (51–62), příp. +70 (71–82); muži 01–12 nebo +20 (21–32). 10místné
+// rč (od r. 1954) má kontrolní součet dělitelný 11; 9místné starší se checksumem NEvaliduje.
+function parseRc(rc) {
   const digits = String(rc || '').replace(/\D/g, '');
-  if (digits.length < 4) return '';
-  const mm = parseInt(digits.slice(2, 4), 10);
-  if (isNaN(mm)) return '';
-  if ((mm >= 51 && mm <= 62) || (mm >= 71 && mm <= 82)) return 'Ž';
-  if ((mm >= 1 && mm <= 12) || (mm >= 21 && mm <= 32)) return 'M';
-  return '';
+  if (!digits) return { empty: true };
+  if (digits.length !== 9 && digits.length !== 10) return { valid: false };
+  const yy = parseInt(digits.slice(0, 2), 10);
+  const mmRaw = parseInt(digits.slice(2, 4), 10);
+  const dd = parseInt(digits.slice(4, 6), 10);
+  let gender, mm;
+  if (mmRaw >= 71 && mmRaw <= 82) { gender = 'Ž'; mm = mmRaw - 70; }
+  else if (mmRaw >= 51 && mmRaw <= 62) { gender = 'Ž'; mm = mmRaw - 50; }
+  else if (mmRaw >= 21 && mmRaw <= 32) { gender = 'M'; mm = mmRaw - 20; }
+  else if (mmRaw >= 1 && mmRaw <= 12) { gender = 'M'; mm = mmRaw; }
+  else return { valid: false };
+  // Století: 9místné = před 1954; 10místné = 1954+ (starší narození mají 9 číslic).
+  const nowY = new Date().getFullYear();
+  let year;
+  if (digits.length === 10) { year = 2000 + yy; if (year > nowY) year = 1900 + yy; }
+  else { year = (yy <= 53) ? 1900 + yy : 1800 + yy; }
+  const dt = new Date(year, mm - 1, dd);
+  if (dt.getFullYear() !== year || dt.getMonth() !== mm - 1 || dt.getDate() !== dd) return { valid: false };
+  let valid = true;
+  if (digits.length === 10) {
+    valid = (parseInt(digits, 10) % 11 === 0);
+    // výjimka pro starší rč (do 1985): zbytek 10 a kontrolní číslice 0
+    if (!valid && parseInt(digits.slice(0, 9), 10) % 11 === 10 && digits[9] === '0') valid = true;
+  }
+  const birthDate = `${String(dd).padStart(2, '0')}.${String(mm).padStart(2, '0')}.${year}`;
+  return { valid, gender, birthDate, hasChecksum: digits.length === 10 };
 }
-// Po zadání rč odvodí pohlaví, uloží a překreslí formulář (select zůstane disabled).
-function applyGenderFromRc(root) {
-  const g = genderFromRc(wiz.data.client_rc);
-  if (g && wiz.data.client_gender !== g) { wiz.data.client_gender = g; patchCase({ client_gender: g }); }
-  const fc = document.getElementById('amlClientForm');
-  if (fc) fc.innerHTML = clientFormHTML();
+function genderFromRc(rc) { const p = parseRc(rc); return (p && p.valid) ? (p.gender || '') : ''; }
+
+// Porovná dvě data (DD.MM.RRRR i D.M.RR) na shodu.
+function sameDate(a, b) {
+  const norm = (s) => {
+    const m = String(s || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{2,4})/);
+    if (!m) return null;
+    let y = +m[3]; if (y < 100) y += (y <= (new Date().getFullYear() % 100)) ? 2000 : 1900;
+    return `${+m[1]}.${+m[2]}.${y}`;
+  };
+  const na = norm(a), nb = norm(b);
+  return !!(na && nb && na === nb);
+}
+function rerenderClientForm() { const fc = document.getElementById('amlClientForm'); if (fc) fc.innerHTML = clientFormHTML(); }
+
+// Po zadání rč: validace (nebloku­jící), předvyplnění data narození + pohlaví
+// (editovatelné), kontrola nesouladu s ručně zadaným datem.
+function applyRc(root) {
+  const p = parseRc(wiz.data.client_rc);
+  if (!p || p.empty) { wiz._rcWarning = false; wiz._birthMismatch = false; rerenderClientForm(); return; }
+  wiz._rcWarning = !p.valid;
+  const patch = {};
+  if (p.valid) {
+    if (p.gender && wiz.data.client_gender !== p.gender) { wiz.data.client_gender = p.gender; patch.client_gender = p.gender; }
+    if (!String(wiz.data.client_birth_date || '').trim()) {
+      wiz.data.client_birth_date = p.birthDate; patch.client_birth_date = p.birthDate; wiz._birthMismatch = false;
+    } else {
+      wiz._birthMismatch = !sameDate(wiz.data.client_birth_date, p.birthDate);
+    }
+  } else { wiz._birthMismatch = false; }
+  if (Object.keys(patch).length) patchCase(patch);
+  rerenderClientForm();
+}
+// Po zadání data narození: přepočítá nesoulad s rč (bez přepisu zadaného data).
+function checkRcDateConsistency(root) {
+  const p = parseRc(wiz.data.client_rc);
+  wiz._birthMismatch = !!(p && p.valid && String(wiz.data.client_birth_date || '').trim() && !sameDate(wiz.data.client_birth_date, p.birthDate));
+  rerenderClientForm();
 }
 const REQUIRED_COLS = FORM_FIELDS.filter(f => f.req).map(f => f.col);
 
@@ -314,8 +367,10 @@ function bindRoot(root) {
       if (!wiz.caseId && ['aml_f_client_name', 'aml_f_client_surname', 'aml_f_company_name'].includes(e.target.id) && e.target.value.trim()) ensureCase();
       // Duplicity: po opuštění identifikačního pole prověř evidenci (nenápadná nabídka).
       if (['aml_f_client_name', 'aml_f_client_surname', 'aml_f_client_birth_date', 'aml_f_client_rc', 'aml_f_client_doc_number', 'aml_f_client_ico'].includes(e.target.id)) maybeCheckDuplicate(root);
-      // Rodné číslo → odvoď pohlaví a zamkni jeho select.
-      if (e.target.id === 'aml_f_client_rc') applyGenderFromRc(root);
+      // Rodné číslo → validace + předvyplnění data narození a pohlaví (editovatelné).
+      if (e.target.id === 'aml_f_client_rc') applyRc(root);
+      // Datum narození → přepočet nesouladu s rč.
+      else if (e.target.id === 'aml_f_client_birth_date') checkRcDateConsistency(root);
     }
   });
   // Live validace formuláře + průběžné čtení do wiz.data (bez re-renderu → nezahodí fokus).
@@ -521,7 +576,7 @@ function resetWizard() {
   wiz.generating = false; wiz.recordSha = null; wiz.completeResult = null; wiz.verifierTimestamp = null;
   wiz._profileTried = false; wiz._clientsLoading = false; wiz._creating = false;
   wiz._dupMatch = null; wiz._dupDismissed = false; wiz._dupDismissedId = null;
-  wiz._lastRenderedStep = null;
+  wiz._lastRenderedStep = null; wiz._rcWarning = false; wiz._birthMismatch = false;
   wiz._started = true;
 }
 
@@ -1508,10 +1563,10 @@ function uploadZoneHTML() {
 // U PO se IČO vynechá (je v bloku Společnost). U podnikající FO je IČO povinné.
 function clientFormHTML() {
   const fields = FORM_FIELDS.filter(f => !(f.col === 'client_ico' && wiz.subject_type === 'po'));
-  const genderLocked = !genderRequired();   // rč vyplněno → pohlaví se určí z rč
+  const rcFilled = !genderRequired();   // rč vyplněno → pohlaví se určuje z rč (§ 5)
   return `<div class="aml-fields">` + fields.map(f => {
-    // Pohlaví: při zadaném rč odvoď hodnotu a zamkni select (neotevírat dropdown).
-    const val = (f.col === 'client_gender' && genderLocked)
+    // Pohlaví: při zadaném rč předvyplň z rč, ale ponech editovatelné (možnost opravy).
+    const val = (f.col === 'client_gender' && rcFilled)
       ? (wiz.data.client_gender || genderFromRc(wiz.data.client_rc) || '')
       : (wiz.data[f.col] || '');
     const req = f.req
@@ -1520,14 +1575,17 @@ function clientFormHTML() {
     const star = req ? ' <span class="aml-req">*</span>' : '';
     let input;
     if (f.type === 'select') {
-      const dis = (f.col === 'client_gender' && genderLocked) ? ' disabled' : '';
       const opts = f.opts.map(([v, l]) => `<option value="${esc(v)}"${v === val ? ' selected' : ''}>${esc(l)}</option>`).join('');
-      input = `<select id="aml_f_${f.col}"${dis}>${opts}</select>`;
+      input = `<select id="aml_f_${f.col}">${opts}</select>`;
     } else {
       input = `<input id="aml_f_${f.col}" value="${esc(val)}"${f.ph ? ` placeholder="${esc(f.ph)}"` : ''}>`;
     }
-    const noteText = (f.col === 'client_gender' && genderLocked) ? 'Určeno z rodného čísla.' : f.note;
-    const note = noteText ? `<span class="aml-field-note">${esc(noteText)}</span>` : '';
+    // Inline poznámky / upozornění (nebloku­jící).
+    let noteText = f.note, warn = false;
+    if (f.col === 'client_rc' && wiz._rcWarning) { noteText = 'Rodné číslo nevypadá platně — zkontrolujte.'; warn = true; }
+    else if (f.col === 'client_gender' && rcFilled) { noteText = 'Určeno z rodného čísla (lze upravit).'; }
+    else if (f.col === 'client_birth_date' && wiz._birthMismatch) { noteText = 'Datum nesouhlasí s rodným číslem — zkontrolujte.'; warn = true; }
+    const note = noteText ? `<span class="aml-field-note${warn ? ' aml-field-note--warn' : ''}">${esc(noteText)}</span>` : '';
     return `<label class="aml-field"><span>${esc(f.label)}${star}</span>${input}${note}</label>`;
   }).join('') + `</div>`;
 }

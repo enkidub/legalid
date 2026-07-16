@@ -297,10 +297,12 @@ export async function lookupSanctionsEntity(env, companyName) {
     const needle = stripLegalForms(companyName);
     const tokens = needle.split(' ').filter(t => t.length >= 3);
     const likeVals = (tokens.length ? tokens : [needle]).map(t => `%${t}%`);
-    const where = likeVals.map(() => 'name_normalized LIKE ?').join(' OR ');
+    // Token hledej v name_normalized NEBO aliases (stejný pattern jako u osob).
+    const where = likeVals.map(() => '(name_normalized LIKE ? OR aliases LIKE ?)').join(' OR ');
+    const binds = likeVals.flatMap(v => [v, v]);
     const { results } = await env.DB.prepare(
       `SELECT * FROM sanctions_entities WHERE ${where} LIMIT 500`
-    ).bind(...likeVals).all();
+    ).bind(...binds).all();
     const rows = results || [];
     const cands = [];
     for (const r of rows) {

@@ -2036,16 +2036,12 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 
 /* Hero */
 .lnd-hero {
-  padding: clamp(52px, 7vw, 92px) 0;
+  /* horní padding mírně navýšen po odstranění eyebrow badge, ať nadpis nepůsobí useknutě */
+  padding: clamp(72px, 8vw, 108px) 0 clamp(52px, 7vw, 92px);
   background:
     radial-gradient(1200px 460px at 72% -12%, rgba(139,96,20,.10), transparent 60%),
     linear-gradient(180deg, #faf7f0 0%, #f6f1e6 100%);
   text-align: center;
-}
-.lnd-eyebrow {
-  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 2.4px;
-  text-transform: uppercase; color: var(--gold-h); background: var(--gold-p);
-  padding: 6px 14px; border-radius: 20px; margin-bottom: 24px; border: 1px solid #efe3c6;
 }
 .lnd-h1 {
   font-family: var(--serif); font-weight: 700; color: var(--navy);

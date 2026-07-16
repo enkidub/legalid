@@ -31,7 +31,6 @@ export function renderLanding() {
   <!-- HERO -->
   <section class="lnd-hero">
     <div class="lnd-wrap">
-      <div class="lnd-eyebrow">AML pro povinné osoby</div>
       <h1 class="lnd-h1">AML kontrola klientů za 3 minuty</h1>
       <p class="lnd-sub">Splňte AML povinnosti podle zákona č. 253/2008 Sb. — bez tabulek a papírování.</p>
       <div class="lnd-cta-row">

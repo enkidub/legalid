@@ -142,6 +142,23 @@ export async function apiClientsSearch(q = '') {
   return r.json();
 }
 
+// Read-only dedup podle identity (duplicity v kroku 1). Vrací { client|null }.
+export async function apiAmlClientMatch(params) {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params || {})) if (v) qs.set(k, String(v));
+  const r = await fetch(`${WORKER_URL}/api/clients/match?${qs.toString()}`, { credentials: 'include' });
+  return r.json();
+}
+
+// Audit vazby Archiv↔Klienti (jen správce). apply=true provede backfill.
+export async function apiAmlClientLinkAudit(apply = false) {
+  const r = await fetch(`${WORKER_URL}/api/admin/aml/client-link-audit`, {
+    method: apply ? 'POST' : 'GET', credentials: 'include',
+    ...(apply ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apply: true }) } : {}),
+  });
+  return r.json();
+}
+
 // Detail klienta + historie AML případů.
 export async function apiClientGet(id) {
   const r = await fetch(`${WORKER_URL}/api/clients/${id}`, { credentials: 'include' });

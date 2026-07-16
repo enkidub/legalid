@@ -7,7 +7,7 @@ import { apiAmlCreateCase, apiAmlGetCase, apiAmlPatchCase, apiAmlAddDocument, ap
 import { state } from '../core/state.js';
 import { showToast, esc } from '../core/ui.js';
 import { openRegistrationModal, markLoginRedirect } from '../auth/auth.js';
-import { apiAmlComplete, apiAmlGetDocuments, apiClientsSearch } from '../core/api.js';
+import { apiAmlComplete, apiAmlGetDocuments, apiClientsSearch, apiAmlClientMatch } from '../core/api.js';
 import { buildTerminationPdf, buildRecordPdf } from './pdf.js';
 import { getProfile, ensureProfileLoaded, profileIsFilled } from '../profile/profile.js';
 
@@ -293,6 +293,8 @@ function bindRoot(root) {
       readFieldsFromForm(); clearOwnInvalid(e.target);
       // Uložené jméno klienta (blur s obsahem) = reálný obsah → lazy založení případu.
       if (!wiz.caseId && ['aml_f_client_name', 'aml_f_client_surname', 'aml_f_company_name'].includes(e.target.id) && e.target.value.trim()) ensureCase();
+      // Duplicity: po opuštění identifikačního pole prověř evidenci (nenápadná nabídka).
+      if (['aml_f_client_name', 'aml_f_client_surname', 'aml_f_client_birth_date', 'aml_f_client_rc', 'aml_f_client_doc_number', 'aml_f_client_ico'].includes(e.target.id)) maybeCheckDuplicate(root);
     }
   });
   // Live validace formuláře + průběžné čtení do wiz.data (bez re-renderu → nezahodí fokus).
@@ -324,7 +326,7 @@ function handleAction(root, act, ds) {
   switch (act) {
     case 'resume': case 'resume-banner': resumeCase(root, +ds.id); break;
     case 'dismiss-banner': dismissBanner(ds.id); break;
-    case 'new': startFreshWizard(root); break;
+    case 'new': if (!confirmLeaveUndocumented()) break; startFreshWizard(root); break;
     case 'login': openRegistrationModal(); break;
     case 'set-subject': setSubjectType(root, ds.subject); break;
     case 'ares-load': aresLoad(root); break;
@@ -337,6 +339,8 @@ function handleAction(root, act, ds) {
     case 'cam-shoot': shootCamera(root); break;
     case 'cam-cancel': closeCamera(); break;
     case 'pick-client': pickClient(root, ds.key); break;
+    case 'use-existing-dup': if (wiz._dupMatch) applyExistingClient(root, wiz._dupMatch); break;
+    case 'dismiss-dup': dismissDupPanel(); break;
     case 'retry-clients': loadClients(root, (wiz.clientQuery || '').trim()); break;
     case 'continue-lustrace': continueToLustrace(root); break;
     case 'next': goNext(root); break;
@@ -352,7 +356,7 @@ function handleAction(root, act, ds) {
     case 'open-terminate': openTerminateModal(root); break;
     case 'close-terminate': closeTerminateModal(); break;
     case 'confirm-terminate': confirmTerminate(root); break;
-    case 'go-archive': wiz.caseId = null; wiz._started = false; if (window.navigate) window.navigate('/archiv'); break;
+    case 'go-archive': if (!confirmLeaveUndocumented()) break; wiz.caseId = null; wiz._started = false; if (window.navigate) window.navigate('/archiv'); break;
     case 'set-relation': readFieldsFromForm(); wiz.data.relation_type = ds.val; renderPurpose(root); break;
     case 'set-band': readFieldsFromForm(); wiz.data.deal_value_band = ds.val; renderPurpose(root); break;
     case 'add-purpose-doc': $('amlPurposeInput')?.click(); break;
@@ -399,7 +403,18 @@ function readResumeCaseId() {
   return null;
 }
 
+// Zavření/refresh záložky po kroku 4 bez záznamu → nativní varování prohlížeče (§ 16).
+let _leaveGuardBound = false;
+function bindLeaveGuard() {
+  if (_leaveGuardBound) return;
+  _leaveGuardBound = true;
+  window.addEventListener('beforeunload', (e) => {
+    if (wiz.riskDecided && !wiz.recordSha) { e.preventDefault(); e.returnValue = ''; }
+  });
+}
+
 async function startAml(root) {
+  bindLeaveGuard();
   const resumeId = readResumeCaseId();
   if (resumeId) { await resumeCase(root, resumeId); return; }
   const prefill = readAmlPrefill();
@@ -424,11 +439,22 @@ async function loadResumeBanner(root) {
   const step = (c.current_step || 0) + 1;
   const more = meaningful.length > 1
     ? ` <button class="aml-banner-more" data-act="go-archive">další v Archivu →</button>` : '';
-  el.innerHTML = `<div class="aml-banner">
-    <span class="aml-banner-txt">Rozpracovaná kontrola <b>${esc(c.case_number || '')}</b>: ${esc(name)} · krok ${step} z 5</span>
-    <button class="aml-btn aml-btn-sm aml-btn-primary" data-act="resume-banner" data-id="${c.id}">Pokračovat</button>${more}
+  const decidedNoRecord = isDecidedNoRecord(c);
+  const txt = decidedNoRecord
+    ? `<b>${esc(c.case_number || '')}</b>: ${esc(name)} — <b>Rozhodnuto — chybí záznam</b> (dokončete krok 5)`
+    : `Rozpracovaná kontrola <b>${esc(c.case_number || '')}</b>: ${esc(name)} · krok ${step} z 5`;
+  el.innerHTML = `<div class="aml-banner${decidedNoRecord ? ' aml-banner--warn' : ''}">
+    <span class="aml-banner-txt">${txt}</span>
+    <button class="aml-btn aml-btn-sm aml-btn-primary" data-act="resume-banner" data-id="${c.id}">${decidedNoRecord ? 'Dokončit' : 'Pokračovat'}</button>${more}
     <button class="aml-banner-x" data-act="dismiss-banner" data-id="${c.id}" aria-label="Skrýt">×</button>
   </div>`;
+}
+
+// Případ, kde padlo závazné rozhodnutí (krok 4), ale nebyl vygenerován PDF záznam
+// (krok 5) — dokud je in_progress a má risk_decided_at. Bez záznamu není kontrola
+// doložitelná (§ 16).
+function isDecidedNoRecord(c) {
+  return c && c.status === 'in_progress' && !!c.risk_decided_at;
 }
 
 // Smysluplný draft = má jméno klienta (FO/PO) NEBO je za krokem 1 (Lustrace+).
@@ -467,6 +493,7 @@ function resetWizard() {
   wiz.riskDecided = false; wiz.riskDeciding = false;
   wiz.generating = false; wiz.recordSha = null; wiz.completeResult = null; wiz.verifierTimestamp = null;
   wiz._profileTried = false; wiz._clientsLoading = false; wiz._creating = false;
+  wiz._dupMatch = null; wiz._dupDismissed = false; wiz._dupDismissedId = null;
   wiz._started = true;
 }
 
@@ -613,6 +640,15 @@ async function goNext(root) {
     await patchCase({ current_step: wiz.maxStep });
   }
   renderStep(root);
+}
+
+// § 16 — po závazném rozhodnutí (krok 4) bez vygenerovaného PDF záznamu (krok 5)
+// není kontrola doložitelná. Confirm při odchodu z wizardu. true = pokračovat v odchodu.
+function confirmLeaveUndocumented() {
+  if (wiz.riskDecided && !wiz.recordSha) {
+    return window.confirm('Záznam ještě nebyl vygenerován — bez něj kontrola není doložitelná (§ 16). Opravdu chcete odejít?');
+  }
+  return true;
 }
 
 async function goBack(root) {
@@ -909,25 +945,89 @@ function debouncedClientSearch(root) {
 }
 
 // Namapuje záznam z clients (D1) na sloupce wiz.data a předvyplní formulář.
-async function pickClient(root, key) {
-  const c = (wiz.clients || []).find(x => String(x.id) === String(key));
-  if (!c) return;
+// Předvyplní wiz.data z klienta v evidenci a vrátí patch pro case (client_id + pole).
+function clientToCasePatch(c) {
   const map = {
     client_name: c.name, client_surname: c.surname, client_birth_date: c.birth_date,
     client_birth_place: c.birth_place, client_address: c.address, client_nationality: c.nationality,
     client_doc_type: c.doc_type, client_doc_number: c.doc_number, client_rc: c.rc,
     client_ico: c.ico, company_name: c.company_name,
   };
-  // Naváž případ na klienta z evidence (client_id) + subject_type + ULOŽ client_* pole
-  // do case (jinak resume ztratí jméno i předvyplnění).
   const patch = { client_id: c.id };
   Object.entries(map).forEach(([col, v]) => {
     if (v != null && v !== '') { wiz.data[col] = v; patch[col] = v; }
   });
   if (c.subject_type) { wiz.subject_type = c.subject_type; patch.subject_type = c.subject_type; }
+  wiz.data.client_id = c.id;
+  return patch;
+}
+
+// Naváž případ na klienta z evidence (client_id) + subject_type + ULOŽ client_* pole
+// do case (jinak resume ztratí jméno i předvyplnění). Sdíleno s panelem duplicit.
+async function applyExistingClient(root, c) {
+  const patch = clientToCasePatch(c);
+  wiz._dupMatch = null; wiz._dupDismissed = true;   // panel duplicit po výběru zmizí
   renderStep(root);            // okamžitě ukázat předvyplněný formulář
   await ensureCase();          // výběr existujícího klienta = reálný obsah → založ DB případ (lazy)
   patchCase(patch);
+}
+
+async function pickClient(root, key) {
+  const c = (wiz.clients || []).find(x => String(x.id) === String(key));
+  if (!c) return;
+  await applyExistingClient(root, c);
+}
+
+// ── Duplicity při ručním zadání (krok 1) ─────────────────────────────
+const RISK_CS_SHORT = { nizke: 'nízké', stredni: 'střední', vysoke: 'vysoké' };
+// Po opuštění pole jméno+datum (nebo rč/č. dokladu/IČO) prověří evidenci a nabídne
+// existujícího klienta. NEBLOKUJE — jen nenápadný panel.
+async function maybeCheckDuplicate(root) {
+  readFieldsFromForm();
+  const d = wiz.data;
+  const identity = {
+    rc: d.client_rc, doc_number: d.client_doc_number, ico: d.client_ico,
+    name: d.client_name, surname: d.client_surname, birth_date: d.client_birth_date,
+  };
+  const enough = identity.rc || identity.doc_number || identity.ico
+    || ((identity.name || identity.surname) && identity.birth_date);
+  if (!enough) return;
+  try {
+    const r = await apiAmlClientMatch(identity);
+    const m = r && r.client;
+    if (!m || (wiz.data.client_id && String(wiz.data.client_id) === String(m.id))) {
+      if (wiz._dupMatch) { wiz._dupMatch = null; updateDupPanel(); }
+      return;
+    }
+    wiz._dupMatch = m;
+    wiz._dupDismissed = (m.id === wiz._dupDismissedId);   // jednou zavřený stejný klient znovu neotravuje
+    updateDupPanel();
+  } catch { /* nabídka duplicit je best-effort */ }
+}
+function dupPanelHTML() {
+  const m = wiz._dupMatch;
+  if (!m || wiz._dupDismissed) return '';
+  const isPo = m.subject_type === 'po';
+  const name = isPo ? (m.company_name || 'firma') : [m.name, m.surname].filter(Boolean).join(' ');
+  const bd = m.birth_date ? ` (nar. ${fmtDate(m.birth_date)})` : '';
+  const parts = [];
+  if (m.last_aml_date) parts.push(`poslední kontrola ${fmtDate(m.last_aml_date)}`);
+  if (m.last_risk_level) parts.push(`riziko ${RISK_CS_SHORT[m.last_risk_level] || m.last_risk_level}`);
+  const meta = parts.length ? ' — ' + parts.join(', ') : '';
+  return `<div class="aml-dup">
+    <span class="aml-dup-txt">V evidenci už je <b>${esc(name)}</b>${esc(bd)}${esc(meta)}.</span>
+    <button class="aml-btn aml-btn-sm aml-btn-primary" data-act="use-existing-dup">Použít existujícího</button>
+    <button class="aml-btn aml-btn-sm" data-act="dismiss-dup">Pokračovat s novým</button>
+  </div>`;
+}
+function updateDupPanel() {
+  const el = document.getElementById('amlDupPanel');
+  if (el) el.innerHTML = dupPanelHTML();
+}
+function dismissDupPanel() {
+  wiz._dupDismissedId = wiz._dupMatch ? wiz._dupMatch.id : null;
+  wiz._dupDismissed = true;
+  updateDupPanel();
 }
 
 // ── Kamera (desktop, getUserMedia) ───────────────────────────────────
@@ -1230,6 +1330,7 @@ function renderClientStep(root) {
     <div class="aml-src-area">${sourceAreaHTML()}</div>
     ${formShown ? `<div class="aml-form-note">Pole označená <span class="aml-req">*</span> jsou povinná.</div>
     <div class="aml-form-wrap" id="amlClientForm">${clientFormHTML()}</div>` : ''}
+    <div class="aml-dup-slot" id="amlDupPanel">${dupPanelHTML()}</div>
     ${isPo ? actingRoleHTML() : ''}
     ${isPo ? esmBlockHTML() : ''}
     <div class="aml-method">

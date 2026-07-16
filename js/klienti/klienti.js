@@ -152,10 +152,15 @@ export async function klientiToggle(id) {
     if (!cases.length) { box.innerHTML = `<div class="lp-hist-empty">Žádné AML kontroly.</div>`; return; }
     box.innerHTML = cases.map(k => {
       const risk = k.final_risk_level ? ` · ${esc(RISK_CS[k.final_risk_level] || k.final_risk_level)} riziko` : '';
-      const st = k.status === 'completed' ? 'dokončeno' : (k.status === 'terminated' ? 'ukončeno' : k.status);
+      // Rozhodnuto (krok 4) bez vystaveného PDF záznamu (krok 5) — § 16.
+      const decidedNoRecord = k.status === 'in_progress' && !!k.risk_decided_at;
+      const st = k.status === 'completed' ? 'dokončeno'
+        : (k.status === 'terminated' ? 'ukončeno'
+        : (decidedNoRecord ? 'kontrola rozpracována, záznam nevystaven'
+        : (k.status === 'in_progress' ? 'rozpracováno' : k.status)));
       const when = k.completed_at || k.created_at;
       return `<div class="lp-hist-row"><span class="lp-hist-num">${esc(k.case_number || 'bez čísla')}</span>
-        <span class="lp-hist-meta">${esc(st)} ${esc(fmtDate(when))}${risk}</span></div>`;
+        <span class="lp-hist-meta${decidedNoRecord ? ' lp-hist-meta--warn' : ''}">${esc(st)} ${esc(fmtDate(when))}${risk}</span></div>`;
     }).join('') + `<button class="btn-lp-action" onclick="navigate('/archiv')" style="margin-top:8px">Otevřít archiv</button>`;
   } catch { box.innerHTML = `<div class="lp-hist-empty">Historii se nepodařilo načíst.</div>`; }
 }

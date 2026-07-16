@@ -72,18 +72,26 @@ function draftHasName(c) {
 }
 function draftHasLustrace(c) { return (c.lookup_count || 0) > 0; }
 function isEmptyDraft(c) { return !draftHasName(c) && (c.current_step || 0) === 0 && !draftHasLustrace(c); }
+// Rozhodnuto (krok 4) bez vygenerovaného PDF záznamu (krok 5) — bez záznamu není
+// kontrola doložitelná (§ 16). Výrazný stav místo obecného „rozpracováno".
+function isDecidedNoRecord(c) { return c.status === 'in_progress' && !!c.risk_decided_at; }
 
 function progressRows(list) {
   return list.map(c => {
     const step = c.current_step || 0;
-    const meta = [c.case_number, `krok ${step + 1} z 5 (${STEP_LABELS[step] || ''})`,
+    const decidedNoRecord = isDecidedNoRecord(c);
+    const badge = decidedNoRecord
+      ? `<span class="arch-badge arch-badge-norecord">Rozhodnuto — chybí záznam</span>`
+      : `<span class="arch-badge arch-badge-prog">rozpracováno</span>`;
+    const meta = [c.case_number,
+      decidedNoRecord ? 'dokončete krok 5 (Záznam)' : `krok ${step + 1} z 5 (${STEP_LABELS[step] || ''})`,
       c.created_at && `založeno ${fmtDateCs(c.created_at)}`].filter(Boolean).join(' · ');
-    return `<div class="arch-row">
+    return `<div class="arch-row${decidedNoRecord ? ' arch-row--norecord' : ''}">
       <div class="arch-main">
-        <div class="arch-name">${esc(caseName(c))} <span class="arch-badge arch-badge-prog">rozpracováno</span></div>
+        <div class="arch-name">${esc(caseName(c))} ${badge}</div>
         <div class="arch-meta">${esc(meta)}</div>
       </div>
-      <button class="aml-btn aml-btn-sm aml-btn-primary" data-act="resume-aml" data-id="${c.id}">Pokračovat</button>
+      <button class="aml-btn aml-btn-sm aml-btn-primary" data-act="resume-aml" data-id="${c.id}">${decidedNoRecord ? 'Dokončit' : 'Pokračovat'}</button>
       <button class="aml-btn aml-btn-sm aml-btn-ghost" data-act="del-draft" data-id="${c.id}" title="Smazat rozpracovanou kontrolu">Smazat</button>
     </div>`;
   }).join('');

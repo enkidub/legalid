@@ -151,8 +151,10 @@ function amlCaseToClient(c) {
 // Dedup + upsert klienta. Match v pořadí: rc → doc_number → ico(PO) → jméno+příjmení+narození
 // (case-insensitive, bez diakritiky). Match → UPDATE prázdných/změněných polí; jinak INSERT.
 // Vrací { id, created }.
-async function upsertClient(env, userId, d, source) {
-  const now = new Date().toISOString();
+// Dedup vyhledání klienta podle identity v pořadí: rc → doc_number → ico(PO) →
+// jméno+příjmení+narození (case-insensitive, bez diakritiky). Vrací řádek nebo null.
+// Sdíleno mezi upsertClient a read-only /api/clients/match (duplicity v kroku 1).
+async function findClientByIdentity(env, userId, d) {
   const findBy = async (col, val) => (val ? await env.DB.prepare(`SELECT * FROM clients WHERE user_id = ? AND ${col} = ? LIMIT 1`).bind(userId, val).first() : null);
   let existing = await findBy('rc', d.rc) || await findBy('doc_number', d.doc_number) || (d.ico ? await findBy('ico', d.ico) : null);
   if (!existing && (d.name || d.surname) && d.birth_date) {
@@ -160,6 +162,12 @@ async function upsertClient(env, userId, d, source) {
     const target = normalizeName(`${d.name || ''} ${d.surname || ''}`);
     existing = (results || []).find(r => normalizeName(`${r.name || ''} ${r.surname || ''}`) === target) || null;
   }
+  return existing || null;
+}
+
+async function upsertClient(env, userId, d, source) {
+  const now = new Date().toISOString();
+  const existing = await findClientByIdentity(env, userId, d);
   if (existing) {
     const sets = [], vals = [];
     for (const c of CLIENT_COLS) {
@@ -180,15 +188,18 @@ async function upsertClient(env, userId, d, source) {
 }
 
 // Po uložení identity klienta v AML případu propíše klienta do clients a uloží client_id na case.
+// Vrací true = klient synchronizován (nebo není co synchronizovat), false = selhalo.
+// Chyba nesmí shodit hlavní operaci, ale u dokončení kontroly ji volající loguje.
 async function syncAmlClient(env, userId, caseId, extra) {
   try {
     const full = await env.DB.prepare('SELECT * FROM aml_cases WHERE id = ? AND user_id = ?').bind(caseId, userId).first();
-    if (!full) return;
+    if (!full) return false;
     const data = { ...amlCaseToClient(full), ...(extra || {}) };
-    if (!data.name && !data.surname && !data.company_name && !data.rc && !data.doc_number && !data.ico) return;
+    if (!data.name && !data.surname && !data.company_name && !data.rc && !data.doc_number && !data.ico) return true;
     const { id } = await upsertClient(env, userId, data, 'aml');
     if (id && id !== full.client_id) await env.DB.prepare('UPDATE aml_cases SET client_id = ? WHERE id = ? AND user_id = ?').bind(id, caseId, userId).run();
-  } catch { /* sync klienta nesmí shodit hlavní operaci */ }
+    return !!id;
+  } catch (e) { console.error('[aml] syncAmlClient selhal pro case', caseId, ':', String(e && e.message || e)); return false; }
 }
 
 // Vygeneruje číslo kontroly 'AML-YYYYMM-XXXXXX' (6 náhodných znaků A-Z0-9).
@@ -800,6 +811,58 @@ export default {
       return json(await sanctionsSelftest(env));
     }
 
+    // GET/POST /api/admin/aml/client-link-audit — audit vazby Archiv↔Klienti.
+    // Najde DOKONČENÉ případy bez odpovídajícího klienta v evidenci a navrhne backfill
+    // (dopárovat dle dedup pravidel rč→doklad→IČO→jméno+narození, jinak založit).
+    // GET = jen report (dry-run). POST {"apply":true} = provede backfill.
+    if (url.pathname === '/api/admin/aml/client-link-audit') {
+      const token = getSessionToken(request);
+      const payload = token ? await verifyJWT(token, env.JWT_SECRET) : null;
+      if (!payload || payload.email !== 'kuba.houser@gmail.com') return json({ error: 'forbidden' }, 403);
+      const { results: orphans } = await env.DB.prepare(
+        `SELECT c.id AS id, c.user_id AS user_id, c.case_number AS case_number, c.subject_type AS subject_type,
+                c.client_name AS client_name, c.client_surname AS client_surname, c.company_name AS company_name,
+                c.client_rc AS client_rc, c.client_doc_number AS client_doc_number, c.client_ico AS client_ico,
+                c.client_birth_date AS client_birth_date, c.final_risk_level AS final_risk_level,
+                c.completed_at AS completed_at, c.next_review_due AS next_review_due, c.client_id AS client_id
+           FROM aml_cases c
+          WHERE c.status = 'completed'
+            AND (c.client_id IS NULL
+                 OR NOT EXISTS (SELECT 1 FROM clients cl WHERE cl.id = c.client_id AND cl.user_id = c.user_id))
+          ORDER BY c.completed_at DESC`
+      ).all();
+      const list = orphans || [];
+      const report = [];
+      for (const c of list) {
+        const d = amlCaseToClient(c);
+        const match = await findClientByIdentity(env, c.user_id, d);
+        report.push({
+          case_id: c.id, case_number: c.case_number, user_id: c.user_id,
+          name: c.subject_type === 'po' ? (c.company_name || '(firma bez názvu)') : ([c.client_name, c.client_surname].filter(Boolean).join(' ') || '(bez jména)'),
+          completed_at: c.completed_at, current_client_id: c.client_id,
+          proposal: match ? { action: 'link', client_id: match.id } : { action: 'create' },
+        });
+      }
+      const summary = { orphans: report.length, propose_link: report.filter(r => r.proposal.action === 'link').length, propose_create: report.filter(r => r.proposal.action === 'create').length };
+      let apply = null;
+      if (request.method === 'POST') {
+        let b; try { b = await request.json(); } catch { b = {}; }
+        if (b.apply === true) {
+          let linked = 0, created = 0, failed = 0;
+          for (const c of list) {
+            const before = await findClientByIdentity(env, c.user_id, amlCaseToClient(c));
+            const ok = await syncAmlClient(env, c.user_id, c.id, {
+              last_aml_case_id: Number(c.id), last_aml_date: c.completed_at,
+              last_risk_level: c.final_risk_level, next_review_due: c.next_review_due,
+            });
+            if (!ok) failed++; else if (before) linked++; else created++;
+          }
+          apply = { linked, created, failed };
+        }
+      }
+      return json({ ok: true, summary, report, apply });
+    }
+
     // POST /api/admin/cron/test — ruční test alertingu. ?scenario=selftest|inject (default inject).
     // Skipuje reálný import (rychlé), vynutí selhání → pošle alert e-mail se skutečnými
     // počty D1 a reálným selftestem. Ověření doručení/formátu bez čekání na noční běh.
@@ -1088,9 +1151,14 @@ export default {
         await env.DB.prepare(
           "UPDATE aml_cases SET status = 'completed', final_pdf_generated = 1, completed_at = ?, next_review_due = ?, record_sha256 = ? WHERE id = ? AND user_id = ?"
         ).bind(completedAt, nextReview, sha, caseId, userId).run();
-        // Centrální evidence: dokončený případ zapíše last_aml_* na klienta.
-        await syncAmlClient(env, userId, caseId, { last_aml_case_id: Number(caseId), last_aml_date: completedAt, last_risk_level: c.final_risk_level, next_review_due: nextReview });
-        return json({ ok: true, completed_at: completedAt, next_review_due: nextReview });
+        // Centrální evidence: dokončený případ MUSÍ mít klienta. Upsert s jedním
+        // opakováním; případné selhání se loguje (audit /api/admin/aml/client-link-audit
+        // je záchytná síť), ale nedokončení kvůli evidenci uživatele neblokuje.
+        const extra = { last_aml_case_id: Number(caseId), last_aml_date: completedAt, last_risk_level: c.final_risk_level, next_review_due: nextReview };
+        let synced = await syncAmlClient(env, userId, caseId, extra);
+        if (!synced) synced = await syncAmlClient(env, userId, caseId, extra);
+        if (!synced) console.error('[aml] dokončený případ', caseId, 'nemá navázaného klienta — nutný backfill přes client-link-audit');
+        return json({ ok: true, completed_at: completedAt, next_review_due: nextReview, client_synced: synced });
       }
 
       // POST /api/aml/case/create — založí nový případ
@@ -1199,6 +1267,7 @@ export default {
                   c.client_name AS client_name, c.client_surname AS client_surname, c.company_name AS company_name,
                   c.final_risk_level AS final_risk_level, c.created_at AS created_at, c.completed_at AS completed_at,
                   c.next_review_due AS next_review_due, c.terminated_reason AS terminated_reason,
+                  c.risk_decided_at AS risk_decided_at,
                   (SELECT COUNT(*) FROM aml_lookups l WHERE l.case_id = c.id) AS lookup_count
              FROM aml_cases c WHERE c.user_id = ? ORDER BY c.created_at DESC`
         ).bind(userId).all();
@@ -1389,6 +1458,17 @@ export default {
         return json({ error: 'method_not_allowed' }, 405);
       }
 
+      // GET /api/clients/match — read-only dedup podle identity (duplicity v kroku 1).
+      // Vrací { client } nebo { client: null }. Stejná pravidla jako upsertClient.
+      if (url.pathname === '/api/clients/match') {
+        if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
+        const g = k => { const v = (url.searchParams.get(k) || '').trim(); return v || null; };
+        const d = { rc: g('rc'), doc_number: g('doc_number'), ico: g('ico'), name: g('name'), surname: g('surname'), birth_date: g('birth_date') };
+        if (!d.rc && !d.doc_number && !d.ico && !((d.name || d.surname) && d.birth_date)) return json({ client: null });
+        const match = await findClientByIdentity(env, userId, d);
+        return json({ client: match || null });
+      }
+
       // POST /api/clients/import — bulk import (dedup), vrací { created, merged }
       if (url.pathname === '/api/clients/import') {
         if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
@@ -1415,7 +1495,7 @@ export default {
 
         if (request.method === 'GET') {
           const { results: cases } = await env.DB.prepare(
-            'SELECT id, case_number, status, final_risk_level, completed_at, next_review_due, created_at FROM aml_cases WHERE client_id = ? AND user_id = ? ORDER BY created_at DESC'
+            'SELECT id, case_number, status, final_risk_level, risk_decided_at, completed_at, next_review_due, created_at FROM aml_cases WHERE client_id = ? AND user_id = ? ORDER BY created_at DESC'
           ).bind(id, userId).all();
           return json({ client: owner, aml_cases: cases || [] });
         }

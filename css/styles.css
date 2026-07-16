@@ -1030,6 +1030,7 @@ input[type=number].form-input::-webkit-inner-spin-button { -webkit-appearance: n
 .lp-hist-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; border-top: 1px solid var(--rule); padding-top: 5px; }
 .lp-hist-num { font-weight: 600; color: var(--navy); font-family: ui-monospace, Menlo, monospace; }
 .lp-hist-meta { color: var(--ink-lt); text-align: right; }
+.lp-hist-meta--warn { color: #b4530e; font-weight: 600; }
 .lp-hist-loading, .lp-hist-empty { font-size: 12px; color: var(--ink-lt); padding: 4px 0; }
 .lp-banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--gold-p); border: 1px solid #f0dcae; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
 .lp-banner-text { font-size: 13px; color: var(--ink-mid); flex: 1; min-width: 180px; }
@@ -1468,6 +1469,20 @@ body.logged-in .nav-section-guest { display: none; }
 .aml-banner-more:hover { text-decoration: underline; }
 .aml-banner-x { background: none; border: none; color: var(--ink-lt); cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
 .aml-banner-x:hover { color: var(--navy); background: rgba(0,0,0,.04); }
+/* Banner „Rozhodnuto — chybí záznam" (§ 16) — výrazná varianta */
+.aml-banner--warn { background: #fdf3e6; border-color: #f0d9a8; color: #8a5a12; }
+.aml-banner--warn .aml-banner-txt b { color: #8a5a12; }
+
+/* Panel duplicit v kroku 1 — nenápadná nabídka existujícího klienta */
+.aml-dup-slot:empty { display: none; }
+.aml-dup {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 12px; padding: 8px 12px;
+  background: var(--gold-p); border: 1px solid #efe3c6; border-radius: 8px;
+  font-size: 13px; color: var(--ink-mid);
+}
+.aml-dup-txt { flex: 1; min-width: 200px; }
+.aml-dup .aml-btn-sm { flex-shrink: 0; }
 
 /* Kontextový panel — jen ≥1440px, sticky, vizuálně tišší než karta. */
 .aml-context { display: none; width: 300px; flex-shrink: 0; position: sticky; top: 84px; align-self: flex-start; margin-top: 94px; max-height: calc(100vh - 96px); overflow-y: auto; }
@@ -2014,6 +2029,8 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .arch-badge-done { color: #1a8a4a; background: #eefaf2; }
 .arch-badge-term { color: #8a5a12; background: #fff8ec; }
 .arch-badge-prog { color: #3d6bb3; background: #eef3fb; }
+.arch-badge-norecord { color: #b4530e; background: #fdecdd; }
+.arch-row--norecord { border-left: 3px solid #e08a2b; }
 .arch-section-title { font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-lt); margin: 18px 0 8px; }
 .arch-section-title:first-of-type { margin-top: 6px; }
 .arch-section-prog { display: flex; align-items: center; gap: 10px; }

@@ -2,9 +2,7 @@
 // Stránka „Zásady zpracování osobních údajů" (route "/soukromi") + sekce Bezpečnost
 // (kotva /soukromi#bezpecnost). Každé tvrzení odpovídá realitě kódu (viz report).
 //
-// OTEVŘENÉ BODY (viz výstup pro uživatele):
-//  - [TODO] identifikace provozovatele (firma + IČO) — dodá uživatel (sekce Úvod)
-//  - [TODO] retenční politika dat v D1 po zrušení účtu — potvrdí uživatel (Doby uchování)
+// Pozn.: retenční politika dat v D1 po zrušení účtu čeká na potvrzení (Doby uchování).
 
 export function renderSoukromi() {
   return `
@@ -25,8 +23,7 @@ export function renderSoukromi() {
           <h2 class="sk-h2">Úvod — dvojí role</h2>
           <p>Pro údaje klientů, které do Legalid vkládáte, jste <strong>správcem vy jako povinná osoba</strong>;
           Legalid vystupuje jako <strong>zpracovatel</strong> dle čl. 28 GDPR a údaje zpracovává podle vašich pokynů.</p>
-          <p>Pro údaje vašeho uživatelského účtu je správcem provozovatel Legalid —
-          <strong>[DOPLNÍ SE: obchodní firma a IČO provozovatele]</strong>.</p>
+          <p>Pro údaje vašeho uživatelského účtu je správcem provozovatel Legalid.</p>
         </section>
 
         <section class="sk-sec">

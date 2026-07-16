@@ -85,7 +85,7 @@ export function renderSoukromi() {
         <section class="sk-sec">
           <h2 class="sk-h2">Doby uchování</h2>
           <ul class="sk-list">
-            <li><strong>Data účtu</strong> — po dobu trvání účtu; výmaz do 30 dnů od zrušení účtu.</li>
+            <li><strong>Data účtu</strong> — po dobu trvání účtu; výmaz do 90 dnů od zrušení účtu.</li>
             <li><strong>Data kontrol</strong> — po dobu trvání účtu. Zákonnou archivaci záznamů po dobu 10 let
             dle § 16 zákona č. 253/2008 Sb. plní povinná osoba uchováním staženého PDF záznamu ve své evidenci.</li>
           </ul>

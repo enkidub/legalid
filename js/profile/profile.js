@@ -6,6 +6,7 @@
 import { apiGetProfile, apiSaveProfile } from '../core/api.js';
 import { state } from '../core/state.js';
 import { showToast } from '../core/ui.js';
+import { updateUserIdentityDisplay } from '../auth/auth.js';
 import { ENTITY_ORDER, ENTITY_LABELS, regLabel, regIsOptional } from '../core/entities.js';
 
 const LS_PROFILE = 'legalid_profile';        // host fallback centrálního profilu
@@ -55,6 +56,7 @@ export async function reloadProfile() {
   _loaded = false;
   await ensureProfileLoaded();
   const a = state.advokat;
+  updateUserIdentityDisplay(a?.jmeno);   // po načtení profilu ukaž jméno v hlavičce/menu
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
   set('aJmeno', a.jmeno); set('aRole', a.role); set('aEvCislo', a.ev_cislo);
   set('aCisloKnihy', a.cislo_knihy); set('aSidlo', a.sidlo);
@@ -332,6 +334,7 @@ export async function profileSave() {
     _profile = p;
   }
   syncStateAdvokat(_profile, extra);
+  updateUserIdentityDisplay(state.advokat?.jmeno);   // hlavička/menu → jméno místo e-mailu
   refreshBanner();
   applyPanelState();
   if (btn) btn.disabled = false;

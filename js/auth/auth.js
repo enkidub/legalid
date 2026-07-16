@@ -127,6 +127,22 @@ export async function trackUsage() {
 }
 
 
+// Zobrazí v hlavičce a v menu jméno povinné osoby (z profilu), když je vyplněné —
+// jinak e-mail. E-mail zůstává jako tooltip. Volá se z checkSession (jen e-mail) i
+// z profilu po načtení/uložení (jméno). Bez přihlášení nedělá nic.
+export function updateUserIdentityDisplay(displayName) {
+  if (!state.loggedIn) return;
+  const email = state.userEmail || '';
+  const shown = (displayName && displayName.trim()) ? displayName.trim() : email;
+  const emailEl = document.getElementById('headerUserEmail');
+  const navItem = document.getElementById('navLoginItem');
+  if (emailEl) { emailEl.textContent = shown; emailEl.title = email; emailEl.style.display = ''; }
+  if (navItem) {
+    const label = navItem.querySelector('.nav-item-label');
+    if (label) label.textContent = shown;
+  }
+}
+
 export async function checkSession() {
   let loggedIn = false, email = '';
   try {

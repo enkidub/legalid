@@ -46,6 +46,18 @@ export async function apiAmlListCases() {
   return r.json();
 }
 
+// Tvrdé smazání rozpracovaného draftu (vč. lustrací, dokumentů, event. klienta).
+export async function apiAmlDeleteCase(id) {
+  const r = await fetch(`${WORKER_URL}/api/aml/case/${id}`, { method: 'DELETE', credentials: 'include' });
+  return r.json();
+}
+
+// Hromadné smazání prázdných rozpracovaných (bez jména, bez lustrace).
+export async function apiAmlDeleteEmpty() {
+  const r = await fetch(`${WORKER_URL}/api/aml/cases/delete-empty`, { method: 'POST', credentials: 'include' });
+  return r.json();
+}
+
 // Uložení klienti (distinct z případů uživatele) — zdroj pro „Ze seznamu".
 export async function apiAmlListClients() {
   const r = await fetch(`${WORKER_URL}/api/aml/clients`, { credentials: 'include' });

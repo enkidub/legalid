@@ -1105,6 +1105,34 @@ export default {
         return json({ case_id: r.meta.last_row_id, case_number: caseNumber });
       }
 
+      // POST /api/aml/cases/delete-empty — hromadné smazání PRÁZDNÝCH rozpracovaných
+      // (in_progress, bez jména klienta, bez proběhlé lustrace). Vč. klientů založených
+      // jen tímto draftem.
+      if (url.pathname === '/api/aml/cases/delete-empty') {
+        if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+        const { results } = await env.DB.prepare(
+          `SELECT c.id AS id, c.client_id AS client_id FROM aml_cases c
+             WHERE c.user_id = ? AND c.status = 'in_progress'
+               AND (c.client_name IS NULL OR c.client_name = '')
+               AND (c.client_surname IS NULL OR c.client_surname = '')
+               AND (c.company_name IS NULL OR c.company_name = '')
+               AND NOT EXISTS (SELECT 1 FROM aml_lookups l WHERE l.case_id = c.id)`
+        ).bind(userId).all();
+        let deleted = 0;
+        for (const cse of (results || [])) {
+          await env.DB.prepare('DELETE FROM aml_documents WHERE case_id = ?').bind(cse.id).run();
+          await env.DB.prepare('DELETE FROM aml_lookups WHERE case_id = ?').bind(cse.id).run();
+          await env.DB.prepare('DELETE FROM aml_cases WHERE id = ? AND user_id = ?').bind(cse.id, userId).run();
+          if (cse.client_id) {
+            const other = await env.DB.prepare('SELECT COUNT(*) AS n FROM aml_cases WHERE client_id = ? AND user_id = ?').bind(cse.client_id, userId).first();
+            const cl = await env.DB.prepare('SELECT created_from FROM clients WHERE id = ? AND user_id = ?').bind(cse.client_id, userId).first();
+            if ((other?.n ?? 0) === 0 && cl && cl.created_from === 'aml') await env.DB.prepare('DELETE FROM clients WHERE id = ? AND user_id = ?').bind(cse.client_id, userId).run();
+          }
+          deleted++;
+        }
+        return json({ ok: true, deleted });
+      }
+
       // GET /api/aml/ares/:ico — předvyplnění firmy z ARES (subject_type='po')
       const aresM = url.pathname.match(/^\/api\/aml\/ares\/(\d{1,10})$/);
       if (aresM) {
@@ -1166,10 +1194,13 @@ export default {
       if (url.pathname === '/api/aml/cases') {
         if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405);
         const { results } = await env.DB.prepare(
-          `SELECT id, case_number, status, current_step, identification_method, subject_type,
-                  client_name, client_surname, company_name, final_risk_level,
-                  created_at, completed_at, next_review_due, terminated_reason
-             FROM aml_cases WHERE user_id = ? ORDER BY created_at DESC`
+          `SELECT c.id AS id, c.case_number AS case_number, c.status AS status, c.current_step AS current_step,
+                  c.identification_method AS identification_method, c.subject_type AS subject_type,
+                  c.client_name AS client_name, c.client_surname AS client_surname, c.company_name AS company_name,
+                  c.final_risk_level AS final_risk_level, c.created_at AS created_at, c.completed_at AS completed_at,
+                  c.next_review_due AS next_review_due, c.terminated_reason AS terminated_reason,
+                  (SELECT COUNT(*) FROM aml_lookups l WHERE l.case_id = c.id) AS lookup_count
+             FROM aml_cases c WHERE c.user_id = ? ORDER BY c.created_at DESC`
         ).bind(userId).all();
         return json({ cases: results || [] });
       }
@@ -1221,6 +1252,27 @@ export default {
 
         // GET /api/aml/case/:id — stav případu + profil povinné osoby (pro PDF/regeneraci)
         if (request.method === 'GET') return json({ case: amlCase, profile: (await getProfile(env, userId)) || null });
+
+        // DELETE /api/aml/case/:id — tvrdé smazání ROZPRACOVANÉHO draftu vč. lustrací,
+        // dokumentů a (byl-li klient založen jen tímto draftem) i jeho záznamu v evidenci.
+        // Dokončené a ukončené (§ 15) kontroly smazat nelze.
+        if (request.method === 'DELETE') {
+          if (amlCase.status !== 'in_progress') return json({ error: 'not_deletable', message: 'Smazat lze jen rozpracovanou kontrolu.' }, 409);
+          const clientId = amlCase.client_id;
+          await env.DB.prepare('DELETE FROM aml_lookups WHERE case_id = ?').bind(caseId).run();
+          await env.DB.prepare('DELETE FROM aml_documents WHERE case_id = ?').bind(caseId).run();
+          await env.DB.prepare('DELETE FROM aml_cases WHERE id = ? AND user_id = ?').bind(caseId, userId).run();
+          let clientDeleted = false;
+          if (clientId) {
+            const other = await env.DB.prepare('SELECT COUNT(*) AS n FROM aml_cases WHERE client_id = ? AND user_id = ?').bind(clientId, userId).first();
+            const cl = await env.DB.prepare('SELECT created_from FROM clients WHERE id = ? AND user_id = ?').bind(clientId, userId).first();
+            if ((other?.n ?? 0) === 0 && cl && cl.created_from === 'aml') {
+              await env.DB.prepare('DELETE FROM clients WHERE id = ? AND user_id = ?').bind(clientId, userId).run();
+              clientDeleted = true;
+            }
+          }
+          return json({ ok: true, client_deleted: clientDeleted });
+        }
 
         // PATCH /api/aml/case/:id — částečný update (whitelist sloupců)
         if (request.method === 'PATCH') {

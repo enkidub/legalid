@@ -1453,6 +1453,22 @@ body.logged-in .nav-section-guest { display: none; }
 .aml-shell { display: flex; justify-content: center; align-items: flex-start; gap: 24px; }
 .aml { width: min(860px, 94vw); margin: 0; padding: clamp(16px, 3vw, 28px) 0 96px; }
 
+/* Tenký banner nad wizardem — nabídka pokračovat v rozpracované kontrole */
+.aml-banner-slot:empty { display: none; }
+.aml-banner {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  width: min(860px, 94vw); margin: 16px auto -8px; padding: 8px 14px;
+  background: var(--gold-p); border: 1px solid #efe3c6; border-radius: 10px;
+  font-size: 13px; color: var(--ink-mid);
+}
+.aml-banner-txt { flex: 1; min-width: 180px; }
+.aml-banner-txt b { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; color: var(--navy); }
+.aml-banner .aml-btn-sm { flex-shrink: 0; }
+.aml-banner-more { background: none; border: none; color: var(--gold-h); cursor: pointer; font-size: 12px; font-family: var(--sans); padding: 2px 4px; }
+.aml-banner-more:hover { text-decoration: underline; }
+.aml-banner-x { background: none; border: none; color: var(--ink-lt); cursor: pointer; font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+.aml-banner-x:hover { color: var(--navy); background: rgba(0,0,0,.04); }
+
 /* Kontextový panel — jen ≥1440px, sticky, vizuálně tišší než karta. */
 .aml-context { display: none; width: 300px; flex-shrink: 0; position: sticky; top: 84px; align-self: flex-start; margin-top: 94px; max-height: calc(100vh - 96px); overflow-y: auto; }
 /* margin-top = odstup horní hrany karty wizardu od horní hrany shellu (řádek kroků
@@ -1997,6 +2013,17 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .arch-badge-prog { color: #3d6bb3; background: #eef3fb; }
 .arch-section-title { font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-lt); margin: 18px 0 8px; }
 .arch-section-title:first-of-type { margin-top: 6px; }
+.arch-section-prog { display: flex; align-items: center; gap: 10px; }
+.arch-section-prog .aml-btn { text-transform: none; letter-spacing: 0; }
+.arch-list-prog .arch-row { border-left: 3px solid var(--gold, #c8a24a); }
+/* Archiv confirm modal */
+.arch-modal-ov { position: fixed; inset: 0; z-index: 3000; background: rgba(20,18,14,.42); display: flex; align-items: center; justify-content: center; padding: 18px; }
+.arch-modal { background: #fff; border-radius: 14px; max-width: 460px; width: 100%; padding: 22px 22px 18px; box-shadow: 0 18px 50px rgba(0,0,0,.28); }
+.arch-modal-title { font-size: 17px; font-weight: 700; color: var(--ink, #22201b); margin-bottom: 10px; }
+.arch-modal-body { font-size: 14px; line-height: 1.5; color: var(--ink-lt, #555); }
+.arch-modal-body p { margin: 0 0 8px; }
+.arch-modal-warn { background: #fdf3e6; border: 1px solid #f0d9a8; border-radius: 8px; padding: 10px 12px; color: #8a5a12; }
+.arch-modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .arch-risk { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
 .arch-risk-nizke { color: #1a8a4a; background: #eefaf2; }
 .arch-risk-stredni { color: #b8791a; background: #fff8ec; }

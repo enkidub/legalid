@@ -1,6 +1,6 @@
 // legalid.cz — js/archiv/archiv.js
 // Archiv AML kontrol — dokončené i ukončené případy + regenerace PDF (bez příloh).
-import { apiAmlListCases, apiAmlGetCase, apiAmlGetLookups, apiAmlGetDocuments } from '../core/api.js';
+import { apiAmlListCases, apiAmlGetCase, apiAmlGetLookups, apiAmlGetDocuments, apiAmlDeleteCase, apiAmlDeleteEmpty } from '../core/api.js';
 import { buildRecordPdf, buildTerminationPdf, fmtDateCs } from '../aml/pdf.js';
 import { state } from '../core/state.js';
 import { showToast, esc } from '../core/ui.js';
@@ -34,6 +34,8 @@ export function initArchiv() {
       try { sessionStorage.setItem('legalid_aml_resume', t.dataset.id); } catch {}
       if (window.navigate) window.navigate('/aml');
     }
+    if (t.dataset.act === 'del-draft') confirmDeleteDraft(root, +t.dataset.id);
+    if (t.dataset.act === 'del-empty') confirmDeleteEmpty(root);
   });
   loadArchiv(root);
 }
@@ -65,6 +67,12 @@ function caseName(c) {
     : ([c.client_name, c.client_surname].filter(Boolean).join(' ') || 'bez jména');
 }
 
+function draftHasName(c) {
+  return c.subject_type === 'po' ? !!c.company_name : !!(c.client_name || c.client_surname);
+}
+function draftHasLustrace(c) { return (c.lookup_count || 0) > 0; }
+function isEmptyDraft(c) { return !draftHasName(c) && (c.current_step || 0) === 0 && !draftHasLustrace(c); }
+
 function progressRows(list) {
   return list.map(c => {
     const step = c.current_step || 0;
@@ -76,6 +84,7 @@ function progressRows(list) {
         <div class="arch-meta">${esc(meta)}</div>
       </div>
       <button class="aml-btn aml-btn-sm aml-btn-primary" data-act="resume-aml" data-id="${c.id}">Pokračovat</button>
+      <button class="aml-btn aml-btn-sm aml-btn-ghost" data-act="del-draft" data-id="${c.id}" title="Smazat rozpracovanou kontrolu">Smazat</button>
     </div>`;
   }).join('');
 }
@@ -85,8 +94,11 @@ function archivHTML(inprog, list) {
     <div class="view-lp-title">Archiv AML kontrol</div>
     <button class="aml-btn aml-btn-sm" data-act="new-check" style="margin-left:auto">Nová kontrola</button>
   </div>`;
+  const emptyCount = inprog.filter(isEmptyDraft).length;
+  const bulkBtn = emptyCount > 1
+    ? `<button class="aml-btn aml-btn-sm aml-btn-ghost" data-act="del-empty" style="margin-left:auto">Smazat prázdné rozpracované (${emptyCount})</button>` : '';
   const progSection = inprog.length
-    ? `<div class="arch-section-title">Rozpracované</div><div class="arch-list">${progressRows(inprog)}</div>` : '';
+    ? `<div class="arch-section-title arch-section-prog">Rozpracované ${bulkBtn}</div><div class="arch-list arch-list-prog">${progressRows(inprog)}</div>` : '';
   if (!list.length && !inprog.length) {
     return `<div class="view-archiv-wrap">${head}
       <div class="aml-card"><div class="aml-ai-note">Zatím nemáte žádné kontroly. Rozpracované i dokončené kontroly se objeví zde.</div></div></div>`;
@@ -164,6 +176,94 @@ async function regenerate(root, id) {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Regenerovat PDF'; }
   }
+}
+
+function resumeAml(id) {
+  try { sessionStorage.setItem('legalid_aml_resume', String(id)); } catch {}
+  if (window.navigate) window.navigate('/aml');
+}
+
+// Lehký modal se 2–3 tlačítky. Vrací klíč zvoleného tlačítka (null při Esc / kliku mimo).
+function choiceModal({ title, body, buttons }) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.className = 'arch-modal-ov';
+    const btnHtml = buttons.map(b =>
+      `<button class="aml-btn ${b.cls || ''}" data-k="${b.key}">${esc(b.label)}</button>`).join('');
+    ov.innerHTML = `<div class="arch-modal" role="dialog" aria-modal="true">
+      <div class="arch-modal-title">${esc(title)}</div>
+      <div class="arch-modal-body">${body}</div>
+      <div class="arch-modal-actions">${btnHtml}</div>
+    </div>`;
+    const onKey = (e) => { if (e.key === 'Escape') close(null); };
+    function close(k) { ov.remove(); document.removeEventListener('keydown', onKey); resolve(k); }
+    ov.addEventListener('click', (e) => {
+      if (e.target === ov) return close(null);
+      const b = e.target.closest('[data-k]');
+      if (b) close(b.dataset.k);
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(ov);
+    const first = ov.querySelector('[data-k]');
+    if (first) first.focus();
+  });
+}
+
+async function confirmDeleteDraft(root, id) {
+  const c = _cases.find(x => x.id === id);
+  if (!c) return;
+  const name = esc(caseName(c));
+  const num = c.case_number ? ' — ' + esc(c.case_number) : '';
+  let choice;
+  if (draftHasLustrace(c)) {
+    choice = await choiceModal({
+      title: 'Smazat rozpracovanou kontrolu?',
+      body: `<p><strong>${name}</strong>${num}</p>
+        <p class="arch-modal-warn">Proběhla lustrace — smazáním nezůstane žádný záznam. Alternativně můžete kontrolu ukončit dle § 15 (zůstane doklad o provedené kontrole).</p>`,
+      buttons: [
+        { key: 'terminate', label: 'Ukončit dle § 15', cls: 'aml-btn-primary' },
+        { key: 'delete', label: 'Smazat', cls: 'aml-btn-danger' },
+        { key: 'cancel', label: 'Zpět', cls: '' },
+      ],
+    });
+  } else {
+    choice = await choiceModal({
+      title: 'Smazat rozpracovanou kontrolu?',
+      body: `<p><strong>${name}</strong>${num}</p><p>Tato rozpracovaná kontrola bude trvale odstraněna.</p>`,
+      buttons: [
+        { key: 'delete', label: 'Smazat', cls: 'aml-btn-danger' },
+        { key: 'cancel', label: 'Zpět', cls: '' },
+      ],
+    });
+  }
+  if (choice === 'terminate') { resumeAml(id); return; }
+  if (choice !== 'delete') return;
+  try {
+    const r = await apiAmlDeleteCase(id);
+    if (r && r.ok) {
+      showToast(r.client_deleted ? 'Kontrola i klient smazáni.' : 'Rozpracovaná kontrola smazána.');
+      await loadArchiv(root);
+    } else showToast((r && r.message) || 'Smazání se nezdařilo.');
+  } catch { showToast('Smazání se nezdařilo.'); }
+}
+
+async function confirmDeleteEmpty(root) {
+  const empties = _cases.filter(c => c.status === 'in_progress' && isEmptyDraft(c));
+  if (!empties.length) return;
+  const choice = await choiceModal({
+    title: 'Smazat prázdné rozpracované?',
+    body: `<p>Bude odstraněno <strong>${empties.length}</strong> prázdných rozpracovaných kontrol (bez jména, krok 1, bez lustrace).</p>`,
+    buttons: [
+      { key: 'delete', label: 'Smazat', cls: 'aml-btn-danger' },
+      { key: 'cancel', label: 'Zpět', cls: '' },
+    ],
+  });
+  if (choice !== 'delete') return;
+  try {
+    const r = await apiAmlDeleteEmpty();
+    if (r && r.ok) { showToast(`Smazáno ${r.deleted || 0} prázdných kontrol.`); await loadArchiv(root); }
+    else showToast('Smazání se nezdařilo.');
+  } catch { showToast('Smazání se nezdařilo.'); }
 }
 
 function recordDataFromCase(c, lookups, documents, profile) {

@@ -82,8 +82,9 @@ const SOURCES = [
 ];
 const LAST_METHOD_KEY = 'legalid_aml_lastMethod';
 function loadLastMethod() {
-  // Výchozí metoda „Zadat ručně"; jinak poslední použitá (uloženo v pickSource).
-  try { const v = localStorage.getItem(LAST_METHOD_KEY); return SOURCES.some(s => s.id === v) ? v : 'manual'; }
+  // Výchozí „Zadat ručně"; jinak poslední použitá z {camera, upload, manual}.
+  // „list" (Existující klient) se NIKDY nestává výchozí předvolbou.
+  try { const v = localStorage.getItem(LAST_METHOD_KEY); return (v && v !== 'list' && SOURCES.some(s => s.id === v)) ? v : 'manual'; }
   catch { return 'manual'; }
 }
 
@@ -228,6 +229,7 @@ const $ = (id) => document.getElementById(id);
 
 export function renderAml() {
   return `
+<div class="aml-banner-slot" id="amlBanner"></div>
 <div class="aml-shell">
   <div class="aml" id="amlRoot">
     <div class="aml-head-row">
@@ -259,12 +261,14 @@ function bindRoot(root) {
     if (!t || !root.contains(t)) return;
     handleAction(root, t.dataset.act, t.dataset);
   });
-  // Kontextový panel je sourozenec #amlRoot (mimo něj) → vlastní delegace kliknutí.
-  const ctxPanel = document.getElementById('amlContext');
-  if (ctxPanel) ctxPanel.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-act]');
-    if (t) handleAction(root, t.dataset.act, t.dataset);
-  });
+  // Kontextový panel i banner jsou sourozenci #amlRoot (mimo něj) → vlastní delegace.
+  for (const id of ['amlContext', 'amlBanner']) {
+    const node = document.getElementById(id);
+    if (node) node.addEventListener('click', (e) => {
+      const t = e.target.closest('[data-act]');
+      if (t) handleAction(root, t.dataset.act, t.dataset);
+    });
+  }
   root.addEventListener('change', (e) => {
     if (e.target.id === 'amlUploadInput') {
       addUploadFiles(root, e.target.files); e.target.value = ''; return;
@@ -285,7 +289,11 @@ function bindRoot(root) {
     if (e.target.id === 'amlDeclSanctions') { wiz.declaration.sanctions = e.target.checked; clearOwnInvalid(e.target); return; }
     if (e.target.id === 'amlDeclSource') { wiz.declaration.source = e.target.checked; clearOwnInvalid(e.target); return; }
     // select / checkbox / textarea polí formuláře (typ dokladu, role, ESM, pohlaví)
-    if (e.target.id && e.target.id.startsWith('aml_f_')) { readFieldsFromForm(); clearOwnInvalid(e.target); }
+    if (e.target.id && e.target.id.startsWith('aml_f_')) {
+      readFieldsFromForm(); clearOwnInvalid(e.target);
+      // Uložené jméno klienta (blur s obsahem) = reálný obsah → lazy založení případu.
+      if (!wiz.caseId && ['aml_f_client_name', 'aml_f_client_surname', 'aml_f_company_name'].includes(e.target.id) && e.target.value.trim()) ensureCase();
+    }
   });
   // Live validace formuláře + průběžné čtení do wiz.data (bez re-renderu → nezahodí fokus).
   root.addEventListener('input', (e) => {
@@ -314,8 +322,9 @@ function bindRoot(root) {
 
 function handleAction(root, act, ds) {
   switch (act) {
-    case 'resume': resumeCase(root, +ds.id); break;
-    case 'new': createNewCase(root); break;
+    case 'resume': case 'resume-banner': resumeCase(root, +ds.id); break;
+    case 'dismiss-banner': dismissBanner(ds.id); break;
+    case 'new': startFreshWizard(root); break;
     case 'login': openRegistrationModal(); break;
     case 'set-subject': setSubjectType(root, ds.subject); break;
     case 'ares-load': aresLoad(root); break;
@@ -340,7 +349,7 @@ function handleAction(root, act, ds) {
     case 'open-terminate': openTerminateModal(root); break;
     case 'close-terminate': closeTerminateModal(); break;
     case 'confirm-terminate': confirmTerminate(root); break;
-    case 'go-archive': wiz.caseId = null; if (window.navigate) window.navigate('/archiv'); break;
+    case 'go-archive': wiz.caseId = null; wiz._started = false; if (window.navigate) window.navigate('/archiv'); break;
     case 'set-relation': readFieldsFromForm(); wiz.data.relation_type = ds.val; renderPurpose(root); break;
     case 'set-band': readFieldsFromForm(); wiz.data.deal_value_band = ds.val; renderPurpose(root); break;
     case 'add-purpose-doc': $('amlPurposeInput')?.click(); break;
@@ -391,41 +400,96 @@ async function startAml(root) {
   const resumeId = readResumeCaseId();
   if (resumeId) { await resumeCase(root, resumeId); return; }
   const prefill = readAmlPrefill();
-  if (prefill) { await createNewCase(root); await applyClientPrefill(root, prefill); return; }
-  if (wiz.caseId) { renderStep(root); return; }   // už rozpracováno v této relaci
-  renderLoading('Načítám…');
-  let cases = [];
-  try { const r = await apiAmlListCases(); cases = r.cases || []; } catch {}
-  const inProgress = cases.find(c => c.status === 'in_progress');
-  if (inProgress) renderResume(root, inProgress);
-  else await createNewCase(root);
+  if (prefill) { startFreshWizard(root); await ensureCase(); await applyClientPrefill(root, prefill); return; }
+  if (wiz._started) { renderStep(root); return; }   // wizard běží v této relaci (i in-memory draft bez caseId)
+  startFreshWizard(root);            // „AML kontrola" vede vždy rovnou do nové kontroly
+  loadResumeBanner(root);            // + tenký banner nad wizardem, existuje-li smysluplný draft
 }
 
-async function createNewCase(root) {
-  renderLoading('Zakládám případ…');
+// Banner nad wizardem: nabídne pokračování v NEJNOVĚJŠÍ smysluplné rozpracované
+// kontrole (má jméno klienta NEBO je za krokem 1). Prázdné skořápky se nezobrazí.
+async function loadResumeBanner(root) {
+  const el = $('amlBanner'); if (!el) return;
+  let cases = [];
+  try { const r = await apiAmlListCases(); cases = r.cases || []; } catch { return; }
+  const meaningful = cases
+    .filter(c => c.status === 'in_progress' && isMeaningfulDraft(c) && !bannerDismissed(c.id))
+    .sort((a, b) => b.id - a.id);
+  if (!meaningful.length) { el.innerHTML = ''; return; }
+  const c = meaningful[0];
+  const name = draftName(c);
+  const step = (c.current_step || 0) + 1;
+  const more = meaningful.length > 1
+    ? ` <button class="aml-banner-more" data-act="go-archive">další v Archivu →</button>` : '';
+  el.innerHTML = `<div class="aml-banner">
+    <span class="aml-banner-txt">Rozpracovaná kontrola <b>${esc(c.case_number || '')}</b>: ${esc(name)} · krok ${step} z 5</span>
+    <button class="aml-btn aml-btn-sm aml-btn-primary" data-act="resume-banner" data-id="${c.id}">Pokračovat</button>${more}
+    <button class="aml-banner-x" data-act="dismiss-banner" data-id="${c.id}" aria-label="Skrýt">×</button>
+  </div>`;
+}
+
+// Smysluplný draft = má jméno klienta (FO/PO) NEBO je za krokem 1 (Lustrace+).
+function isMeaningfulDraft(c) {
+  const hasName = !!(c.client_name || c.client_surname || c.company_name);
+  return hasName || (c.current_step || 0) >= 1;
+}
+function draftName(c) {
+  if (c.subject_type === 'po') return c.company_name || 'bez názvu';
+  const n = [c.client_name, c.client_surname].filter(Boolean).join(' ');
+  return n || 'bez jména';
+}
+function bannerDismissed(id) {
+  try { return sessionStorage.getItem('legalid_aml_banner_dismiss_' + id) === '1'; } catch { return false; }
+}
+function dismissBanner(id) {
+  try { sessionStorage.setItem('legalid_aml_banner_dismiss_' + id, '1'); } catch {}
+  const el = $('amlBanner'); if (el) el.innerHTML = '';
+}
+
+// Reset wizardu do výchozího stavu BEZ založení DB případu. Číslo (case_number)
+// i řádek v DB vznikne až při prvním reálném obsahu — viz ensureCase().
+function resetWizard() {
+  wiz.caseId = null; state.amlCurrentCaseId = null; wiz.case_number = null;
+  wiz.step = 0; wiz.source = loadLastMethod(); wiz.method = 'personal'; wiz.data = {};
+  wiz.subject_type = 'fo'; wiz.aresStatus = null; wiz.aresLoading = false;
+  wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
+  wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.clients = null; wiz.clientQuery = ''; wiz.clientsError = false;
+  wiz.lookups = null; wiz.lookupStatus = 'idle'; wiz.maxStep = 0; wiz.forceRun = false;
+  wiz._ctxLookupsTriedStep = null;
+  wiz.verifierConfirmed = false; wiz.terminating = false;
+  wiz.purposeDocs = []; wiz.consistency = null; wiz.consistencyLoading = false;
+  wiz.riskSuggestion = null; wiz.riskSuggestLoading = false;
+  wiz.declaration = { pep: null, sanctions: false, source: false };
+  wiz.riskDecision = { level: null, justification: '' };
+  wiz.riskDecided = false; wiz.riskDeciding = false;
+  wiz.generating = false; wiz.recordSha = null; wiz.completeResult = null; wiz.verifierTimestamp = null;
+  wiz._profileTried = false; wiz._clientsLoading = false; wiz._creating = false;
+  wiz._started = true;
+}
+
+function startFreshWizard(root) {
+  resetWizard();
+  renderStep(root);   // renderClientStep → ensureClientsLoaded načte list, je-li aktivní
+}
+
+// Lazy založení DB případu při PRVNÍM reálném obsahu (uložené jméno / doklad / výběr
+// klienta / přechod na krok 2). Přidělí case_number a propíše už zadaná data.
+async function ensureCase() {
+  if (wiz.caseId) return wiz.caseId;
+  if (wiz._creating) { for (let i = 0; i < 240 && wiz._creating; i++) await new Promise(r => setTimeout(r, 25)); return wiz.caseId; }
+  wiz._creating = true;
   try {
     const r = await apiAmlCreateCase();
     if (!r.case_id) throw new Error(r.error || 'create_failed');
-    wiz.caseId = r.case_id; state.amlCurrentCaseId = r.case_id;
-    wiz.case_number = r.case_number || null;
-    wiz.step = 0; wiz.source = loadLastMethod(); wiz.method = 'personal'; wiz.data = {};
-    wiz.subject_type = 'fo'; wiz.aresStatus = null; wiz.aresLoading = false;
-    wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
-    wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.clients = null; wiz.clientQuery = ''; wiz.clientsError = false;
-    wiz.lookups = null; wiz.lookupStatus = 'idle'; wiz.maxStep = 0; wiz.forceRun = false;
-    wiz._ctxLookupsTriedStep = null;
-    wiz.verifierConfirmed = false; wiz.terminating = false;
-    wiz.purposeDocs = []; wiz.consistency = null; wiz.consistencyLoading = false;
-    wiz.riskSuggestion = null; wiz.riskSuggestLoading = false;
-    wiz.declaration = { pep: null, sanctions: false, source: false };
-    wiz.riskDecision = { level: null, justification: '' };
-    wiz.riskDecided = false; wiz.riskDeciding = false;
-    wiz.generating = false; wiz.recordSha = null; wiz.completeResult = null; wiz.verifierTimestamp = null;
-    wiz._profileTried = false; wiz._clientsLoading = false;
-    renderStep(root);   // renderClientStep → ensureClientsLoaded načte list, je-li aktivní
-  } catch {
-    renderError('Nepodařilo se založit AML případ. Zkuste to prosím znovu.');
-  }
+    wiz.caseId = r.case_id; state.amlCurrentCaseId = r.case_id; wiz.case_number = r.case_number || null;
+    const patch = {};
+    DATA_COLS.forEach(col => { const v = wiz.data[col]; if (v != null && v !== '') patch[col] = v; });
+    if (wiz.subject_type && wiz.subject_type !== 'fo') patch.subject_type = wiz.subject_type;
+    if (Object.keys(patch).length) { try { await apiAmlPatchCase(wiz.caseId, patch); } catch {} }
+    renderCaseNum(); renderContext();   // zobraz přidělené číslo v hlavičce/panelu
+  } catch { showToast('Nepodařilo se založit AML případ.'); }
+  finally { wiz._creating = false; }
+  return wiz.caseId;
 }
 
 // Všechny datové sloupce klienta (formulář + místo narození z OCR).
@@ -434,6 +498,8 @@ const DATA_COLS = [...FORM_FIELDS.map(f => f.col), 'client_birth_place',
   ...PURPOSE_COLS];
 
 async function resumeCase(root, id) {
+  wiz._started = true;
+  const el = $('amlBanner'); if (el) el.innerHTML = '';   // schovej banner při pokračování
   renderLoading('Načítám případ…');
   try {
     const r = await apiAmlGetCase(id);
@@ -479,7 +545,8 @@ function hasClientData() {
 function pickSource(root, id) {
   if (!SOURCES.some(s => s.id === id)) return;
   wiz.source = id;
-  try { localStorage.setItem(LAST_METHOD_KEY, id); } catch {}
+  // Pamatuj jen Vyfotit/Nahrát/Zadat ručně — „Existující klient" se nikdy nepředvolí.
+  if (id !== 'list') { try { localStorage.setItem(LAST_METHOD_KEY, id); } catch {} }
   renderStep(root);   // renderClientStep → ensureClientsLoaded načte seznam, je-li aktivní
 }
 
@@ -592,6 +659,7 @@ async function continueToLustrace(root) {
   readFieldsFromForm();
   const missing = validateStep0(root);
   if (missing.length) { scrollToInvalid(missing[0]); showToast('Doplňte prosím povinná pole (*).'); return; }
+  await ensureCase();   // přechod na krok 2 = reálný obsah → založ DB případ (lazy)
   const patch = { current_step: 1, identification_method: wiz.method, subject_type: wiz.subject_type };
   DATA_COLS.forEach(col => { patch[col] = (wiz.data[col] === '' || wiz.data[col] == null) ? null : wiz.data[col]; });
   if (wiz.method === 'personal') {
@@ -791,6 +859,8 @@ function refreshContinue() { /* no-op: aktivní tlačítko + validace po kliku *
 
 async function saveDoc(type, img, extracted) {
   if (!img) return;
+  await ensureCase();   // nahraný/vyfocený doklad = reálný obsah → založ DB případ (lazy)
+  if (!wiz.caseId) return;
   try {
     await apiAmlAddDocument(wiz.caseId, {
       doc_type: type,
@@ -836,7 +906,7 @@ function debouncedClientSearch(root) {
 }
 
 // Namapuje záznam z clients (D1) na sloupce wiz.data a předvyplní formulář.
-function pickClient(root, key) {
+async function pickClient(root, key) {
   const c = (wiz.clients || []).find(x => String(x.id) === String(key));
   if (!c) return;
   const map = {
@@ -846,14 +916,15 @@ function pickClient(root, key) {
     client_ico: c.ico, company_name: c.company_name,
   };
   // Naváž případ na klienta z evidence (client_id) + subject_type + ULOŽ client_* pole
-  // do case (jinak resume ztratí jméno i předvyplnění — bug B).
+  // do case (jinak resume ztratí jméno i předvyplnění).
   const patch = { client_id: c.id };
   Object.entries(map).forEach(([col, v]) => {
     if (v != null && v !== '') { wiz.data[col] = v; patch[col] = v; }
   });
   if (c.subject_type) { wiz.subject_type = c.subject_type; patch.subject_type = c.subject_type; }
+  renderStep(root);            // okamžitě ukázat předvyplněný formulář
+  await ensureCase();          // výběr existujícího klienta = reálný obsah → založ DB případ (lazy)
   patchCase(patch);
-  renderStep(root);
 }
 
 // ── Kamera (desktop, getUserMedia) ───────────────────────────────────

@@ -284,6 +284,7 @@ function bindRoot(root) {
     }
     if (e.target.matches('input[name="amlMethod"]')) { setMethod(e.target.value); renderStep(root); return; }
     if (e.target.id === 'amlVerifierCheck') { wiz.verifierConfirmed = e.target.checked; clearOwnInvalid(e.target); return; }
+    if (e.target.id === 'amlAiReason') { persistAiReason(); return; }   // uloží upravené AI odůvodnění na blur
     // Blok 4 — prohlášení klienta.
     if (e.target.name === 'amlPep') { wiz.declaration.pep = e.target.value; clearOwnInvalid(e.target); runRiskSuggest(root); return; }
     if (e.target.id === 'amlDeclSanctions') { wiz.declaration.sanctions = e.target.checked; clearOwnInvalid(e.target); return; }
@@ -302,6 +303,11 @@ function bindRoot(root) {
     if (e.target.id && e.target.id.startsWith('aml_f_')) { readFieldsFromForm(); clearOwnInvalid(e.target); }
     if (e.target.id === 'amlClientSearch') { wiz.clientQuery = e.target.value; debouncedClientSearch(root); }
     if (e.target.id === 'amlRiskJust') { wiz.riskDecision.justification = e.target.value; clearOwnInvalid(e.target); }
+    // Editace AI odůvodnění — bez re-renderu (drží fokus/kurzor), uloží se na blur.
+    if (e.target.id === 'amlAiReason' && wiz.riskSuggestion) {
+      wiz.riskSuggestion.reasoning_cs = e.target.value; wiz._aiEdited = true;
+      e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px';
+    }
   });
   // Drag & drop na dropzóny (source 'upload').
   root.addEventListener('dragover', (e) => {
@@ -341,6 +347,7 @@ function handleAction(root, act, ds) {
     case 'pick-client': pickClient(root, ds.key); break;
     case 'use-existing-dup': if (wiz._dupMatch) applyExistingClient(root, wiz._dupMatch); break;
     case 'dismiss-dup': dismissDupPanel(); break;
+    case 'ai-add-para': addAiParagraph(); break;
     case 'retry-clients': loadClients(root, (wiz.clientQuery || '').trim()); break;
     case 'continue-lustrace': continueToLustrace(root); break;
     case 'next': goNext(root); break;
@@ -487,7 +494,7 @@ function resetWizard() {
   wiz._ctxLookupsTriedStep = null;
   wiz.verifierConfirmed = false; wiz.terminating = false;
   wiz.purposeDocs = []; wiz.consistency = null; wiz.consistencyLoading = false;
-  wiz.riskSuggestion = null; wiz.riskSuggestLoading = false;
+  wiz.riskSuggestion = null; wiz.riskSuggestLoading = false; wiz._aiEdited = false;
   wiz.declaration = { pep: null, sanctions: false, source: false };
   wiz.riskDecision = { level: null, justification: '' };
   wiz.riskDecided = false; wiz.riskDeciding = false;
@@ -550,6 +557,7 @@ async function resumeCase(root, id) {
       const rr = c.ai_risk_reasoning ? JSON.parse(c.ai_risk_reasoning) : null;
       wiz.riskSuggestion = (rr && rr.suggested_level) ? rr
         : (c.ai_risk_suggestion ? { suggested_level: c.ai_risk_suggestion, factors: [], reasoning_cs: '' } : null);
+      wiz._aiEdited = !!c.ai_risk_edited;
     } catch { wiz.riskSuggestion = c.ai_risk_suggestion ? { suggested_level: c.ai_risk_suggestion, factors: [], reasoning_cs: '' } : null; }
     try { const dj = c.client_declaration_json ? JSON.parse(c.client_declaration_json) : null; if (dj) wiz.declaration = { pep: dj.pep || null, sanctions: !!dj.sanctions_confirmed, source: !!dj.source_confirmed }; }
     catch { wiz.declaration = { pep: null, sanctions: false, source: false }; }
@@ -1800,15 +1808,43 @@ function riskAiCardHTML() {
     const iv = IMPACT_VIEW[f.impact] || IMPACT_VIEW.neutral;
     return `<div class="aml-factor aml-factor-${iv.cls}"><span class="aml-factor-ico">${iv.icon}</span><span><b>${esc(f.factor || '')}</b>${f.note_cs ? ' — ' + esc(f.note_cs) : ''}</span></div>`;
   }).join('');
+  // Odůvodnění je editovatelné, dokud kontrola není dokončena — povinná osoba může
+  // text upravit, smazat části i doplnit. Do PDF jde finální znění (ai_edited příznak).
+  const editable = !wiz.completeResult;
+  const reasonBlock = editable
+    ? `<div class="aml-ai-reason-edit">
+        <div class="aml-ai-reason-label">Odůvodnění návrhu — můžete upravit, smazat části i doplnit${wiz._aiEdited ? ' <span class="aml-ai-edited-tag">upraveno</span>' : ''}</div>
+        <textarea id="amlAiReason" class="aml-ai-reason-ta" rows="5" placeholder="Odůvodnění rizikového návrhu…">${esc(s.reasoning_cs || '')}</textarea>
+        <button class="aml-btn aml-btn-sm aml-ai-addpara" data-act="ai-add-para">+ Přidat vlastní odstavec</button>
+      </div>`
+    : (s.reasoning_cs ? `<div class="aml-ai-reason">${esc(s.reasoning_cs)}</div>` : '');
   return `<div class="aml-ai-card">
     <div class="aml-ai-card-head">
       <span class="aml-ai-tag">AI návrh</span>
       <span class="aml-risk-badge aml-risk-${esc(s.suggested_level)}">${esc(lvl[1])} riziko</span>
     </div>
     ${factors ? `<div class="aml-factors">${factors}</div>` : ''}
-    ${s.reasoning_cs ? `<div class="aml-ai-reason">${esc(s.reasoning_cs)}</div>` : ''}
+    ${reasonBlock}
   </div>
   <div class="aml-disclaimer">${esc(RISK_DISCLAIMER)}</div>`;
+}
+
+// Uloží (debounce-free, na blur) upravené odůvodnění AI návrhu do case.
+function persistAiReason() {
+  if (!wiz.caseId || !wiz.riskSuggestion) return;
+  patchCase({ ai_risk_reasoning: JSON.stringify(wiz.riskSuggestion), ai_risk_edited: wiz._aiEdited ? 1 : 0 });
+}
+// „+ Přidat vlastní odstavec" — přidá prázdný odstavec a nastaví fokus na konec.
+function addAiParagraph() {
+  const ta = document.getElementById('amlAiReason');
+  if (!ta || !wiz.riskSuggestion) return;
+  const cur = ta.value.replace(/\s+$/, '');
+  ta.value = cur + (cur ? '\n\n' : '');
+  wiz.riskSuggestion.reasoning_cs = ta.value;
+  wiz._aiEdited = true;
+  ta.focus();
+  try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch {}
+  ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px';
 }
 
 function declarationHTML() {

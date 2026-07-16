@@ -249,6 +249,32 @@ const RISK_RANK = { nizke: 0, stredni: 1, vysoke: 2 };
 function maxRisk(a, b) { return (RISK_RANK[a] ?? 0) >= (RISK_RANK[b] ?? 0) ? a : b; }
 function safeParse(s) { try { return s ? JSON.parse(s) : null; } catch { return null; } }
 
+// Hodnota obchodu je VŽDY v EUR — explicitní label pro AI (žádné pásmo/kódy, žádné Kč).
+const DEAL_VALUE_EUR = { do_1k: 'do 1 000 EUR', '1k_15k': '1 000 – 15 000 EUR', '15k_plus': '15 000 EUR a více' };
+
+// Post-check AI výstupu: odstraní odkazy na paragrafy. Právní odkazy smí být jen ve
+// statických ověřených textech aplikace — v AI výstupu nikdy. Závorku s § maže celou.
+function stripLegalRefs(s) {
+  if (!s) return s;
+  let t = String(s);
+  t = t.replace(/\s*[([][^()[\]]*§[^()[\]]*[)\]]/g, '');                 // (…§…) / […§…] → pryč
+  t = t.replace(/§\s*\d+[a-z]?(\s*(odst\.|písm\.|pism\.|pís\.)\s*[\w]+)*/gi, ''); // samostatný § 9 odst. 2 písm. a
+  t = t.replace(/\(\s*\)/g, '').replace(/\[\s*\]/g, '');
+  t = t.replace(/\s{2,}/g, ' ').replace(/\s+([.,;:])/g, '$1').trim();
+  return t;
+}
+
+// Post-check měny: výskyt „Kč" v AI výstupu → nahradit zadanou hodnotou v EUR.
+// Vrací { text, changed }.
+function fixCurrency(s, eurLabel) {
+  if (!s || !/Kč/i.test(s)) return { text: s, changed: false };
+  let t = String(s);
+  t = t.replace(/(?:do\s+|cca\s+|přibližně\s+|kolem\s+)?\d[\d\s.,]*\s*(?:,-)?\s*Kč/gi, eurLabel || 'hodnota v EUR');
+  t = t.replace(/Kč/gi, 'EUR');
+  t = t.replace(/\s{2,}/g, ' ').trim();
+  return { text: t, changed: true };
+}
+
 // U2 — když klient má jméno v originále (azbuka…), sankce+PEP běží i na tuto variantu.
 // Vrátí závažnější (příp. vyšší skóre) ze dvou výsledků.
 const LOOKUP_SEVERITY = { match: 3, warning: 2, manual: 1, clean: 0, error: -1 };
@@ -1079,23 +1105,38 @@ export default {
           detFactors.push({ factor: 'Chybějící podpůrné dokumenty', impact: 'raises', note_cs: 'Vysoká hodnota obchodu (15 000 € a více) bez doložení původu prostředků.' });
         }
 
+        const dealValueEur = DEAL_VALUE_EUR[c.deal_value_band] || null;
         const aiData = {
-          subject_type: c.subject_type, relation_type: c.relation_type, deal_value_band: c.deal_value_band,
+          subject_type: c.subject_type, relation_type: c.relation_type,
+          deal_value: dealValueEur, currency: 'EUR',   // hodnota VŽDY v EUR, explicitně
           deal_countries: c.deal_countries, purpose_category: c.purpose_category, business_purpose: c.business_purpose,
           source_of_funds_type: c.source_of_funds_type, source_of_funds: c.source_of_funds, client_occupation: c.client_occupation,
           consistency: safeParse(c.consistency_json),
           lookups: Object.values(byType).map(r => ({ type: r.lookup_type, status: r.result_status, matched: r.matched_against, score: r.match_score })),
           red_flags: redFlags, client_declaration: decl,
         };
-        const system = 'Jsi AML analytik (zákon č. 253/2008 Sb., risk-based approach). Navrhni rizikový profil klienta. Zohledni: rizikové země (mimo EU/EHP zvyšují riziko), hodnotu obchodu, typ vztahu, konzistenci dokumentů, povolání vs. hodnotu obchodu, výsledky lustrací a red flags. Vrať POUZE validní JSON bez markdownu: {"suggested_level":"nizke|stredni|vysoke","factors":[{"factor":"...","impact":"neutral|raises|critical","note_cs":"..."}],"reasoning_cs":"3-4 věty"}.';
+        const system = 'Jsi AML analytik (risk-based approach). Navrhni rizikový profil klienta. Zohledni: rizikové země (mimo EU/EHP zvyšují riziko), hodnotu obchodu, typ vztahu, konzistenci dokumentů, povolání vs. hodnotu obchodu, výsledky lustrací a red flags. PRAVIDLA: (1) Neuváděj žádné konkrétní paragrafy ani odkazy na paragrafy zákona (např. „§ 9") — právní odkazy nepiš vůbec. (2) Všechny hodnoty obchodu jsou v EUR; nikdy nepřeváděj na Kč ani jinou měnu a slovo „Kč" nepoužívej, hodnotu uváděj v EUR přesně jak je zadána. Vrať POUZE validní JSON bez markdownu: {"suggested_level":"nizke|stredni|vysoke","factors":[{"factor":"...","impact":"neutral|raises|critical","note_cs":"..."}],"reasoning_cs":"3-4 věty"}.';
         let ai;
         try {
           ai = await anthropicJson(env, { system, userContent: [{ type: 'text', text: JSON.stringify(aiData) }], max_tokens: 1200 });
         } catch {
           ai = { suggested_level: floor, factors: [], reasoning_cs: 'Automatický návrh AI je dočasně nedostupný; navržená úroveň vychází z tvrdých pravidel (sankce, PEP, dokumenty). Posuďte prosím riziko sami.' };
         }
+        // Post-check jen na AI výstup (NE na deterministické detFactors — to jsou ověřené
+        // statické texty aplikace a § v nich zůstávají). Paragrafy pryč, Kč → EUR.
+        const cleanAiText = (s) => {
+          const cur = fixCurrency(s, dealValueEur);
+          if (cur.changed) console.warn('[aml] AI výstup obsahoval Kč — nahrazeno EUR pro case', caseId);
+          return stripLegalRefs(cur.text);
+        };
+        if (ai && typeof ai.reasoning_cs === 'string') ai.reasoning_cs = cleanAiText(ai.reasoning_cs);
+        const aiFactors = (Array.isArray(ai.factors) ? ai.factors : []).map(f => ({
+          ...f,
+          factor: cleanAiText(f.factor || ''),
+          note_cs: cleanAiText(f.note_cs || ''),
+        }));
         const finalLevel = maxRisk(floor, ['nizke', 'stredni', 'vysoke'].includes(ai.suggested_level) ? ai.suggested_level : 'nizke');
-        const factors = [...detFactors, ...(Array.isArray(ai.factors) ? ai.factors : [])];
+        const factors = [...detFactors, ...aiFactors];
         const suggestion = { suggested_level: finalLevel, factors, reasoning_cs: ai.reasoning_cs || '', deterministic_floor: floor };
 
         try {
@@ -1356,7 +1397,7 @@ export default {
             'subject_type', 'company_name', 'company_address',
             'acting_person_role', 'acting_person_note', 'esm_checked', 'esm_note',
             'business_purpose', 'ai_risk_suggestion',
-            'ai_risk_reasoning', 'final_risk_level', 'risk_decided_at',
+            'ai_risk_reasoning', 'ai_risk_edited', 'final_risk_level', 'risk_decided_at',
             'final_pdf_generated', 'completed_at', 'next_review_due',
             // Týden 4 (aml_v6): kroky Účel / Riziko / Záznam + originál jména (kromě case_number, record_sha256).
             'client_name_original', 'client_occupation',

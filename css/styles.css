@@ -1988,7 +1988,18 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .aml-factor-neutral .aml-factor-ico { color: var(--ink-lt); }
 .aml-factor-raises .aml-factor-ico { color: #d99a2b; }
 .aml-factor-critical .aml-factor-ico { color: #c0392b; }
-.aml-ai-reason { font-size: 13px; color: var(--ink-mid); line-height: 1.6; }
+.aml-ai-reason { font-size: 13px; color: var(--ink-mid); line-height: 1.6; white-space: pre-wrap; }
+/* Editovatelné AI odůvodnění (krok 4) */
+.aml-ai-reason-edit { display: flex; flex-direction: column; gap: 6px; }
+.aml-ai-reason-label { font-size: 12px; color: var(--ink-lt); font-weight: 600; }
+.aml-ai-reason-ta {
+  width: 100%; min-height: 96px; resize: vertical; font: inherit; font-size: 13px;
+  line-height: 1.6; color: var(--ink-mid); padding: 10px 12px;
+  border: 1px solid #cfdcef; border-radius: 8px; background: #fff;
+}
+.aml-ai-reason-ta:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(40,70,120,.12); }
+.aml-ai-addpara { align-self: flex-start; }
+.aml-ai-edited-tag { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: #8a5a12; background: #fff8ec; border-radius: 20px; padding: 1px 7px; margin-left: 6px; }
 .aml-disclaimer { font-size: 11px; color: var(--ink-fnt); line-height: 1.5; font-style: italic; }
 
 .aml-decl { display: flex; flex-direction: column; gap: 10px; }

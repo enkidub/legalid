@@ -422,7 +422,11 @@ export async function buildRecordPdf(data, attachments = []) {
       const sev = f.impact === 'critical' ? ' [kritický]' : (f.impact === 'raises' ? ' [zvyšuje riziko]' : '');
       b.para(`•  ${f.factor || ''}${sev}${f.note_cs ? ' — ' + f.note_cs : ''}`, { size: 9.5, color: MUTED });
     }
-    if (sug.reasoning_cs) b.para(sug.reasoning_cs, { size: 9.5, color: [0.42, 0.45, 0.52] });
+    // Odůvodnění může být upravené povinnou osobou a mít více odstavců (prázdný řádek).
+    if (sug.reasoning_cs) {
+      String(sug.reasoning_cs).split(/\n{2,}/).map(p => p.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean)
+        .forEach(p => b.para(p, { size: 9.5, color: [0.42, 0.45, 0.52] }));
+    }
     b.para('Návrh rizika má výhradně informativní charakter a slouží jako podpůrný nástroj. Nezbavuje povinnou osobu zákonné odpovědnosti za konečné posouzení klienta dle zákona č. 253/2008 Sb.', { size: 8.5, color: [0.55, 0.57, 0.63] });
   }
   b.moveDown(4);

@@ -361,8 +361,10 @@ export async function lookupPep(env, name, birthDate) {
   if (!name) return { status: 'clean', source: 'cz_manual', details: { note: 'Jméno nezadáno — přeskočeno.' } };
   try {
     // Krok 1 — ruční CZ seznam v D1 (přísnější threshold 0.90 kvůli českým jménům).
+    // expandAliases sjednocuje chování se sankcemi; při prázdných aliases (default '')
+    // se rozbalí jen primární jméno, tj. beze změny oproti dosavadnímu chování.
     const rows = await dbCandidates(env.DB, 'pep', name);
-    const cands = rows.map(r => ({ row: r, cand_name: r.full_name, name_normalized: r.name_normalized }));
+    const cands = expandAliases(rows);
     const { match, score } = findBestMatch(name, cands, 0.90);
     if (match) {
       const r = match.row;
@@ -411,7 +413,7 @@ export async function lookupPep(env, name, birthDate) {
 // STABILNÍ záznamy vybrané z reálných dat (OSN-only osoby z výboru DRC; CZ osoba
 // Gunďajev/Kirill). Jména jsou veřejné sankcionované subjekty (žádná data klientů).
 export async function sanctionsSelftest(env) {
-  const out = { eu: { ok: true, checks: [] }, un: { ok: true, checks: [] }, cz: { ok: true, checks: [] }, safety: { ok: true, checks: [] } };
+  const out = { eu: { ok: true, checks: [] }, un: { ok: true, checks: [] }, cz: { ok: true, checks: [] }, pep: { ok: true, checks: [] }, safety: { ok: true, checks: [] } };
 
   const cnt = async (t, s) => { try { return (await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${t} WHERE source=?`).bind(s).first())?.n ?? -1; } catch { return -1; } };
   async function person(bucket, name, { expect = 'match', source = null } = {}) {
@@ -428,6 +430,20 @@ export async function sanctionsSelftest(env) {
     out[bucket].checks.push({ entity: name, expected: 'match' + (source ? '/' + source : ''), status: r.status, source: src, matched_against: r.matched_against || null, score: r.match_score || null, pass });
     if (!pass) out[bucket].ok = false;
   }
+  // PEP: lokální D1 (ruční CZ seznam) = tvrdá kontrola; OpenSanctions větev = MĚKKÁ
+  // (externí API — výpadek je warning, ne fail, není to naše chyba).
+  async function pepCheck(name, { expect = 'warning', softExternal = false } = {}) {
+    let r; try { r = await lookupPep(env, name, null); } catch (e) { r = { status: 'error', source: null, details: String(e.message || e) }; }
+    const external = r.source === 'opensanctions' || /opensanctions/i.test(String(r.details || ''));
+    if (softExternal && r.status === 'error' && external) {
+      out.pep.checks.push({ name, expected: expect, status: r.status, source: r.source || null, soft: true, note: 'OpenSanctions nedostupné — měkký warning (nezpůsobuje fail)', pass: true });
+      out.pep.warnings = (out.pep.warnings || 0) + 1;
+      return;
+    }
+    const pass = r.status === expect;
+    out.pep.checks.push({ name, expected: expect, status: r.status, source: r.source || null, matched_against: r.matched_against || null, score: r.match_score || null, pass });
+    if (!pass) out.pep.ok = false;
+  }
 
   // EU: osoba + ENTITA (entity path dosud selftest nekryl)
   await person('eu', 'Vladimir Putin', { source: 'EU' });
@@ -443,12 +459,20 @@ export async function sanctionsSelftest(env) {
   await person('cz', 'Vladimir Gundajev', { source: 'CZ' });
   out.cz.count = await cnt('sanctions', 'CZ');
   if (out.cz.count < 1) out.cz.ok = false;
+  // PEP: pozitivní kotva z ručního CZ seznamu (stabilní historický záznam — bývalý
+  // prezident) MUSÍ vrátit shodu přes lokální D1 (source cz_manual, status warning).
+  // + negativní kontrola (smyšlené jméno). OpenSanctions výpadek u negativní kontroly
+  // je měkký warning, ne fail.
+  await pepCheck('Miloš Zeman', { expect: 'warning' });
+  await pepCheck('Karel Zkušební Neexistující Osoba', { expect: 'clean', softExternal: true });
+  try { out.pep.count = (await env.DB.prepare("SELECT COUNT(*) AS n FROM pep WHERE source='manual_cz'").first())?.n ?? -1; } catch { out.pep.count = -1; }
+  if (out.pep.count < 1) out.pep.ok = false;
   // Bezpečnost: azbukový vstup NESMÍ dělat falešnou shodu (guard proti prázdné
   // normalizaci) + smyšlené jméno musí být clean.
   await person('safety', 'Владимир Путин', { expect: 'clean' });
   await person('safety', 'Karel Zkušební Neexistující Osoba', { expect: 'clean' });
   out.safety.note = 'Azbukový vstup se normalizací redukuje na prázdno → nematchuje (guard proti falešné shodě). Skutečné screeningy jedou přes latinku (viz EU test) + originál se ukládá do aliases.';
 
-  out.ok = out.eu.ok && out.un.ok && out.cz.ok && out.safety.ok;
+  out.ok = out.eu.ok && out.un.ok && out.cz.ok && out.pep.ok && out.safety.ok;
   return out;
 }

@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS pep (
   active_until TEXT,                -- NULL = stále aktivní
   source TEXT,                      -- 'manual_cz' | 'opensanctions'
   notes TEXT,
+  aliases TEXT NOT NULL DEFAULT '', -- JSON pole alternativních jmen (sjednoceno se sankcemi; viz migrations/pep_aliases.sql)
   imported_at TEXT DEFAULT (datetime('now'))
 );
 

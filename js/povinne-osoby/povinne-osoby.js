@@ -1,13 +1,21 @@
 // legalid.cz — js/povinne-osoby/povinne-osoby.js
 // Statická informační stránka (route "/povinne-osoby"): kdo je povinná osoba podle
-// AML zákona č. 253/2008 Sb. Accordion 12 profesí, kotvy #advokati atd.
+// AML zákona č. 253/2008 Sb. Karty (H3) seskupené do tematických sekcí (H2, viz SEKCE);
+// defaultně SBALENÉ, rozbalí je jen kotva v URL (#advokati atd.). Kotvy = id karet a
+// musí sedět s odkazy ve footeru (index.html, onclick="gotoProfese('…')").
 //
 // ⚠ PRÁVNÍ TEXTY ČEKAJÍ NA KONTROLU — každý text „kdy povinnost vzniká" má v šabloně
 //    HTML komentář <!-- OVĚŘIT -->. Editovat lze zde v poli PROFESE bez zásahu do šablony.
+//    Dozor ověřen dle § 35 (profesní komory dohlížejí své členy, FAÚ ostatní/koordinuje).
+//    § 2 písmena: ověřit proti konsolidovanému znění po novele 280/2024 Sb.
 
 import { navigate } from '../core/router.js';
 
 const DOZOR_FAU = 'Finanční analytický úřad (FAÚ)';
+const DOZOR_EK = 'Exekutorská komora ČR (EK ČR)';
+const DOZOR_KDP = 'Komora daňových poradců ČR (KDP ČR)';
+// Kombinovaná karta „Auditoři a účetní": auditoři spadají pod komoru, účetní pod FAÚ.
+const DOZOR_KA_UCETNI = 'Komora auditorů ČR (KA ČR) – auditoři; Finanční analytický úřad (FAÚ) – účetní';
 
 // ── Konfigurační pole profesí (editovatelné) ─────────────────────────
 // id     → kotva (#id) a DOM id karty (po-<id>); musí sedět s odkazy ve footeru
@@ -33,7 +41,7 @@ export const PROFESE = [
   {
     id: 'exekutori', name: 'Soudní exekutoři',
     zaklad: '§ 2 odst. 1 písm. h) zákona č. 253/2008 Sb.',
-    dozor: DOZOR_FAU,
+    dozor: DOZOR_EK,
     kdy: 'Soudní exekutor je povinnou osobou zejména při provádění dražeb a při správě majetku, tedy když nakládá s peněžními prostředky nebo majetkem účastníků řízení. Povinnost se váže na tuto majetkovou činnost, nikoli na samotný výkon rozhodnutí. <!-- OVĚŘIT -->',
     pomoc: 'Legalid provede identifikaci a lustraci účastníků a vytvoří AML záznam k archivaci. Vše online, bez tabulek, s časovým razítkem lustrace.',
   },
@@ -47,14 +55,14 @@ export const PROFESE = [
   {
     id: 'danovi-poradci', name: 'Daňoví poradci',
     zaklad: '§ 2 odst. 1 písm. h) zákona č. 253/2008 Sb.',
-    dozor: DOZOR_FAU,
+    dozor: DOZOR_KDP,
     kdy: 'Daňový poradce je povinnou osobou při poskytování daňového poradenství a souvisejících služeb klientovi, zejména pomáhá-li se strukturováním transakcí, majetku nebo obchodních společností. Rozhodující je obsah poskytované služby. <!-- OVĚŘIT -->',
     pomoc: 'Legalid provede identifikaci klienta a lustraci v rejstřících a vygeneruje AML záznam s náležitostmi podle zákona. Hotovo do tří minut, připraveno k archivaci.',
   },
   {
     id: 'auditori-ucetni', name: 'Auditoři a účetní',
     zaklad: '§ 2 odst. 1 písm. h) zákona č. 253/2008 Sb.',
-    dozor: DOZOR_FAU,
+    dozor: DOZOR_KA_UCETNI,
     kdy: 'Auditor, účetní a osoba poskytující účetní služby jsou povinnými osobami při výkonu této činnosti pro klienta — typicky při vedení účetnictví, sestavování účetních výkazů a při auditu. Povinnost se váže na poskytování služby, ne na jednorázovou výpomoc. <!-- OVĚŘIT -->',
     pomoc: 'Legalid zajistí identifikaci klienta, lustraci sankcí a PEP a hodnocení rizika. AML záznam si stáhnete jako PDF a uložíte do evidence.',
   },
@@ -94,6 +102,13 @@ export const PROFESE = [
     pomoc: 'Legalid provede identifikaci zákazníka z dokladu a lustraci v rejstřících. AML záznam vzniká automaticky a uložíte si jej do evidence.',
   },
   {
+    id: 'hazard', name: 'Provozovatelé hazardních her',
+    zaklad: '§ 2 odst. 1 zákona č. 253/2008 Sb. (ve spojení se zákonem č. 186/2016 Sb., o hazardních hrách) <!-- OVĚŘIT § -->',
+    dozor: DOZOR_FAU,
+    kdy: 'Provozovatel hazardní hry je povinnou osobou při provozování hazardních her, kdy přijímá vklady a vyplácí výhry. U řady her vzniká povinnost identifikovat účastníka již při vkladu nebo výhře od stanovené částky. Rozhoduje druh hry a výše plnění. <!-- OVĚŘIT -->',
+    pomoc: 'Legalid provede identifikaci účastníka a lustraci v sankčních a PEP seznamech. Výsledkem je AML záznam s náležitostmi podle § 8 a násl. připravený k archivaci.',
+  },
+  {
     id: 'hotovostni-platby', name: 'Podnikatelé s hotovostními platbami ≥ 10 000 EUR',
     zaklad: '§ 2 odst. 2 písm. d) zákona č. 253/2008 Sb.',
     dozor: DOZOR_FAU,
@@ -102,11 +117,24 @@ export const PROFESE = [
   },
 ];
 
-function cardHtml(p, open) {
+// ── Sekce stránky (H2) → seznam id karet (H3) v daném pořadí ──────────
+// Karty se seskupují do tematických sekcí. Pořadí id určuje pořadí karet.
+export const SEKCE = [
+  { title: 'Právní profese', ids: ['advokati', 'notari', 'exekutori', 'insolvencni-spravci'] },
+  { title: 'Poradenství a správa', ids: ['danovi-poradci', 'auditori-ucetni', 'sverensti-spravci'] },
+  { title: 'Nemovitosti', ids: ['realitni', 'drazebnici'] },
+  { title: 'Obchod a služby', ids: ['umeni-kovy', 'zastavarny'] },
+  { title: 'Ostatní', ids: ['hazard', 'hotovostni-platby'] },
+];
+
+const BY_ID = Object.fromEntries(PROFESE.map(p => [p.id, p]));
+
+// Karty jsou defaultně SBALENÉ; rozbalí je jen kotva v URL (viz initPovinneOsoby).
+function cardHtml(p) {
   return `
-  <article class="po-card${open ? ' open' : ''}" id="po-${p.id}">
-    <button class="po-card-head" onclick="togglePoCard('${p.id}')" aria-expanded="${open ? 'true' : 'false'}">
-      <span class="po-card-name">${p.name}</span>
+  <article class="po-card" id="po-${p.id}">
+    <button class="po-card-head" onclick="togglePoCard('${p.id}')" aria-expanded="false">
+      <h3 class="po-card-name">${p.name}</h3>
       <span class="po-card-arrow" aria-hidden="true">▾</span>
     </button>
     <div class="po-card-body">
@@ -133,7 +161,13 @@ function cardHtml(p, open) {
 }
 
 export function renderPovinneOsoby() {
-  const cards = PROFESE.map((p, i) => cardHtml(p, i === 0)).join('');
+  const sections = SEKCE.map(sec => {
+    const cards = sec.ids.map(id => BY_ID[id]).filter(Boolean).map(cardHtml).join('');
+    return `<section class="po-sec">
+      <h2 class="po-sec-title">${sec.title}</h2>
+      <div class="po-list">${cards}</div>
+    </section>`;
+  }).join('');
   return `
 <div class="po">
   <section class="po-hero">
@@ -148,7 +182,7 @@ export function renderPovinneOsoby() {
   </section>
   <section class="po-list-section">
     <div class="lnd-wrap lnd-wrap--narrow">
-      <div class="po-list">${cards}</div>
+      ${sections}
       <div class="po-cta">
         <p class="po-cta-text">AML kontrolu zvládnete s Legalid za 3 minuty na klienta.</p>
         <button class="lnd-btn lnd-btn-primary" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>

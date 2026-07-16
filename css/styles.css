@@ -2341,6 +2341,26 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .soukromi-body { font-size: 15px; color: var(--ink-mid); line-height: 1.7; display: flex; flex-direction: column; gap: 14px; }
 .soukromi-body a { color: var(--gold-h); }
 
+/* Zásady zpracování / Bezpečnost (route /soukromi) */
+.sk-body { font-size: 15px; color: var(--ink-mid); line-height: 1.7; }
+.sk-body a { color: var(--gold-h); }
+.sk-sec { margin-bottom: clamp(24px, 3.5vw, 38px); scroll-margin-top: 72px; }
+.sk-h2 { font-family: var(--serif); font-size: clamp(18px, 2vw, 22px); font-weight: 600; color: var(--navy); margin: 0 0 12px; padding-bottom: 7px; border-bottom: 1px solid var(--rule); }
+.sk-sec p { margin: 0 0 10px; }
+.sk-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.sk-list li { padding-left: 2px; }
+/* Zvýrazněná sekce „Co neukládáme" — architektonická výhoda */
+.sk-highlight { background: var(--gold-p); border: 1px solid #efe6d4; border-radius: 14px; padding: 20px 22px; }
+.sk-highlight .sk-h2 { border-bottom-color: #e6dcc4; }
+/* Tabulka sub-procesorů */
+.sk-table-wrap { overflow-x: auto; margin-top: 6px; -webkit-overflow-scrolling: touch; }
+.sk-table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 640px; }
+.sk-table th, .sk-table td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--rule); }
+.sk-table th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--ink-lt); background: var(--paper-w); }
+.sk-table td:first-child { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.sk-table tr:last-child td { border-bottom: none; }
+.sk-contact { margin-top: 8px; font-size: 14px; color: var(--ink-lt); }
+
 /* ════════════════════ GLOBÁLNÍ PATIČKA (landing i aplikace) ════════════════════ */
 .site-footer { background: var(--navy); color: #c9d4e2; padding: 40px 0 26px; margin-top: 48px; }
 .site-footer-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px 24px; }

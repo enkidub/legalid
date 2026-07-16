@@ -857,7 +857,7 @@ export default {
 
         // Podpůrné dokumenty (bez souboru) + jejich red flags.
         const { results: docRows } = await env.DB.prepare(
-          'SELECT extracted_json FROM aml_documents WHERE case_id = ? AND content_base64 IS NULL'
+          "SELECT extracted_json FROM aml_documents WHERE case_id = ? AND doc_type NOT LIKE 'doklad%'"
         ).bind(caseId).all();
         const redFlags = [];
         for (const d of (docRows || [])) { const j = safeParse(d.extracted_json); if (j && Array.isArray(j.red_flags)) redFlags.push(...j.red_flags); }
@@ -1047,7 +1047,7 @@ export default {
         const owner = await env.DB.prepare('SELECT id FROM aml_cases WHERE id = ? AND user_id = ?').bind(caseId, userId).first();
         if (!owner) return json({ error: 'not_found' }, 404);
         const { results } = await env.DB.prepare(
-          'SELECT doc_type, filename, sha256, ai_summary FROM aml_documents WHERE case_id = ? AND content_base64 IS NULL ORDER BY id'
+          "SELECT doc_type, filename, sha256, ai_summary FROM aml_documents WHERE case_id = ? AND doc_type NOT LIKE 'doklad%' ORDER BY id"
         ).bind(caseId).all();
         return json({ documents: (results || []).map(r => ({ doc_type: r.doc_type, filename: r.filename, sha256: r.sha256, summary: r.ai_summary })) });
       }
@@ -1071,14 +1071,17 @@ export default {
           try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
           const { doc_type, filename, content_base64, ai_extracted_data } = b;
           if (!doc_type) return json({ error: 'missing_doc_type' }, 400);
+          // Obraz dokladu se NEUKLÁDÁ — z base64 spočítáme jen velikost a SHA-256 otisk,
+          // content_base64 zapisujeme jako NULL (viz zásady zpracování, sekce „Co neukládáme").
           const size = content_base64 ? Math.floor(content_base64.length * 3 / 4) : 0;
+          const sha256 = content_base64 ? await sha256Hex(content_base64) : null;
           const aiData = ai_extracted_data == null ? null
             : (typeof ai_extracted_data === 'string' ? ai_extracted_data : JSON.stringify(ai_extracted_data));
           const r = await env.DB.prepare(
-            `INSERT INTO aml_documents (case_id, doc_type, filename, content_base64, content_size_bytes, ai_extracted_data)
-             VALUES (?, ?, ?, ?, ?, ?)`
-          ).bind(caseId, doc_type, filename || null, content_base64 || null, size, aiData).run();
-          return json({ ok: true, document_id: r.meta.last_row_id });
+            `INSERT INTO aml_documents (case_id, doc_type, filename, sha256, content_base64, content_size_bytes, ai_extracted_data)
+             VALUES (?, ?, ?, ?, NULL, ?, ?)`
+          ).bind(caseId, doc_type, filename || null, sha256, size, aiData).run();
+          return json({ ok: true, document_id: r.meta.last_row_id, sha256 });
         }
 
         // GET /api/aml/case/:id — stav případu + profil povinné osoby (pro PDF/regeneraci)

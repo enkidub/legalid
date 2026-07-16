@@ -203,20 +203,10 @@
     <button class="btn-privacy-close" onclick="closePrivacyModal()" aria-label="Zavřít">×</button>
     <div class="privacy-modal-title">Jak pracujeme s vašimi daty</div>
     <div class="privacy-section">
-      <div class="privacy-section-title">Fotografie dokladu</div>
-      <div class="privacy-section-body">Fotografie dokladu (v ověřovací doložce i v AML kontrole) je zpracována externím poskytovatelem AI služeb na základě zpracovatelské smlouvy dle čl. 28 GDPR. Slouží jen k jednorázovému rozpoznání údajů, není uchovávána déle, než je pro zpracování nezbytné, a neukládá se na našich serverech.</div>
+      <div class="privacy-section-body">U údajů vašich klientů jste správcem vy jako povinná osoba; Legalid je zpracovatel dle čl. 28 GDPR. Fotografie dokladů a podpůrné dokumenty se na našich serverech neukládají — zůstávají jen extrahovaná data a otisk SHA-256. Údaje klientů a AML záznamy jsou uloženy v zabezpečené databázi k vašemu účtu (Cloudflare, region EU – východní Evropa) a slouží výhradně vám.</div>
     </div>
     <div class="privacy-section">
-      <div class="privacy-section-title">Rozpoznané a zadané údaje</div>
-      <div class="privacy-section-body">V ověřovací doložce zůstávají rozpoznané údaje jen v paměti vašeho prohlížeče a smažou se při zavření záložky. V AML kontrole se zadané a rozpoznané údaje ukládají do vašeho zabezpečeného AML záznamu (viz níže) — jejich uchování vyžaduje zákon k doložení provedené kontroly.</div>
-    </div>
-    <div class="privacy-section">
-      <div class="privacy-section-title">Klienti a AML záznamy</div>
-      <div class="privacy-section-body">Údaje klientů a AML záznamy se u přihlášených uživatelů ukládají v zabezpečené databázi k vašemu účtu (Cloudflare D1, region EU – východní Evropa); slouží výhradně vám a nesdílejí se. Kniha prohlášení a klienti u nepřihlášených uživatelů zůstávají uloženi pouze lokálně ve vašem prohlížeči (localStorage) a nepřenášejí se na server.</div>
-    </div>
-    <div class="privacy-section">
-      <div class="privacy-section-title">Povinná osoba a mlčenlivost</div>
-      <div class="privacy-section-body">Jako povinná osoba jste správcem osobních údajů svých klientů. Aplikace legalid vystupuje jako zpracovatel dle čl. 28 GDPR. Zpracovatelská smlouva dostupná na vyžádání: <a href="mailto:info@legalid.cz" class="privacy-email-link">info@legalid.cz</a></div>
+      <div class="privacy-section-body"><a href="/soukromi" class="privacy-email-link" onclick="event.preventDefault();closePrivacyModal();navigate('/soukromi')">Úplné zásady zpracování →</a></div>
     </div>
     <button class="privacy-modal-ok" onclick="closePrivacyModal()">Rozumím</button>
   </div>
@@ -626,6 +616,7 @@
       <div class="sf-col-title">Kontakt &amp; právní</div>
       <a class="sf-link" href="mailto:info@legalid.cz">info@legalid.cz</a>
       <button class="sf-link" onclick="navigate('/soukromi')">Ochrana osobních údajů</button>
+      <button class="sf-link" onclick="navigate('/soukromi#bezpecnost')">Bezpečnost</button>
     </div>
   </div>
   <div class="wrap sf-bottom">© 2026 Legalid · AML povinnosti podle zákona č. 253/2008 Sb.</div>

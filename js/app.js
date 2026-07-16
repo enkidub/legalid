@@ -10,7 +10,7 @@ import { state } from './core/state.js';
 import { initRouter, navigate, currentPath } from './core/router.js';
 import { renderLanding, initLanding, gotoLandingSection } from './landing/landing.js';
 import { renderPovinneOsoby, initPovinneOsoby, togglePoCard, gotoProfese } from './povinne-osoby/povinne-osoby.js';
-import { renderSoukromi } from './soukromi/soukromi.js';
+import { renderSoukromi, initSoukromi } from './soukromi/soukromi.js';
 import { openDemoModal, closeDemoModal, submitDemoRequest } from './demo/demo.js';
 import { renderAml, initAml } from './aml/aml.js';
 import { renderArchiv, initArchiv } from './archiv/archiv.js';
@@ -164,7 +164,7 @@ const VIEW_TITLES = {
 };
 
 function resolveView(path) {
-  let v = (path || '/').replace(/\/+$/, '') || '/';
+  let v = (path || '/').split('#')[0].split('?')[0].replace(/\/+$/, '') || '/';
   if (v === '/') return state.loggedIn ? 'aml' : 'landing';
   v = v.slice(1);
   return KNOWN_VIEWS.includes(v) ? v : (state.loggedIn ? 'aml' : 'landing');
@@ -187,7 +187,7 @@ function mountRoute(path) {
     else if (view === 'klienti') { host.innerHTML = renderKlientiPage(); renderKlientiList(); }
     else if (view === 'kniha')   { host.innerHTML = renderKnihaPage(); renderKnihaList(); }
     else if (view === 'povinne-osoby') { host.innerHTML = renderPovinneOsoby(); initPovinneOsoby(); }
-    else if (view === 'soukromi') { host.innerHTML = renderSoukromi(); }
+    else if (view === 'soukromi') { host.innerHTML = renderSoukromi(); initSoukromi(); }
     host.style.display = '';
   }
   document.title = VIEW_TITLES[view] || DEFAULT_TITLE;

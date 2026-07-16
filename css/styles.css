@@ -1540,25 +1540,26 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .aml-steps::-webkit-scrollbar { display: none; }
 .aml-step { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 4px 6px; position: relative; }
 .aml-step-dot {
-  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 700; background: var(--rule); color: var(--ink-lt);
+  font-size: var(--fs-value); font-weight: var(--fw-semibold); background: var(--rule); color: var(--ink-fnt);
 }
-.aml-step-label { font-size: 15px; font-weight: 500; color: var(--ink-lt); white-space: nowrap; }
+.aml-step-label { font-size: var(--fs-body); font-weight: var(--fw-regular); color: var(--ink-lt); white-space: nowrap; }
 .aml-step--click { cursor: pointer; }
 .aml-step--click:hover .aml-step-label { color: var(--navy); text-decoration: underline; }
-.aml-step.active .aml-step-dot { background: var(--navy); color: #fff; }
-.aml-step.active .aml-step-label { color: var(--navy); font-weight: 700; position: relative; }
+.aml-step.active .aml-step-dot { background: var(--navy); color: var(--white); }
+.aml-step.active .aml-step-label { color: var(--navy); font-weight: var(--fw-semibold); position: relative; }
 .aml-step.active .aml-step-label::after { content: ''; position: absolute; left: 0; right: 0; bottom: -4px; height: 3px; border-radius: 2px; background: var(--gold); }
-.aml-step.done .aml-step-dot { background: var(--gold); color: #fff; }
-.aml-step.done .aml-step-label { color: var(--ink-mid); }
+/* neaktivní kroky (dokončené i budoucí) — jedna šedá z tokenů */
+.aml-step.done .aml-step-dot { background: var(--rule); color: var(--ink-fnt); }
+.aml-step.done .aml-step-label { color: var(--ink-lt); }
 .aml-step.future .aml-step-dot { background: var(--rule); color: var(--ink-fnt); }
 .aml-step.future .aml-step-label { color: var(--ink-fnt); }
 @media (max-width: 640px) {
   .aml-head-row { flex-direction: column-reverse; align-items: stretch; gap: 8px; margin-bottom: 18px; }
   .aml-casenum { font-size: 11px; }
-  .aml-step-dot { width: 28px; height: 28px; font-size: 13px; }
-  .aml-step-label { font-size: 13px; }
+  .aml-step-dot { width: 28px; height: 28px; font-size: var(--fs-value); }
+  .aml-step-label { font-size: var(--fs-body); }
 }
 
 /* Karta kroku */
@@ -1707,20 +1708,18 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 /* Lustrace — nadpis skupiny (PO) */
 .aml-lk-group-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-lt); margin: 10px 0 2px; }
 
-/* Krok Údaje klienta — dlaždice cest (4 / 2×2 / 1) */
-.aml-tiles-src { grid-template-columns: repeat(2, 1fr); margin-bottom: 16px; }
-@media (min-width: 1025px) { .aml-tiles-src { grid-template-columns: repeat(4, 1fr); } }
-.aml-tile-src { flex-direction: row; align-items: center; justify-content: flex-start; text-align: left; gap: 12px; padding: 0 16px; min-height: 78px; }
+/* Krok Údaje klienta — metody jako kompaktní segmenty v jednom řádku (mobil 2×2) */
+.aml-tiles-src { grid-template-columns: repeat(4, 1fr); gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.aml-tile-src { flex-direction: row; align-items: center; justify-content: center; text-align: left; gap: var(--sp-2); padding: 0 var(--sp-3); min-height: 0; height: 52px; }
 .aml-tile-ico { line-height: 0; color: var(--ink-lt); flex-shrink: 0; }
 .aml-tile-ico svg { width: 26px; height: 26px; }
 .aml-tile-src .aml-tile-ico svg { width: 20px; height: 20px; }
-.aml-tile-src .aml-tile-title { font-size: 15px; }
+.aml-tile-src .aml-tile-title { font-size: var(--fs-body); }
 .aml-tile-src.aml-tile--selected .aml-tile-ico { color: var(--gold-h); }
-/* Zdrojové dlaždice: 2×2 i na mobilu (přebíjí obecné .aml-tiles → 1 sloupec). */
+/* Mobil: 2×2 grid (přebíjí obecné .aml-tiles → 1 sloupec). */
 @media (max-width: 600px) {
   .aml-tiles.aml-tiles-src { grid-template-columns: repeat(2, 1fr); }
-  .aml-tile-src { min-height: 74px; padding: 0 12px; gap: 8px; }
-  .aml-tile-src .aml-tile-title { font-size: 13px; }
+  .aml-tile-src { height: 52px; padding: 0 var(--sp-2); }
 }
 
 /* Prostřední část podle dlaždice */
@@ -2096,14 +2095,14 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .rl-badge-amber { color: #b4530e; background: #fdecdd; }
 
 /* Riziko — jediný semafor (tečka + text) */
-.rl-riskdot { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-mid); }
+.rl-riskdot { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-value); color: var(--text-secondary); }
 .rl-riskdot .rl-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
 .rl-riskdot-vysoke .rl-dot { background: #c0392b; }
 .rl-riskdot-stredni .rl-dot { background: #e0912b; }
 .rl-riskdot-nizke .rl-dot { background: #1a8a4a; }
 
-/* Revize / revalidace */
-.rl-review { font-size: 12.5px; color: var(--ink-lt); }
+/* Revize / revalidace + datum poslední kontroly (hodnoty sloupců) */
+.rl-review, .rl-date { font-size: var(--fs-value); color: var(--text-secondary); }
 .rl-review--soon { display: inline-flex; align-items: center; gap: 4px; color: #b4530e; font-weight: 500; }
 .rl-review--over { display: inline-flex; align-items: center; gap: 4px; color: #c0392b; font-weight: 600; }
 

@@ -1,0 +1,44 @@
+/* legalid.cz — css/tokens.css
+   Design tokeny: barvy, typografická škála, váhy, spacing, výšky ovládacích prvků.
+   Načítá se PŘED styles.css, takže styles.css i moduly z tokenů čerpají. */
+:root {
+  /* ── Barvy ── */
+  --navy:   #0b1929;
+  --navy-h: #132540;
+  --ink:    #1a2233;
+  --ink-mid:#3d4f6a;
+  --ink-lt: #6b7d96;
+  --ink-fnt:#9babbe;
+  --gold:   #8B6014;
+  --gold-h: #6d4a0f;
+  --gold-p: #fdf8ec;
+  --paper:  #f9f8f5;
+  --paper-w:#ffffff;
+  --white:  #ffffff;
+  --rule:   #e8eaed;
+  /* sémantické aliasy */
+  --text-primary:   var(--ink);
+  --text-secondary: var(--ink-lt);
+  --text-faint:     var(--ink-fnt);
+
+  /* ── Typografická škála ── */
+  --fs-caption: 11.5px; --ls-caption: .04em;   /* uppercase labely */
+  --fs-meta:    12px;                            /* meta / drobný text */
+  --fs-value:   13px;                            /* hodnoty ve sloupcích */
+  --fs-body:    14px;                            /* běžný text / tlačítka */
+  --fs-nav:     15px;                            /* navigace, header */
+  --fs-h3:      18px;                            /* serif */
+  --fs-h2:      22px;                            /* serif */
+  --fs-h1:      30px;                            /* serif */
+
+  /* ── Váhy (jen dvě) ── */
+  --fw-regular:  400;
+  --fw-semibold: 600;
+
+  /* ── Spacing ── */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+
+  /* ── Výšky ovládacích prvků ── */
+  --ctrl-sm: 32px;
+  --ctrl-md: 40px;
+}

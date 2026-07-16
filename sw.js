@@ -1,10 +1,11 @@
-const CACHE = 'legalid-v107'; // ← BUMP při každém deployi
+const CACHE = 'legalid-v108'; // ← BUMP při každém deployi
 
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icons/icon.svg',
+  '/css/tokens.css',
   '/css/styles.css',
   '/js/app.js',
   '/js/core/state.js',
@@ -12,6 +13,7 @@ const APP_SHELL = [
   '/js/core/ui.js',
   '/js/core/router.js',
   '/js/core/entities.js',
+  '/js/core/rowlist.js',
   '/js/profile/profile.js',
   '/js/auth/auth.js',
   '/js/dolozka/dolozka.js',

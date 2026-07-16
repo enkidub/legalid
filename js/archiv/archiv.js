@@ -27,6 +27,7 @@ export function initArchiv() {
   root.addEventListener('click', (e) => {
     const t = e.target.closest('[data-act]');
     if (!t) return;
+    if (t.dataset.act === 'archiv-retry') loadArchiv(root);
     if (t.dataset.act === 'regen') regenerate(root, +t.dataset.id);
     if (t.dataset.act === 'new-check' && window.navigate) window.navigate('/aml');
     if (t.dataset.act === 'resume-aml') {
@@ -38,8 +39,18 @@ export function initArchiv() {
 }
 
 async function loadArchiv(root) {
+  let error = false;
   try { const r = await apiAmlListCases(); _cases = r.cases || []; }
-  catch { _cases = []; }
+  catch { _cases = []; error = true; }
+  if (error) {
+    root.innerHTML = `<div class="view-archiv-wrap">
+      <div class="view-lp-head"><div class="view-lp-title">Archiv AML kontrol</div></div>
+      <div class="aml-card"><div class="aml-src-state aml-src-state--err">
+        <span>Archiv se nepodařilo načíst.</span>
+        <button class="aml-btn aml-btn-sm" data-act="archiv-retry">Zkusit znovu</button>
+      </div></div></div>`;
+    return;
+  }
   const inprog = _cases.filter(c => c.status === 'in_progress');
   const done = _cases.filter(c => c.status === 'completed' || c.status === 'terminated');
   root.innerHTML = archivHTML(inprog, done);

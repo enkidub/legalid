@@ -1452,7 +1452,9 @@ body.logged-in .nav-section-guest { display: none; }
 .aml { width: min(860px, 94vw); margin: 0; padding: clamp(16px, 3vw, 28px) 0 96px; }
 
 /* Kontextový panel — jen ≥1440px, sticky, vizuálně tišší než karta. */
-.aml-context { display: none; width: 300px; flex-shrink: 0; position: sticky; top: 84px; align-self: flex-start; padding-top: clamp(16px, 3vw, 28px); max-height: calc(100vh - 96px); overflow-y: auto; }
+.aml-context { display: none; width: 300px; flex-shrink: 0; position: sticky; top: 84px; align-self: flex-start; margin-top: 94px; max-height: calc(100vh - 96px); overflow-y: auto; }
+/* margin-top = odstup horní hrany karty wizardu od horní hrany shellu (řádek kroků
+   + mezery) → horní hrana panelu SOUHRN KONTROLY je zarovnaná s kartou, ne s kroky. */
 @media (min-width: 1200px) { .aml-context { display: block; } }   /* snížen práh, ať se panel ukáže i při zvětšeném zobrazení (150 % scaling) */
 .aml-ctx-card { background: var(--gold-p); border: 1px solid #efe6d4; border-radius: 14px; padding: 16px 18px; }
 .aml-ctx-title { font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-lt); margin-bottom: 10px; }
@@ -1830,6 +1832,17 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .aml-cn-val { font-weight: 700; color: var(--navy); letter-spacing: .3px; font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; }
 .aml-cn-copy { display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--ink-lt); padding: 2px; border-radius: 6px; line-height: 0; }
 .aml-cn-copy:hover { color: var(--navy); background: var(--paper-w); }
+/* Číslo kontroly nahoře skryj, když je viditelný panel SOUHRN KONTROLY (stejná
+   podmínka jako panel) — číslo pak žije jen v panelu (s kopírovací ikonou). */
+@media (min-width: 1200px) { .aml-casenum { display: none; } }
+/* Panel: řádek Číslo s kopírovací ikonou */
+.aml-ctx-num { display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; }
+.aml-ctx-num > span { font-weight: 700; color: var(--navy); letter-spacing: .3px; }
+.aml-ctx-num .aml-cn-copy svg { width: 13px; height: 13px; }
+
+/* Async seznam — error stav s retry (dlaždice Existující klient ap.) */
+.aml-src-state { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px 0; font-size: 13px; }
+.aml-src-state--err { color: #b23b30; }
 
 .aml-field-note { font-size: 11px; color: var(--ink-fnt); line-height: 1.4; margin-top: 2px; }
 

@@ -82,8 +82,9 @@ const SOURCES = [
 ];
 const LAST_METHOD_KEY = 'legalid_aml_lastMethod';
 function loadLastMethod() {
-  try { const v = localStorage.getItem(LAST_METHOD_KEY); return SOURCES.some(s => s.id === v) ? v : 'camera'; }
-  catch { return 'camera'; }
+  // Výchozí metoda „Zadat ručně"; jinak poslední použitá (uloženo v pickSource).
+  try { const v = localStorage.getItem(LAST_METHOD_KEY); return SOURCES.some(s => s.id === v) ? v : 'manual'; }
+  catch { return 'manual'; }
 }
 
 // Typ subjektu (segmentový přepínač nad dlaždicemi).
@@ -329,6 +330,7 @@ function handleAction(root, act, ds) {
     case 'cam-shoot': shootCamera(root); break;
     case 'cam-cancel': closeCamera(); break;
     case 'pick-client': pickClient(root, ds.key); break;
+    case 'retry-clients': loadClients(root, (wiz.clientQuery || '').trim()); break;
     case 'continue-lustrace': continueToLustrace(root); break;
     case 'next': goNext(root); break;
     case 'back': goBack(root); break;
@@ -411,7 +413,7 @@ async function createNewCase(root) {
     wiz.step = 0; wiz.source = loadLastMethod(); wiz.method = 'personal'; wiz.data = {};
     wiz.subject_type = 'fo'; wiz.aresStatus = null; wiz.aresLoading = false;
     wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
-    wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.clients = null; wiz.clientQuery = '';
+    wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.clients = null; wiz.clientQuery = ''; wiz.clientsError = false;
     wiz.lookups = null; wiz.lookupStatus = 'idle'; wiz.maxStep = 0; wiz.forceRun = false;
     wiz.verifierConfirmed = false; wiz.terminating = false;
     wiz.purposeDocs = []; wiz.consistency = null; wiz.consistencyLoading = false;
@@ -462,7 +464,7 @@ async function resumeCase(root, id) {
     wiz.riskSuggestLoading = false; wiz.riskDeciding = false;
     wiz.step = c.current_step || 0;   // DB je již v novém schématu (migrace v4)
     wiz.maxStep = wiz.step; wiz.forceRun = false;
-    wiz.source = hasClientData() ? 'manual' : 'camera';   // s daty rovnou ukaž formulář
+    wiz.source = hasClientData() ? 'manual' : loadLastMethod();   // s daty rovnou ukaž formulář
     wiz.lookups = null; wiz.lookupStatus = 'idle';
     renderStep(root);
   } catch {
@@ -548,7 +550,7 @@ async function goNext(root) {
 async function goBack(root) {
   if (wiz.step > 0) {
     wiz.step -= 1;   // pohyb zpět nezmenšuje dosažený pokrok (maxStep drží klikatelnost)
-    if (wiz.step === 0) wiz.source = hasClientData() ? 'manual' : 'camera';
+    if (wiz.step === 0) wiz.source = hasClientData() ? 'manual' : loadLastMethod();
   }
   renderStep(root);
 }
@@ -557,7 +559,7 @@ async function goBack(root) {
 async function goToStep(root, idx) {
   if (idx === wiz.step || idx > wiz.maxStep) return;
   wiz.step = idx;
-  if (idx === 0) wiz.source = hasClientData() ? 'manual' : 'camera';
+  if (idx === 0) wiz.source = hasClientData() ? 'manual' : loadLastMethod();
   if (idx === 1) { wiz.lookupStatus = 'idle'; wiz.forceRun = false; }   // Lustrace → načti uložené
   renderStep(root);
 }
@@ -804,10 +806,17 @@ async function saveDoc(type, img, extracted) {
 // ── Ze seznamu (uložení klienti z předchozích případů) ───────────────
 // Centrální evidence: hledání klientů přes GET /api/clients?q= (server-side fulltext).
 async function loadClients(root, q = '') {
+  wiz.clientsError = false;
+  wiz.clients = null;                 // loading stav
+  if (wiz.step === 0 && wiz.source === 'list') renderClientList();
+  const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000));
   try {
-    const r = await apiClientsSearch(q);
+    const r = await Promise.race([apiClientsSearch(q), timeout]);
     wiz.clients = r.clients || [];
-  } catch { wiz.clients = []; }
+  } catch {
+    wiz.clients = null;               // ne prázdný seznam — chyba ≠ „nemáte klienty"
+    wiz.clientsError = true;
+  }
   if (wiz.step === 0 && wiz.source === 'list') renderClientList();
 }
 
@@ -1016,10 +1025,12 @@ function renderContext() {
     ? (wiz.data.company_name || '')
     : [wiz.data.client_name, wiz.data.client_surname].filter(Boolean).join(' ');
   const rows = [
-    wiz.case_number && ['Číslo', wiz.case_number],
+    wiz.case_number && ['Číslo', wiz.case_number, true],
     subj && ['Typ klienta', subj[1]],
     clientName && ['Klient', clientName],
-  ].filter(Boolean).map(([k, v]) => `<div class="aml-ctx-row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('');
+  ].filter(Boolean).map(([k, v, copy]) => `<div class="aml-ctx-row"><span>${esc(k)}</span>${copy
+      ? `<b class="aml-ctx-num"><span>${esc(v)}</span><button class="aml-cn-copy" data-act="copy-casenum" aria-label="Kopírovat číslo kontroly" title="Kopírovat">${SVG.copy}</button></b>`
+      : `<b>${esc(v)}</b>`}</div>`).join('');
 
   // Lustrace: krok 0 (Údaje) → placeholder; od kroku 1 dál → řádky (nálezy nahoře).
   if (wiz.step >= 2 && (!wiz.lookups || !wiz.lookups.length) && !wiz._ctxLookupsLoading) fetchContextLookups();
@@ -1274,16 +1285,24 @@ function clientFormHTML() {
   }).join('') + `</div>`;
 }
 
-// Seznam uložených klientů (source 'list').
+// Seznam uložených klientů (source 'list'). Vyhledávací pole i kontejner #amlClientList
+// se renderují VŽDY (i během loadingu) — jinak by renderClientList neměl co aktualizovat.
 function clientListHTML() {
-  if (wiz.clients === null) return `<div class="aml-src-hint"><span class="aml-spinner"></span> Načítám klienty…</div>`;
   return `<input class="aml-client-search" id="amlClientSearch" placeholder="Hledat jméno, IČO nebo číslo dokladu…" value="${esc(wiz.clientQuery)}">
     <div class="aml-client-list" id="amlClientList">${clientRowsHTML()}</div>`;
 }
 
+// Tři stavy: error (retry) → loading (spinner) → data (empty / řádky).
 function clientRowsHTML() {
+  if (wiz.clientsError) {
+    return `<div class="aml-src-state aml-src-state--err">
+      <span>Klienty se nepodařilo načíst.</span>
+      <button class="aml-btn aml-btn-sm" data-act="retry-clients">Zkusit znovu</button>
+    </div>`;
+  }
+  if (wiz.clients === null) return `<div class="aml-src-hint"><span class="aml-spinner"></span> Načítám klienty…</div>`;
   const list = wiz.clients || [];
-  if (!list.length) return `<div class="aml-src-hint">${wiz.clientQuery ? 'Nic nenalezeno.' : 'Zatím nemáte uložené klienty. Použijte jinou cestu.'}</div>`;
+  if (!list.length) return `<div class="aml-src-hint">${wiz.clientQuery ? 'Nic nenalezeno.' : 'Zatím nemáte žádné uložené klienty. Použijte jinou cestu (Vyfotit / Nahrát / Zadat ručně).'}</div>`;
   return list.map(c => {
     const name = c.subject_type === 'po'
       ? (c.company_name || 'firma bez názvu')

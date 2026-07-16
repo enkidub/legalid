@@ -126,6 +126,7 @@ export async function apiSaveProfile(profile) {
 export async function apiClientsSearch(q = '') {
   const url = q ? `${WORKER_URL}/api/clients?q=${encodeURIComponent(q)}` : `${WORKER_URL}/api/clients`;
   const r = await fetch(url, { credentials: 'include' });
+  if (!r.ok) throw new Error('clients_http_' + r.status);   // ať volající zobrazí error stav
   return r.json();
 }
 

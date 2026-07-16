@@ -64,10 +64,16 @@ export async function renderKlientiList() {
   }
   const q = (document.getElementById('klientiSearch')?.value || '').trim();
   if (!q) list.innerHTML = `<div class="lp-empty"><div class="lp-empty-title">Načítám…</div></div>`;
+  let error = false;
   try { const r = await apiClientsSearch(q); _clients = r.clients || []; }
-  catch { _clients = []; }
+  catch { _clients = []; error = true; }
   const badge = document.getElementById('klientiBadge');
-  if (badge) badge.textContent = _clients.length || '';
+  if (badge) badge.textContent = error ? '' : (_clients.length || '');
+  if (error) {
+    list.innerHTML = `<div class="lp-empty"><div class="lp-empty-title">Klienty se nepodařilo načíst.</div>
+      <button class="aml-btn aml-btn-sm" style="margin-top:12px" onclick="renderKlientiList()">Zkusit znovu</button></div>`;
+    return;
+  }
   renderBanner();
   if (!_clients.length) {
     list.innerHTML = `<div class="lp-empty"><div class="lp-empty-title">${esc(q ? 'Žádný výsledek.' : 'Zatím nemáte uložené žádné klienty.')}</div></div>`;

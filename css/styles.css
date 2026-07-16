@@ -2130,9 +2130,9 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
     display: flex; flex-wrap: wrap; align-items: center;
     column-gap: 12px; row-gap: 5px;
   }
-  .arch-c-client { order: 1; flex: 1 1 55%; min-width: 0; }
-  .arch-c-act { order: 2; margin-left: auto; }
-  .arch-c-more { order: 3; }
+  .arch-c-client { order: 1; flex: 1 1 0; min-width: 0; }
+  .arch-c-act { order: 2; flex: 0 0 auto; }
+  .arch-c-more { order: 3; flex: 0 0 auto; }
   .arch-row::after { content: ""; flex-basis: 100%; height: 0; order: 4; }
   .arch-c-stav { order: 5; }
   .arch-c-risk { order: 6; }

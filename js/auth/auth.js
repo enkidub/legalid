@@ -120,30 +120,10 @@ export function closeUpgradeModal() {
 
 
 export async function trackUsage() {
-  try {
-    const data = await apiTrackUsage();
-
-    if (data.anonymous) {
-      const FREE_KEY = 'legalid_free_count';
-      const count = parseInt(localStorage.getItem(FREE_KEY) || '0', 10);
-      if (count >= 5) {
-        showUpgradeModal('Vyčerpali jste 5 doložek zdarma. Zaregistrujte se a získejte 30 dní neomezeně zdarma.', true);
-        return false;
-      }
-      localStorage.setItem(FREE_KEY, count + 1);
-      return true;
-    }
-
-    if (data.allowed) return true;
-
-    if (data.reason === 'limit') {
-      showUpgradeModal('Dosáhli jste limitu 2 doložek tento měsíc. Upgradujte na Pro pro neomezené použití.');
-      return false;
-    }
-    return false;
-  } catch {
-    return true;
-  }
+  // Fáze free testování — žádné limity ani upgrade modal, doložka je vždy povolena.
+  // Volání pro statistiku ponecháno (nesmí nikdy blokovat).
+  try { await apiTrackUsage(); } catch {}
+  return true;
 }
 
 

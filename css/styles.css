@@ -1598,6 +1598,26 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 /* Prázdný select (placeholder „Vyberte…") — šedě. */
 .aml-field select:has(option[value=""]:checked) { color: var(--ink-fnt); }
 
+/* ── Validační zvýraznění (vzor: aktivní tlačítko + validace po kliku) ── */
+.aml-field.aml-invalid input,
+.aml-field.aml-invalid select,
+.aml-field.aml-invalid textarea { border-color: #c0392b; background: #fdf6f5; }
+.aml-check.aml-invalid,
+.aml-decl-q.aml-invalid,
+.aml-verifier.aml-invalid,
+.aml-esm.aml-invalid,
+.aml-risk-cards.aml-invalid,
+.aml-seg-field.aml-invalid,
+.aml-decision.aml-invalid { outline: 1.5px solid #e6b3ac; outline-offset: 5px; border-radius: 8px; }
+.aml-inval-msg { width: 100%; color: #c0392b; font-size: 12px; font-weight: 600; margin-top: 6px; text-transform: none; letter-spacing: 0; }
+/* Řádkové kontejnery (checkbox) — hláška se zalomí pod ně na celou šířku. */
+.aml-check.aml-invalid { flex-wrap: wrap; }
+.aml-check .aml-inval-msg { flex-basis: 100%; }
+.aml-risk-cards .aml-inval-msg { grid-column: 1 / -1; }
+/* Potvrzený stav tlačítka po závazném rozhodnutí (ne šedý disabled) */
+.aml-btn-decided { display: flex; align-items: center; justify-content: center; background: #eefaf2; color: #1a8a4a; border: 1.5px solid #bfe6cd; font-weight: 700; cursor: default; }
+.aml-btn-decided:hover { background: #eefaf2; }
+
 /* Segmentový přepínač typu klienta — shrink-to-fit, vlevo, stejně široké segmenty */
 .aml-seg-field { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; align-self: flex-start; max-width: 100%; margin-bottom: 4px; }
 .aml-seg-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--ink-lt); }

@@ -280,19 +280,19 @@ function bindRoot(root) {
       e.target.value = '';
     }
     if (e.target.matches('input[name="amlMethod"]')) { setMethod(e.target.value); renderStep(root); return; }
-    if (e.target.id === 'amlVerifierCheck') { wiz.verifierConfirmed = e.target.checked; refreshContinue(); return; }
+    if (e.target.id === 'amlVerifierCheck') { wiz.verifierConfirmed = e.target.checked; clearOwnInvalid(e.target); return; }
     // Blok 4 — prohlášení klienta.
-    if (e.target.name === 'amlPep') { wiz.declaration.pep = e.target.value; runRiskSuggest(root); return; }
-    if (e.target.id === 'amlDeclSanctions') { wiz.declaration.sanctions = e.target.checked; updateDecideBtn(); return; }
-    if (e.target.id === 'amlDeclSource') { wiz.declaration.source = e.target.checked; updateDecideBtn(); return; }
+    if (e.target.name === 'amlPep') { wiz.declaration.pep = e.target.value; clearOwnInvalid(e.target); runRiskSuggest(root); return; }
+    if (e.target.id === 'amlDeclSanctions') { wiz.declaration.sanctions = e.target.checked; clearOwnInvalid(e.target); return; }
+    if (e.target.id === 'amlDeclSource') { wiz.declaration.source = e.target.checked; clearOwnInvalid(e.target); return; }
     // select / checkbox / textarea polí formuláře (typ dokladu, role, ESM, pohlaví)
-    if (e.target.id && e.target.id.startsWith('aml_f_')) { readFieldsFromForm(); refreshContinue(); }
+    if (e.target.id && e.target.id.startsWith('aml_f_')) { readFieldsFromForm(); clearOwnInvalid(e.target); }
   });
   // Live validace formuláře + průběžné čtení do wiz.data (bez re-renderu → nezahodí fokus).
   root.addEventListener('input', (e) => {
-    if (e.target.id && e.target.id.startsWith('aml_f_')) { readFieldsFromForm(); refreshContinue(); }
+    if (e.target.id && e.target.id.startsWith('aml_f_')) { readFieldsFromForm(); clearOwnInvalid(e.target); }
     if (e.target.id === 'amlClientSearch') { wiz.clientQuery = e.target.value; debouncedClientSearch(root); }
-    if (e.target.id === 'amlRiskJust') { wiz.riskDecision.justification = e.target.value; updateDecideBtn(); }
+    if (e.target.id === 'amlRiskJust') { wiz.riskDecision.justification = e.target.value; clearOwnInvalid(e.target); }
   });
   // Drag & drop na dropzóny (source 'upload').
   root.addEventListener('dragover', (e) => {
@@ -523,10 +523,18 @@ async function patchCase(fields) {
 
 // Kroky 1–4 (Lustrace, Účel, Riziko, Hotovo). Krok 0 vede vlastní tlačítko v kartě.
 async function goNext(root) {
-  // Krok Účel (2): validace povinných polí + uložení před přechodem na Riziko.
+  // Krok Riziko (3): bez závazného rozhodnutí nelze dál — toast + zvýraznění sekce.
+  if (wiz.step === 3 && !wiz.riskDecided) {
+    const sec = root.querySelector('.aml-decision');
+    if (sec) { clearInvalid(root); markInvalid(sec, 'Nejprve závazně rozhodněte o riziku.'); scrollToInvalid(sec); }
+    showToast('Nejprve závazně rozhodněte o riziku.');
+    return;
+  }
+  // Krok Účel (2): validace povinných polí (zvýraznění + scroll) + uložení.
   if (wiz.step === 2) {
     readFieldsFromForm();
-    if (!purposeValid()) { showToast('Vyplňte prosím povinná pole: typ vztahu, hodnotu obchodu, popis a zdroj prostředků.'); return; }
+    const missing = validatePurpose(root);
+    if (missing.length) { scrollToInvalid(missing[0]); showToast('Doplňte prosím povinná pole (*).'); return; }
     await patchPurpose();
   }
   if (wiz.step >= 1 && wiz.step <= 3) {
@@ -554,20 +562,36 @@ async function goToStep(root, idx) {
   renderStep(root);
 }
 
+// Validace kroku Údaje klienta: zvýrazní chybějící povinná pole/potvrzení a vrátí
+// je (seřazené shora dolů). Prázdné pole → vše v pořádku.
+function validateStep0(root) {
+  clearInvalid(root);
+  const missing = [];
+  const reqCols = [...REQUIRED_COLS];
+  if (wiz.subject_type === 'fo_podnikatel' || wiz.subject_type === 'po') reqCols.push('client_ico');
+  if (genderRequired()) reqCols.push('client_gender');
+  reqCols.forEach(col => {
+    if (String(wiz.data[col] ?? '').trim()) return;
+    const field = document.getElementById(`aml_f_${col}`)?.closest('.aml-field');
+    if (field) { markInvalid(field, 'Toto pole je povinné.'); missing.push(field); }
+  });
+  if (wiz.method === 'personal' && !wiz.verifierConfirmed) {
+    const v = root.querySelector('.aml-verifier');
+    if (v) { markInvalid(v, 'Potvrďte prohlášení ověřující osoby.'); missing.push(v); }
+  }
+  if (wiz.subject_type === 'po' && !wiz.data.esm_checked) {
+    const e = root.querySelector('.aml-esm');
+    if (e) { markInvalid(e, 'Ověření skutečných majitelů je povinné.'); missing.push(e); }
+  }
+  missing.sort(byTop);
+  return missing;
+}
+
 // Uloží data klienta a přejde na Lustraci (krok 0 → 1). Vždy čerstvý běh lustrace.
 async function continueToLustrace(root) {
   readFieldsFromForm();
-  if (!formValid()) { showToast('Vyplňte prosím všechna povinná pole (*).'); return; }
-  // U3: osobní setkání vyžaduje potvrzené prohlášení ověřující osoby.
-  if (wiz.method === 'personal' && !wiz.verifierConfirmed) {
-    showToast('Potvrďte prosím prohlášení ověřující osoby (osobní setkání).');
-    return;
-  }
-  // PO: bez ověření skutečných majitelů nelze pokračovat.
-  if (wiz.subject_type === 'po' && !wiz.data.esm_checked) {
-    showToast('U právnické osoby nejdřív ověřte skutečné majitele v ESM a zaškrtněte potvrzení.');
-    return;
-  }
+  const missing = validateStep0(root);
+  if (missing.length) { scrollToInvalid(missing[0]); showToast('Doplňte prosím povinná pole (*).'); return; }
   const patch = { current_step: 1, identification_method: wiz.method, subject_type: wiz.subject_type };
   DATA_COLS.forEach(col => { patch[col] = (wiz.data[col] === '' || wiz.data[col] == null) ? null : wiz.data[col]; });
   if (wiz.method === 'personal') {
@@ -719,6 +743,41 @@ function readFieldsFromForm() {
   });
 }
 
+// ── Validace UX ──────────────────────────────────────────────────────
+// Vzor „aktivní tlačítko + validace po kliku": tlačítka jsou vždy klikatelná
+// (disabled jen během probíhající akce/loadingu). Nesplněné podmínky se po
+// kliku ukážou zvýrazněním polí + inline hláškou + toastem, nikdy tichým disable.
+function markInvalid(el, msg) {
+  if (!el) return;
+  el.classList.add('aml-invalid');
+  if (msg && !el.querySelector(':scope > .aml-inval-msg')) {
+    const m = document.createElement('div');
+    m.className = 'aml-inval-msg';
+    m.textContent = msg;
+    el.appendChild(m);
+  }
+}
+function clearInvalid(root) {
+  const r = root || document;
+  r.querySelectorAll('.aml-invalid').forEach(e => e.classList.remove('aml-invalid'));
+  r.querySelectorAll('.aml-inval-msg').forEach(e => e.remove());
+}
+// Zruší zvýraznění kontejneru editovaného pole, jakmile ho uživatel začne opravovat.
+function clearOwnInvalid(inputEl) {
+  const c = inputEl && inputEl.closest('.aml-field, .aml-check, .aml-decl-q, .aml-verifier, .aml-esm, .aml-risk-cards, .aml-decision');
+  if (c && c.classList.contains('aml-invalid')) {
+    c.classList.remove('aml-invalid');
+    c.querySelectorAll(':scope > .aml-inval-msg').forEach(m => m.remove());
+  }
+}
+function scrollToInvalid(el) {
+  if (!el) return;
+  try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+  const f = el.querySelector('input, select, textarea');
+  if (f) setTimeout(() => { try { f.focus({ preventScroll: true }); } catch {} }, 320);
+}
+function byTop(a, b) { return a.getBoundingClientRect().top - b.getBoundingClientRect().top; }
+
 function formValid() {
   const req = [...REQUIRED_COLS];
   if (wiz.subject_type === 'fo_podnikatel' || wiz.subject_type === 'po') req.push('client_ico');
@@ -726,11 +785,9 @@ function formValid() {
   return req.every(col => String(wiz.data[col] ?? '').trim());
 }
 
-// Přepne stav tlačítka „pokračovat na lustraci" bez re-renderu (nezahodí fokus).
-function refreshContinue() {
-  const btn = $('amlContinue');
-  if (btn) btn.disabled = !canContinueStep0();
-}
+// Tlačítko „pokračovat na lustraci" je vždy klikatelné — validace probíhá po kliku
+// (viz continueToLustrace). Ponecháno jako no-op kvůli call-sites v bindRoot.
+function refreshContinue() { /* no-op: aktivní tlačítko + validace po kliku */ }
 
 async function saveDoc(type, img, extracted) {
   if (!img) return;
@@ -1068,8 +1125,8 @@ function renderClientStep(root) {
       <div class="aml-radios">${methods}</div>
     </div>
     ${(wiz.method === 'personal' && formShown) ? verifierDeclHTML() : ''}
-    <button class="aml-btn aml-btn-primary aml-btn-block" id="amlContinue" data-act="continue-lustrace"${canContinueStep0() ? '' : ' disabled'}>
-      Údaje jsou úplné, pokračovat na lustraci →
+    <button class="aml-btn aml-btn-primary aml-btn-block" id="amlContinue" data-act="continue-lustrace">
+      Pokračovat na lustraci →
     </button>
     ${hasAnything ? `<button class="aml-reset-link" data-act="restart-step">Vymazat vše</button>` : ''}
   </div>`;
@@ -1278,6 +1335,30 @@ function purposeValid() {
     && String(wiz.data.business_purpose || '').trim() && wiz.data.source_of_funds_type);
 }
 
+// Validace kroku Účel: zvýrazní chybějící povinná pole a vrátí je (shora dolů).
+function validatePurpose(root) {
+  clearInvalid(root);
+  const missing = [];
+  if (!wiz.data.relation_type) {
+    const el = root.querySelector('[data-act="set-relation"]')?.closest('.aml-seg-field');
+    if (el) { markInvalid(el, 'Zvolte typ vztahu.'); missing.push(el); }
+  }
+  if (!wiz.data.deal_value_band) {
+    const el = root.querySelector('[data-act="set-band"]')?.closest('.aml-seg-field');
+    if (el) { markInvalid(el, 'Zvolte hodnotu obchodu.'); missing.push(el); }
+  }
+  if (!String(wiz.data.business_purpose || '').trim()) {
+    const el = document.getElementById('aml_f_business_purpose')?.closest('.aml-field');
+    if (el) { markInvalid(el, 'Popis obchodu je povinný.'); missing.push(el); }
+  }
+  if (!wiz.data.source_of_funds_type) {
+    const el = document.getElementById('aml_f_source_of_funds_type')?.closest('.aml-field');
+    if (el) { markInvalid(el, 'Zdroj prostředků je povinný.'); missing.push(el); }
+  }
+  missing.sort(byTop);
+  return missing;
+}
+
 function renderPurpose(root) {
   if (!wiz.data.deal_countries) wiz.data.deal_countries = 'Česko';   // default dle zadání
 
@@ -1377,8 +1458,9 @@ function purposeDocsHTML() {
 }
 
 function consistencyHTML() {
-  const hasDocs = wiz.purposeDocs.some(d => d.status === 'done');
-  const btnDis = (!hasDocs || wiz.consistencyLoading) ? ' disabled' : '';
+  // Tlačítko je vždy klikatelné; disabled jen během běžící kontroly (loading).
+  // Chybějící dokument řeší runConsistency toastem po kliku.
+  const btnDis = wiz.consistencyLoading ? ' disabled' : '';
   let result = '';
   if (wiz.consistencyLoading) {
     result = `<div class="aml-ai-loading"><span class="aml-spinner"></span> AI porovnává účel a zdroj s dokumenty…</div>`;
@@ -1484,7 +1566,7 @@ function canDecide() {
 }
 function updateDecideBtn() {
   const btn = $('amlDecideBtn');
-  if (btn) btn.disabled = !canDecide() || wiz.riskDeciding;
+  if (btn) btn.disabled = wiz.riskDeciding;   // disabled jen během ukládání (loading)
 }
 
 function riskAiCardHTML() {
@@ -1536,7 +1618,7 @@ function decisionHTML() {
       <span>Odůvodnění${req ? ' <span class="aml-req">*</span>' : ' (nepovinné)'}</span>
       <textarea id="amlRiskJust" rows="3" placeholder="${req ? 'Zdůvodněte odchylku od návrhu nebo PEP status.' : 'Volitelná poznámka k rozhodnutí.'}">${esc(wiz.riskDecision.justification || '')}</textarea>
     </label>
-    <button class="aml-btn aml-btn-primary aml-btn-block" id="amlDecideBtn" data-act="risk-decide"${canDecide() ? '' : ' disabled'}>Závazně rozhodnout</button>
+    <button class="aml-btn aml-btn-primary aml-btn-block" id="amlDecideBtn" data-act="risk-decide">Závazně rozhodnout</button>
   </div>`;
 }
 
@@ -1544,8 +1626,8 @@ function riskLockedHTML() {
   const lvl = RISK_LEVELS.find(([v]) => v === wiz.riskDecision.level) || ['', '—'];
   return `<div class="aml-decision aml-decision-locked">
     <div class="aml-sec-title">Rozhodnutí o riziku</div>
-    <div class="aml-locked-row"><span class="aml-risk-badge aml-risk-${esc(wiz.riskDecision.level)}">${esc(lvl[1])} riziko</span> <span class="aml-locked-tag">✓ závazně rozhodnuto</span></div>
     ${wiz.riskDecision.justification ? `<div class="aml-locked-just"><span class="aml-doc-k">Odůvodnění:</span> ${esc(wiz.riskDecision.justification)}</div>` : ''}
+    <div class="aml-btn aml-btn-block aml-btn-decided">✓ Rozhodnuto — ${esc(lvl[1])} riziko</div>
     <div class="aml-decl-note">Rozhodnutí je uzamčeno. Pokračujte na krok Záznam tlačítkem Další.</div>
   </div>`;
 }
@@ -1577,9 +1659,35 @@ async function runRiskSuggest(root) {
   renderContext();
 }
 
+// Validace závazného rozhodnutí: zvýrazní chybějící prohlášení / úroveň / odůvodnění.
+function validateDecision(root) {
+  clearInvalid(root);
+  const d = wiz.declaration; const missing = [];
+  if (!d.pep) {
+    const el = root.querySelector('.aml-decl-q');
+    if (el) { markInvalid(el, 'Toto prohlášení je povinné.'); missing.push(el); }
+  }
+  [['sanctions', 'amlDeclSanctions'], ['source', 'amlDeclSource']].forEach(([k, id]) => {
+    if (d[k]) return;
+    const el = document.getElementById(id)?.closest('.aml-check');
+    if (el) { markInvalid(el, 'Toto prohlášení je povinné.'); missing.push(el); }
+  });
+  if (!wiz.riskDecision.level) {
+    const el = root.querySelector('.aml-risk-cards');
+    if (el) { markInvalid(el, 'Zvolte úroveň rizika.'); missing.push(el); }
+  }
+  if (justificationRequired() && !String(wiz.riskDecision.justification || '').trim()) {
+    const el = document.getElementById('amlRiskJust')?.closest('.aml-field');
+    if (el) { markInvalid(el, 'Odůvodnění je povinné při odchylce od návrhu nebo u PEP.'); missing.push(el); }
+  }
+  missing.sort(byTop);
+  return missing;
+}
+
 async function runRiskDecision(root) {
   if (wiz.riskDeciding) return;
-  if (!canDecide()) { showToast('Doplňte prohlášení klienta, úroveň rizika a případné odůvodnění.'); return; }
+  const missing = validateDecision(root);
+  if (missing.length) { scrollToInvalid(missing[0]); showToast('Doplňte povinná prohlášení klienta.'); return; }
   wiz.riskDeciding = true; updateDecideBtn();
   let res;
   try {
@@ -2146,10 +2254,11 @@ function renderFoot() {
   if (wiz.step === 0) {
     nav = '';   // krok Údaje klienta má vlastní tlačítko „pokračovat na lustraci" v kartě
   } else if (wiz.step >= 1 && wiz.step <= 3) {
-    // Lustrace (1): Další až po dokončení lustrací. Riziko (3): až po závazném rozhodnutí.
+    // Lustrace (1): Další disabled dokud lustrace neproběhne (loading — výsledky
+    // se načítají/běží). Riziko (3): vždy klikatelné — bez závazného rozhodnutí se
+    // po kliku ukáže toast + zvýraznění sekce, nikdy tichý disable.
     let dis = '';
     if (wiz.step === 1 && wiz.lookupStatus !== 'done') dis = ' disabled';
-    if (wiz.step === 3 && !wiz.riskDecided) dis = ' disabled';
     nav = `<button class="aml-btn" data-act="back">Zpět</button>
            <button class="aml-btn aml-btn-primary" data-act="next"${dis}>Další</button>`;
   } else { // Záznam (krok 4)

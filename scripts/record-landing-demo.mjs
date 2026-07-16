@@ -26,7 +26,7 @@ const ROOT = join(HERE, '..');
 const OUT_DIR = join(HERE, 'output');
 const ASSETS = join(ROOT, 'assets', 'landing');
 const MP4 = join(ASSETS, 'wizard-demo.mp4');
-const POSTER = join(ASSETS, 'wizard-demo.png');
+const POSTER = join(ASSETS, 'wizard-demo-poster.png');   // landing používá tento poster (click-to-play)
 const SITE = 'https://legalid.cz/';
 const WORKER_HOST = 'legalid.kuba-houser.workers.dev';
 

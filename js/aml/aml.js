@@ -18,7 +18,7 @@ const STEP_LABELS_SHORT = ['Údaje', 'Lustrace', 'Účel', 'Riziko', 'Záznam'];
 // Kontextová nápověda k aktivnímu kroku (pravý panel ≥1440px). Statické texty.
 const CONTEXT_HELP = [
   'Údaje slouží k identifikaci podle § 8. Doklad můžete vyfotit — AI údaje přečte a předvyplní.',
-  'Klient se prověří v 5–7 rejstřících. Každá kontrola dostane časové razítko do záznamu.',
+  'Klient se prověří ve veřejných rejstřících a sankčních seznamech. Každá kontrola dostane časové razítko do záznamu.',
   'Popis účelu a zdroje prostředků vyžaduje § 9. Doložené dokumenty AI porovná s deklarací.',
   'AI navrhne rizikový profil — rozhodnutí je vždy na vás a zapíše se do záznamu.',
   'PDF záznam s náležitostmi § 8 a násl., časovými razítky a kryptografickým otiskem.',
@@ -345,6 +345,9 @@ function handleAction(root, act, ds) {
     case 'toggle-detail': toggleLookupDetail(ds.type); break;
     case 'ctx-lookup': openLookupDetail(root, ds.type); break;
     case 'rerun-lookups': wiz.lookupStatus = 'idle'; wiz.lookups = null; wiz.forceRun = true; wiz._ctxLookupsTriedStep = null; renderLustrace(root); break;
+    // Retry selhaného zdroje: přeběhne celá lustrace (jediná perzistující cesta →
+    // konzistentní záznam), spouští se ale z tlačítka u konkrétního zdroje.
+    case 'retry-lookup': wiz.lookupStatus = 'idle'; wiz.lookups = null; wiz.forceRun = true; wiz._ctxLookupsTriedStep = null; renderLustrace(root); break;
     case 'copy-casenum': copyCaseNum(); break;
     case 'open-terminate': openTerminateModal(root); break;
     case 'close-terminate': closeTerminateModal(); break;
@@ -1076,8 +1079,9 @@ function ctxLookupRow(lk) {
   if (lk.status === 'warning') right = lk.match_score ? `možná shoda ${Math.round(lk.match_score * 100)} %` : 'ke kontrole';
   else if (lk.status === 'match') right = 'SHODA';
   else if (lk.status === 'manual') right = 'ověřte ručně';
-  else if (lk.status === 'error') right = 'nedostupné';
-  // clean → jen ikona+název (bez textu vpravo, šetří místo)
+  else if (lk.status === 'error') right = 'nedokončeno';
+  else if (lk.status === 'clean') right = cleanText(lk.lookup_type);
+  // stejné formulace jako v kroku Lustrace a v PDF
   const finding = ['match', 'warning', 'manual'].includes(lk.status);
   const attrs = finding ? ` data-act="ctx-lookup" data-type="${lk.lookup_type}" role="button" tabindex="0"` : '';
   return `<div class="aml-ctx-lk aml-lk-${v.cls}${finding ? ' aml-ctx-lk--click' : ''}"${attrs}>
@@ -1095,7 +1099,7 @@ async function fetchContextLookups() {
   if (wiz._ctxLookupsLoading || wiz._ctxLookupsTriedStep === wiz.step || !wiz.caseId) return;
   wiz._ctxLookupsLoading = true;
   wiz._ctxLookupsTriedStep = wiz.step;
-  try { const r = await apiAmlGetLookups(wiz.caseId); if (r.results?.length) wiz.lookups = r.results; } catch {}
+  try { const r = await apiAmlGetLookups(wiz.caseId); if (r.results?.length) { wiz.lookups = r.results; logLookupErrors(wiz.lookups); } } catch {}
   wiz._ctxLookupsLoading = false;
   renderContext();
 }
@@ -1159,7 +1163,17 @@ function renderContext() {
       ${lustraceHTML}
     </div>
     ${extraHTML}
-    <div class="aml-ctx-help">${esc(CONTEXT_HELP[wiz.step] || '')}</div>`;
+    <div class="aml-ctx-help">${esc(contextHelp(wiz.step))}</div>`;
+}
+
+// Nápověda ke kroku. U kroku Lustrace konkretizuje počet rejstříků podle typu
+// klienta: fyzická osoba = 5, právnická osoba = 7.
+function contextHelp(step) {
+  if (step === 1) {
+    const n = wiz.subject_type === 'po' ? 7 : 5;
+    return `Klient se prověří v ${n} rejstřících. Každá kontrola dostane časové razítko do záznamu.`;
+  }
+  return CONTEXT_HELP[step] || '';
 }
 
 function renderStep(root) {
@@ -1972,16 +1986,29 @@ function renderRecordDone(root) {
 }
 
 // ── Krok 2 — automatická lustrace ────────────────────────────────────
+// Beználezový výsledek per rejstřík — hodnotící závěr („v pořádku") NEDĚLÁ lustrace,
+// dělá ho povinná osoba v kroku Riziko. Proto věcná formulace pro každý zdroj zvlášť.
+const CLEAN_TEXT = {
+  mvcr: 'doklad není evidován jako neplatný',
+  isir: 'bez záznamu v ISIR',
+  isir_po: 'bez záznamu v ISIR',
+  ares: 'ověřeno v ARES',
+  sanctions: 'bez nálezu',
+  sanctions_entity: 'bez nálezu',
+  pep: 'bez nálezu',
+};
+const cleanText = t => CLEAN_TEXT[t] || 'bez nálezu';
+
 // Ikona + třída + text podle stavu jedné lustrace.
 function lookupView(lk) {
   if (!lk) return { icon: '⏳', cls: 'pending', text: 'probíhá…' };
   const pct = lk.match_score ? `${Math.round(lk.match_score * 100)} %` : '';
   switch (lk.status) {
-    case 'clean':   return { icon: '✓', cls: 'ok',    text: 'v pořádku' };
+    case 'clean':   return { icon: '✓', cls: 'ok',    text: cleanText(lk.lookup_type) };
     case 'warning': return { icon: '⚠', cls: 'warn',  text: pct ? `možná shoda ${pct}` : 'ke kontrole' };
     case 'match':   return { icon: '⚠', cls: 'match', text: pct ? `SHODA ${pct}` : 'SHODA' };
     case 'manual':  return { icon: '↗', cls: 'manual', text: 'ověřte ručně' };
-    case 'error':   return { icon: '✕', cls: 'err',   text: 'nedostupné' };
+    case 'error':   return { icon: '✕', cls: 'err',   text: 'ověřte ručně' };
     default:        return { icon: '⏳', cls: 'pending', text: 'probíhá…' };
   }
 }
@@ -2143,13 +2170,15 @@ function lookupDetailHTML(lk) {
 }
 
 // "2026-07-14T09:32:00Z" → "ověřeno 14. 7. 2026 v 9:32" (cs-CZ, Europe/Prague)
-function fmtCheckedAt(iso) {
+// U selhaného zdroje (status 'error') NEpíšeme „ověřeno", ale „nedokončeno".
+function fmtCheckedAt(iso, status) {
   if (!iso) return '';
   const d = new Date(iso);
   if (isNaN(d)) return '';
   try {
     const s = d.toLocaleString('cs-CZ', { timeZone: 'Europe/Prague', day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    return `ověřeno ${s.replace(', ', ' v ')}`;
+    const prefix = status === 'error' ? 'nedokončeno' : 'ověřeno';
+    return `${prefix} ${s.replace(', ', ' v ')}`;
   } catch { return ''; }
 }
 
@@ -2161,17 +2190,35 @@ function sanctionSourceBadge(lk) {
   return ` <span class="aml-src-badge aml-src-${String(s).toLowerCase()}">${SANCTION_SRC_LABEL[s]}</span>`;
 }
 
+// Technická chyba zdroje se uživateli NIKDY neukazuje (D1_ERROR apod.) — jen věcná
+// výzva + retry pro daný zdroj. Odkaz na ruční ověření podle typu rejstříku.
+const MANUAL_LINKS = {
+  mvcr: 'https://aplikace.mv.gov.cz/neplatne-doklady/',
+  isir: 'https://isir.justice.cz', isir_po: 'https://isir.justice.cz',
+  ares: 'https://ares.gov.cz',
+};
+function errorBlockHTML(type) {
+  const url = MANUAL_LINKS[type];
+  const link = url ? ` <a class="aml-lk-link" href="${esc(url)}" target="_blank" rel="noopener">otevřít rejstřík ↗</a>` : '';
+  return `<div class="aml-lk-detail aml-lk-errbox" id="aml-lk-det-${type}">
+      <div>Kontrolu se nepodařilo dokončit — zkuste znovu nebo ověřte ručně.${link}</div>
+      <div class="aml-lk-errbtns"><button class="aml-btn aml-btn-sm" data-act="retry-lookup" data-type="${type}">Zkusit znovu</button></div>
+    </div>`;
+}
+
 function lookupRowHTML(type) {
   const lk = wiz.lookups?.find(x => x.lookup_type === type) || null;
   const v = lookupView(lk);
-  const expandable = lk && ['warning', 'match', 'error', 'manual'].includes(lk.status);
+  const isError = lk && lk.status === 'error';
+  const expandable = lk && ['warning', 'match', 'manual'].includes(lk.status);
   const act = expandable ? ` data-act="toggle-detail" data-type="${type}" role="button" tabindex="0"` : '';
-  const when = lk && lk.checked_at ? `<span class="aml-lk-when">${esc(fmtCheckedAt(lk.checked_at))}</span>` : '';
+  const when = lk && lk.checked_at ? `<span class="aml-lk-when">${esc(fmtCheckedAt(lk.checked_at, lk.status))}</span>` : '';
   const row = `<div class="aml-lk-row aml-lk-${v.cls}"${act}>
       <span class="aml-lk-ico">${v.icon}</span>
       <span class="aml-lk-label">${esc(LOOKUP_LABELS[type] || type)}${when}</span>
       <span class="aml-lk-status">${esc(v.text)}${sanctionSourceBadge(lk)}${expandable ? ' <span class="aml-lk-caret">▾</span>' : ''}</span>
     </div>`;
+  if (isError) return row + errorBlockHTML(type);
   return row + (expandable ? lookupDetailHTML(lk) : '');
 }
 
@@ -2218,11 +2265,24 @@ async function loadStoredLookups(root) {
     if (!types.some(t => res.find(x => x.lookup_type === t))) { wiz.lookupStatus = 'idle'; return false; }
     wiz.lookups = types.map(t => res.find(x => x.lookup_type === t)
       || { lookup_type: t, status: 'error', details: 'Bez odpovědi.' });
+    logLookupErrors(wiz.lookups);
     wiz.lookupStatus = 'done';
     if (wiz.step === 1) { renderLustrace(root); renderFoot(); }
     renderContext();
     return true;
   } catch { wiz.lookupStatus = 'idle'; return false; }
+}
+
+// Technický detail chyby zdroje jde jen do konzole (alerting ho posílá i mailem),
+// uživateli se nikdy nezobrazuje — v UI je jen věcná výzva + retry.
+function logLookupErrors(list) {
+  for (const lk of (list || [])) {
+    if (lk && lk.status === 'error') {
+      const d = lk.details;
+      const detail = typeof d === 'string' ? d : (d && (d.note || JSON.stringify(d))) || '(bez detailu)';
+      console.error(`[aml] lustrace '${lk.lookup_type}' se nedokončila:`, detail);
+    }
+  }
 }
 
 async function runLookups(root) {
@@ -2238,6 +2298,7 @@ async function runLookups(root) {
   } catch {
     res = types.map(t => ({ lookup_type: t, status: 'error', details: 'Lustrace se nezdařila.' }));
   }
+  logLookupErrors(res);
   if (wiz.step !== 1) { wiz.lookupStatus = 'done'; return; }   // uživatel mezitím odešel
   // staggered reveal — řádky naskakují postupně
   for (const t of types) {

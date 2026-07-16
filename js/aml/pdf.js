@@ -313,7 +313,15 @@ const L_DOCTYPE = { kupni_smlouva: 'Kupní smlouva', vypis_uctu: 'Výpis z účt
 const L_RISK = { nizke: 'Nízké', stredni: 'Střední', vysoke: 'Vysoké' };
 const L_CONSISTENCY = { consistent: 'Konzistentní', partial: 'Částečně konzistentní', inconsistent: 'Nekonzistentní' };
 const L_LOOKUP = { mvcr: 'Neplatné doklady (MVČR)', isir: 'Insolvenční rejstřík (ISIR)', ares: 'ARES', sanctions: 'Sankční seznamy (EU · OSN · ČR)', pep: 'PEP databáze', isir_po: 'Insolvenční rejstřík (firma)', sanctions_entity: 'Sankční seznamy — firmy (EU · OSN · ČR)' };
-const L_LK_STATUS = { clean: 'V pořádku', warning: 'Ke kontrole', match: 'SHODA', manual: 'Ověřte ručně', error: 'Nedostupné', pending: 'Neproběhlo' };
+// „V pořádku" (hodnotící závěr) v lustraci nepoužíváme — dělá ho povinná osoba
+// v kroku Riziko. Beználezový výsledek popisujeme věcně per rejstřík.
+const L_LK_STATUS = { warning: 'Ke kontrole', match: 'SHODA', manual: 'Ověřte ručně', error: 'Kontrola neprovedena — zdroj nedostupný', pending: 'Neproběhlo' };
+const L_LK_CLEAN = {
+  mvcr: 'Doklad není evidován jako neplatný',
+  isir: 'Bez záznamu v ISIR', isir_po: 'Bez záznamu v ISIR',
+  ares: 'Ověřeno v ARES',
+  sanctions: 'Bez nálezu', sanctions_entity: 'Bez nálezu', pep: 'Bez nálezu',
+};
 const L_METHOD = { personal: 'Osobní setkání', video: 'Video hovor', bankid: 'BankID', micropayment: 'Mikroplatba' };
 
 // Blok 5 — plný AML záznam o identifikaci a kontrole klienta.
@@ -368,13 +376,19 @@ export async function buildRecordPdf(data, attachments = []) {
   b.sectionTitle('Lustrace v rejstřících a seznamech');
   const SRC_CS = { EU: 'EU', UN: 'OSN', CZ: 'ČR' };
   const lkRows = (d.lookups || []).map(l => {
-    let vysledek = L_LK_STATUS[l.status] || l.status || '—';
+    let vysledek;
+    if (l.status === 'clean') vysledek = L_LK_CLEAN[l.type] || 'Bez nálezu';
+    else vysledek = L_LK_STATUS[l.status] || l.status || '—';
     if (l.status === 'match' && SRC_CS[l.source]) vysledek += ` — ${SRC_CS[l.source]}`;   // který seznam
-    return [L_LOOKUP[l.type] || l.type, vysledek, fmtDateCs(l.checked_at)];
+    // Selhaný zdroj: ve sloupci Ověřeno nikdy jen timestamp — explicitně „nedokončeno".
+    const kdy = l.status === 'error'
+      ? (l.checked_at ? 'nedokončeno ' + fmtDateCs(l.checked_at) : 'nedokončeno')
+      : fmtDateCs(l.checked_at);
+    return [L_LOOKUP[l.type] || l.type, vysledek, kdy];
   });
   if (lkRows.length) b.table(['Zdroj', 'Výsledek', 'Ověřeno'], lkRows, [5, 3, 3]);
   else b.para('Lustrace neproběhly.', { color: [0.42, 0.45, 0.52] });
-  b.para('Sankční kontrola zahrnuje konsolidovaný seznam EU, seznam Rady bezpečnosti OSN a národní seznam MZV ČR (zákon č. 1/2023 Sb.); seznamy se aktualizují denně. Datum ve sloupci Ověřeno je časové razítko provedené lustrace.', { size: 8.5, color: [0.42, 0.45, 0.52] });
+  b.para('Sankční kontrola zahrnuje konsolidovaný seznam EU, seznam Rady bezpečnosti OSN a národní seznam MZV ČR (zákon č. 1/2023 Sb.); seznamy se aktualizují denně. Datum ve sloupci Ověřeno je časové razítko provedené lustrace. U nedokončené kontroly zdroj nebyl v době lustrace dostupný — je nutné ověření ručně.', { size: 8.5, color: [0.42, 0.45, 0.52] });
   if (d.client?.nameOriginal) b.para('Sankční a PEP lustrace byly provedeny i pro jméno v originále.', { size: 9, color: [0.42, 0.45, 0.52] });
 
   // 5. Zdroj prostředků

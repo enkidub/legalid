@@ -1841,6 +1841,9 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
   padding: 8px 13px 10px 43px; margin-top: -4px;
 }
 .aml-lk-detail .aml-lk-dk { color: var(--ink-lt); font-weight: 600; }
+/* Selhaný zdroj — vždy viditelná věcná výzva + retry (bez technického detailu) */
+.aml-lk-errbox { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.aml-lk-errbtns { flex: 0 0 auto; }
 .aml-lk-note { font-size: 11px; color: var(--ink-fnt); margin-top: 12px; }
 
 /* Kamera modal (desktop) */

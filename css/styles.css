@@ -2147,7 +2147,8 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 
 /* Sdílený confirm/merge modal */
 .rl-modal-ov { position: fixed; inset: 0; z-index: 3000; background: rgba(20,18,14,.42); display: flex; align-items: center; justify-content: center; padding: 18px; }
-.rl-modal { background: #fff; border-radius: 14px; max-width: 480px; width: 100%; padding: 22px 22px 18px; box-shadow: 0 18px 50px rgba(0,0,0,.28); }
+.rl-modal { background: #fff; border-radius: 14px; max-width: 480px; width: 100%; padding: 22px 22px 18px; box-shadow: 0 18px 50px rgba(0,0,0,.28); max-height: 90vh; overflow-y: auto; }
+.rl-modal--wide { max-width: 680px; }
 .rl-modal-title { font-size: var(--fs-h3); font-weight: var(--fw-semibold); color: var(--ink, #22201b); margin-bottom: 10px; }
 .rl-modal-body { font-size: var(--fs-body); line-height: 1.5; color: var(--ink-lt, #555); }
 .rl-modal-body p { margin: 0 0 8px; }

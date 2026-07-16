@@ -60,7 +60,7 @@ const FORM_FIELDS = [
   { col: 'client_ico', label: 'IČO (podnikající FO)' },
 ];
 // Pohlaví je povinné, jen když není vyplněné rodné číslo (§ 5 odst. 1 písm. a).
-function genderRequired() { return !String(wiz.data.client_rc || '').trim(); }
+function genderRequired(st = wiz) { return !String(st.data.client_rc || '').trim(); }
 // Rozbor českého rodného čísla → { valid, gender 'M'|'Ž', birthDate 'DD.MM.RRRR', hasChecksum }.
 // Ženy: měsíc +50 (51–62), příp. +70 (71–82); muži 01–12 nebo +20 (21–32). 10místné
 // rč (od r. 1954) má kontrolní součet dělitelný 11; 9místné starší se checksumem NEvaliduje.
@@ -108,29 +108,44 @@ function sameDate(a, b) {
 }
 function rerenderClientForm() { const fc = document.getElementById('amlClientForm'); if (fc) fc.innerHTML = clientFormHTML(); }
 
-// Po zadání rč: validace (nebloku­jící), předvyplnění data narození + pohlaví
-// (editovatelné), kontrola nesouladu s ručně zadaným datem.
-function applyRc(root) {
-  const p = parseRc(wiz.data.client_rc);
-  if (!p || p.empty) { wiz._rcWarning = false; wiz._birthMismatch = false; rerenderClientForm(); return; }
-  wiz._rcWarning = !p.valid;
-  const patch = {};
+// Přepočet stavu z rč nad daným stavem (wizard i modal Nový klient). Předvyplní pohlaví
+// a datum narození (jen když prázdné), nastaví upozornění. Vrací změněná pole k uložení.
+function computeRcState(st) {
+  const p = parseRc(st.data.client_rc);
+  const changed = {};
+  if (!p || p.empty) { st._rcWarning = false; st._birthMismatch = false; return changed; }
+  st._rcWarning = !p.valid;
   if (p.valid) {
-    if (p.gender && wiz.data.client_gender !== p.gender) { wiz.data.client_gender = p.gender; patch.client_gender = p.gender; }
-    if (!String(wiz.data.client_birth_date || '').trim()) {
-      wiz.data.client_birth_date = p.birthDate; patch.client_birth_date = p.birthDate; wiz._birthMismatch = false;
+    if (p.gender && st.data.client_gender !== p.gender) { st.data.client_gender = p.gender; changed.client_gender = p.gender; }
+    if (!String(st.data.client_birth_date || '').trim()) {
+      st.data.client_birth_date = p.birthDate; changed.client_birth_date = p.birthDate; st._birthMismatch = false;
     } else {
-      wiz._birthMismatch = !sameDate(wiz.data.client_birth_date, p.birthDate);
+      st._birthMismatch = !sameDate(st.data.client_birth_date, p.birthDate);
     }
-  } else { wiz._birthMismatch = false; }
-  if (Object.keys(patch).length) patchCase(patch);
+  } else { st._birthMismatch = false; }
+  return changed;
+}
+// Wizard: po zadání rč / data narození — přepočet + uložení + překreslení formuláře.
+function applyRc(root) {
+  const ch = computeRcState(wiz);
+  if (Object.keys(ch).length) patchCase(ch);
   rerenderClientForm();
 }
-// Po zadání data narození: přepočítá nesoulad s rč (bez přepisu zadaného data).
-function checkRcDateConsistency(root) {
-  const p = parseRc(wiz.data.client_rc);
-  wiz._birthMismatch = !!(p && p.valid && String(wiz.data.client_birth_date || '').trim() && !sameDate(wiz.data.client_birth_date, p.birthDate));
-  rerenderClientForm();
+function checkRcDateConsistency(root) { computeRcState(wiz); rerenderClientForm(); }
+
+// Povinná pole klienta (sdíleno wizardem i modalem). Vrací seznam chybějících sloupců.
+function clientMissingRequired(st = wiz) {
+  const missing = [];
+  if (st.subject_type === 'po') {
+    if (!String(st.data.company_name || '').trim()) missing.push('company_name');
+    if (!String(st.data.client_ico || '').trim()) missing.push('client_ico');
+    return missing;
+  }
+  const cols = [...REQUIRED_COLS];
+  if (st.subject_type === 'fo_podnikatel') cols.push('client_ico');
+  if (genderRequired(st)) cols.push('client_gender');
+  cols.forEach(c => { if (!String(st.data[c] ?? '').trim()) missing.push(c); });
+  return missing;
 }
 const REQUIRED_COLS = FORM_FIELDS.filter(f => f.req).map(f => f.col);
 
@@ -1458,22 +1473,22 @@ function canContinueStep0() {
 }
 
 // Blok Společnost (PO) — IČO + načtení z ARES + název/sídlo.
-function companyBlockHTML() {
-  const st = wiz.aresStatus;
-  const status = wiz.aresLoading
+function companyBlockHTML(st = wiz) {
+  const ares = st.aresStatus;
+  const status = st.aresLoading
     ? `<div class="aml-ai-loading"><span class="aml-spinner"></span> Načítám z ARES…</div>`
-    : st ? `<div class="aml-ares-status ${st.ok ? (st.active ? 'is-ok' : 'is-warn') : 'is-warn'}">${esc(st.text)}</div>` : '';
+    : ares ? `<div class="aml-ares-status ${ares.ok ? (ares.active ? 'is-ok' : 'is-warn') : 'is-warn'}">${esc(ares.text)}</div>` : '';
   return `<div class="aml-company">
     <div class="aml-sec-title">Společnost</div>
     <div class="aml-company-ico">
       <label class="aml-field"><span>IČO <span class="aml-req">*</span></span>
-        <input id="aml_f_client_ico" value="${esc(wiz.data.client_ico || '')}" placeholder="12345678"></label>
+        <input id="aml_f_client_ico" value="${esc(st.data.client_ico || '')}" placeholder="12345678"></label>
       <button class="aml-btn aml-btn-sm" data-act="ares-load">Načíst z ARES</button>
     </div>
     ${status}
     <div class="aml-fields">
-      <label class="aml-field"><span>Název společnosti</span><input id="aml_f_company_name" value="${esc(wiz.data.company_name || '')}"></label>
-      <label class="aml-field"><span>Sídlo</span><input id="aml_f_company_address" value="${esc(wiz.data.company_address || '')}"></label>
+      <label class="aml-field"><span>Název společnosti</span><input id="aml_f_company_name" value="${esc(st.data.company_name || '')}"></label>
+      <label class="aml-field"><span>Sídlo</span><input id="aml_f_company_address" value="${esc(st.data.company_address || '')}"></label>
     </div>
   </div>`;
 }
@@ -1561,17 +1576,17 @@ function uploadZoneHTML() {
 
 // Formulář klienta (společný pro všechny 4 cesty).
 // U PO se IČO vynechá (je v bloku Společnost). U podnikající FO je IČO povinné.
-function clientFormHTML() {
-  const fields = FORM_FIELDS.filter(f => !(f.col === 'client_ico' && wiz.subject_type === 'po'));
-  const rcFilled = !genderRequired();   // rč vyplněno → pohlaví se určuje z rč (§ 5)
+function clientFormHTML(st = wiz) {
+  const fields = FORM_FIELDS.filter(f => !(f.col === 'client_ico' && st.subject_type === 'po'));
+  const rcFilled = !genderRequired(st);   // rč vyplněno → pohlaví se určuje z rč (§ 5)
   return `<div class="aml-fields">` + fields.map(f => {
     // Pohlaví: při zadaném rč předvyplň z rč, ale ponech editovatelné (možnost opravy).
     const val = (f.col === 'client_gender' && rcFilled)
-      ? (wiz.data.client_gender || genderFromRc(wiz.data.client_rc) || '')
-      : (wiz.data[f.col] || '');
+      ? (st.data.client_gender || genderFromRc(st.data.client_rc) || '')
+      : (st.data[f.col] || '');
     const req = f.req
-      || (f.col === 'client_ico' && wiz.subject_type === 'fo_podnikatel')
-      || (f.col === 'client_gender' && genderRequired());
+      || (f.col === 'client_ico' && st.subject_type === 'fo_podnikatel')
+      || (f.col === 'client_gender' && genderRequired(st));
     const star = req ? ' <span class="aml-req">*</span>' : '';
     let input;
     if (f.type === 'select') {
@@ -1582,9 +1597,9 @@ function clientFormHTML() {
     }
     // Inline poznámky / upozornění (nebloku­jící).
     let noteText = f.note, warn = false;
-    if (f.col === 'client_rc' && wiz._rcWarning) { noteText = 'Rodné číslo nevypadá platně — zkontrolujte.'; warn = true; }
+    if (f.col === 'client_rc' && st._rcWarning) { noteText = 'Rodné číslo nevypadá platně — zkontrolujte.'; warn = true; }
     else if (f.col === 'client_gender' && rcFilled) { noteText = 'Určeno z rodného čísla (lze upravit).'; }
-    else if (f.col === 'client_birth_date' && wiz._birthMismatch) { noteText = 'Datum nesouhlasí s rodným číslem — zkontrolujte.'; warn = true; }
+    else if (f.col === 'client_birth_date' && st._birthMismatch) { noteText = 'Datum nesouhlasí s rodným číslem — zkontrolujte.'; warn = true; }
     const note = noteText ? `<span class="aml-field-note${warn ? ' aml-field-note--warn' : ''}">${esc(noteText)}</span>` : '';
     return `<label class="aml-field"><span>${esc(f.label)}${star}</span>${input}${note}</label>`;
   }).join('') + `</div>`;
@@ -2682,3 +2697,9 @@ function renderFoot() {
   }
   foot.innerHTML = `<div class="aml-foot-left">${term}</div><div class="aml-foot-right">${nav}</div>`;
 }
+
+// Sdílené s modalem „Nový klient" v Klientech (stejná pole + validace, bez duplicit).
+export {
+  clientFormHTML, companyBlockHTML, genderRequired, parseRc, genderFromRc, sameDate,
+  computeRcState, clientMissingRequired, FORM_FIELDS, SUBJECT_TYPES, DOC_TYPES, GENDERS,
+};

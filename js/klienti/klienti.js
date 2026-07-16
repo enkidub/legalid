@@ -4,12 +4,14 @@ import { navigate } from '../core/router.js';
 import { updatePreview } from '../dolozka/dolozka.js';
 import { esc, showToast } from '../core/ui.js';
 import { state } from '../core/state.js';
-import { apiClientsSearch, apiClientGet, apiClientUpdate, apiClientDelete, apiClientsImport, apiClientMerge } from '../core/api.js';
+import { apiClientsSearch, apiClientGet, apiClientUpdate, apiClientDelete, apiClientsImport, apiClientMerge, apiClientCreate, apiAmlAres } from '../core/api.js';
 import { markLoginRedirect } from '../auth/auth.js';
 import {
   EMPTY_CELL, humanizeName, norm, fmtDateCs, riskDotHTML, amberBadge, choiceModal,
   openRowMenu, closeRowMenu, bindRowMenuGlobalClose,
 } from '../core/rowlist.js';
+// Sdílený formulářový kód wizardu (krok 1) — stejná pole + validace, bez duplicit.
+import { clientFormHTML, companyBlockHTML, computeRcState, clientMissingRequired, SUBJECT_TYPES } from '../aml/aml.js';
 
 export function openKlientiPanel() { navigate('/klienti'); }
 export function closeKlientiPanel() { navigate('/dolozka'); }
@@ -53,6 +55,7 @@ function onClick(root, e) {
   const id = t.dataset.id ? +t.dataset.id : null;
   switch (act) {
     case 'retry': loadClients(root); break;
+    case 'new-client': openNewClientModal(root); break;
     case 'set-filter': _filter = t.dataset.filter; closeRowMenu(); renderList(root); break;
     case 'row-main': openHistory(id); break;
     case 'new-aml': newAml(id); break;
@@ -144,7 +147,10 @@ function renderShell(root) {
   };
   const seg = [['all', 'Vše'], ['no_check', 'Bez kontroly'], ['overdue', 'Po termínu']]
     .map(([k, l]) => `<button class="rl-seg-btn${_filter === k ? ' is-on' : ''}" data-act="set-filter" data-filter="${k}">${l} <span class="rl-seg-n">${n[k]}</span></button>`).join('');
-  root.innerHTML = `<div class="view-lp-head"><h1 class="view-lp-title">Klienti</h1></div>
+  root.innerHTML = `<div class="view-lp-head">
+      <h1 class="view-lp-title">Klienti</h1>
+      <button class="aml-btn aml-btn-sm" data-act="new-client" style="margin-left:auto">Nový klient</button>
+    </div>
     <div id="klientiBanner"></div>
     <div class="rl-toolbar">
       <div class="rl-seg" role="tablist">${seg}</div>
@@ -365,6 +371,77 @@ async function openMergeDialog(root, id) {
       await loadClients(root);
     } catch { showToast('Sloučení se nezdařilo.'); ov.close(); }
   });
+}
+
+// ── Nový klient (sdílí formulář + validace s wizardem, krok 1) ──
+function openNewClientModal(root) {
+  // Stav modalu odpovídá tvaru wizardího `wiz` (data + subject_type + ARES + upozornění).
+  const mst = { subject_type: 'fo', data: {}, aresStatus: null, aresLoading: false, _rcWarning: false, _birthMismatch: false };
+  const ov = openModal(`<div class="rl-modal-title">Nový klient</div>
+    <div class="rl-modal-body">
+      <div class="aml-seg-field"><span class="aml-seg-label">Typ klienta</span><div class="aml-seg-wrap" id="kliNewSeg"></div></div>
+      <div id="kliNewBody"></div>
+    </div>
+    <div class="rl-modal-actions"><button class="aml-btn" data-close>Zrušit</button><button class="aml-btn aml-btn-primary" id="kliNewSave">Uložit klienta</button></div>`);
+  ov.querySelector('.rl-modal')?.classList.add('rl-modal--wide');
+
+  const readFields = () => ov.querySelectorAll('[id^="aml_f_"]').forEach(el => {
+    const col = el.id.slice(6);
+    mst.data[col] = (el.type === 'checkbox') ? el.checked : el.value;
+  });
+  const renderSeg = () => { ov.querySelector('#kliNewSeg').innerHTML = SUBJECT_TYPES.map(([id, label]) => `<button class="aml-seg${mst.subject_type === id ? ' aml-seg--on' : ''}" data-seg="${id}">${esc(label)}</button>`).join(''); };
+  const renderBody = () => { ov.querySelector('#kliNewBody').innerHTML = mst.subject_type === 'po' ? companyBlockHTML(mst) : clientFormHTML(mst); };
+  const rerender = () => { renderSeg(); renderBody(); };
+
+  async function aresLoadNew() {
+    readFields();
+    const ico = (mst.data.client_ico || '').replace(/\s/g, '');
+    if (!/^\d{6,8}$/.test(ico)) { showToast('Zadejte platné IČO (6–8 číslic).'); return; }
+    mst.aresLoading = true; mst.aresStatus = null; renderBody();
+    try {
+      const s = await apiAmlAres(ico);
+      if (s && s.found) {
+        if (s.name) mst.data.company_name = s.name;
+        if (s.address) mst.data.company_address = s.address;
+        mst.aresStatus = { ok: true, active: s.active, text: s.active ? 'Aktivní subjekt' : `Zaniklý subjekt${s.zanik ? ` (${s.zanik})` : ''}` };
+      } else mst.aresStatus = { ok: false, text: 'Subjekt s tímto IČO nebyl v ARES nalezen.' };
+    } catch { mst.aresStatus = { ok: false, text: 'ARES nedostupný — vyplňte údaje ručně.' }; }
+    finally { mst.aresLoading = false; renderBody(); }
+  }
+
+  ov.addEventListener('click', (e) => {
+    const seg = e.target.closest('[data-seg]');
+    if (seg) { readFields(); mst.subject_type = seg.dataset.seg; rerender(); return; }
+    if (e.target.closest('[data-act="ares-load"]')) aresLoadNew();
+  });
+  ov.addEventListener('change', (e) => {
+    if (!e.target.id || !e.target.id.startsWith('aml_f_')) return;
+    readFields();
+    if (e.target.id === 'aml_f_client_rc' || e.target.id === 'aml_f_client_birth_date') { computeRcState(mst); renderBody(); }
+  });
+  ov.addEventListener('input', (e) => { if (e.target.id && e.target.id.startsWith('aml_f_')) readFields(); });
+
+  ov.querySelector('#kliNewSave').addEventListener('click', async () => {
+    readFields();
+    if (clientMissingRequired(mst).length) { showToast('Doplňte prosím povinná pole (*).'); return; }
+    const d = mst.data;
+    const payload = mst.subject_type === 'po'
+      ? { subject_type: 'po', company_name: d.company_name, ico: d.client_ico, address: d.company_address, created_from: 'manual' }
+      : {
+          subject_type: mst.subject_type, name: d.client_name, surname: d.client_surname,
+          birth_date: d.client_birth_date, birth_place: d.client_birth_place, rc: d.client_rc,
+          doc_type: d.client_doc_type, doc_number: d.client_doc_number, address: d.client_address,
+          nationality: d.client_nationality, ico: d.client_ico, created_from: 'manual',
+        };
+    const btn = ov.querySelector('#kliNewSave'); btn.disabled = true;
+    try {
+      const r = await apiClientCreate(payload);
+      if (r && r.client) { showToast(r.created ? 'Klient uložen do evidence.' : 'Sloučeno s existujícím klientem.'); ov.close(); await loadClients(root); }
+      else { showToast('Uložení se nezdařilo.'); btn.disabled = false; }
+    } catch { showToast('Uložení se nezdařilo.'); btn.disabled = false; }
+  });
+
+  rerender();
 }
 
 // ── lehký modal (vlastní obsah + tlačítka) ──

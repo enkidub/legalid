@@ -1,7 +1,7 @@
 {
   "name": "Legalid",
   "short_name": "Legalid",
-  "description": "AML kontrola klientů a ověřovací doložky pro advokáty",
+  "description": "AML pro povinné osoby",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

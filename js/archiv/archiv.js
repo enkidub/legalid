@@ -185,7 +185,7 @@ function recordDataFromCase(c, lookups, documents, profile) {
     deal: { relationType: c.relation_type, valueBand: c.deal_value_band, countries: c.deal_countries, category: c.purpose_category, purpose: c.business_purpose },
     source: { type: c.source_of_funds_type, detail: c.source_of_funds },
     consistency: parse(c.consistency_json),
-    lookups: (lookups || []).map(l => ({ type: l.lookup_type, status: l.status, matched_against: l.matched_against, checked_at: l.checked_at })),
+    lookups: (lookups || []).map(l => ({ type: l.lookup_type, status: l.status, matched_against: l.matched_against, checked_at: l.checked_at, source: (l.details && l.details.source) || l.source || null })),
     documents: documents || [],
     risk: { suggestion: parse(c.ai_risk_reasoning), finalLevel: c.final_risk_level, justification: c.risk_justification, decidedAt: c.risk_decided_at },
     declaration: parse(c.client_declaration_json),

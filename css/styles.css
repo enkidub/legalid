@@ -1792,6 +1792,11 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .aml-lk-label { font-size: 13px; color: var(--ink); font-weight: 500; }
 .aml-lk-when { display: block; font-size: 10.5px; color: var(--ink-fnt); font-weight: 400; margin-top: 1px; }
 .aml-lk-status { margin-left: auto; font-size: 12px; font-weight: 600; white-space: nowrap; }
+/* Badge, který sankční seznam matchnul (EU / OSN / ČR) */
+.aml-src-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; letter-spacing: .3px; vertical-align: middle; margin-left: 4px; }
+.aml-src-eu { background: #eaf1fb; color: #2f5fb3; }
+.aml-src-un { background: #eef6ec; color: #3a7d3a; }
+.aml-src-cz { background: #fbeeea; color: #b3502f; }
 .aml-lk-caret { font-size: 10px; opacity: .6; }
 .aml-lk-pending { opacity: .7; }
 .aml-lk-pending .aml-lk-status { color: var(--ink-lt); font-weight: 500; }

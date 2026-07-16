@@ -312,7 +312,7 @@ const L_SOURCE = { plat: 'Plat či příjem ze zaměstnání', uspory: 'Úspory 
 const L_DOCTYPE = { kupni_smlouva: 'Kupní smlouva', vypis_uctu: 'Výpis z účtu', darovaci_smlouva: 'Darovací smlouva', potvrzeni: 'Potvrzení', danove_priznani: 'Daňové přiznání', jine: 'Jiný dokument', doklad_front: 'Doklad totožnosti', doklad_back: 'Doklad totožnosti (zadní)' };
 const L_RISK = { nizke: 'Nízké', stredni: 'Střední', vysoke: 'Vysoké' };
 const L_CONSISTENCY = { consistent: 'Konzistentní', partial: 'Částečně konzistentní', inconsistent: 'Nekonzistentní' };
-const L_LOOKUP = { mvcr: 'Neplatné doklady (MVČR)', isir: 'Insolvenční rejstřík (ISIR)', ares: 'ARES', sanctions: 'Sankční seznam EU', pep: 'PEP databáze', isir_po: 'Insolvenční rejstřík (firma)', sanctions_entity: 'Sankční seznam EU (firmy)' };
+const L_LOOKUP = { mvcr: 'Neplatné doklady (MVČR)', isir: 'Insolvenční rejstřík (ISIR)', ares: 'ARES', sanctions: 'Sankční seznamy (EU · OSN · ČR)', pep: 'PEP databáze', isir_po: 'Insolvenční rejstřík (firma)', sanctions_entity: 'Sankční seznamy — firmy (EU · OSN · ČR)' };
 const L_LK_STATUS = { clean: 'V pořádku', warning: 'Ke kontrole', match: 'SHODA', manual: 'Ověřte ručně', error: 'Nedostupné', pending: 'Neproběhlo' };
 const L_METHOD = { personal: 'Osobní setkání', video: 'Video hovor', bankid: 'BankID', micropayment: 'Mikroplatba' };
 
@@ -366,13 +366,15 @@ export async function buildRecordPdf(data, attachments = []) {
 
   // 4. Lustrace
   b.sectionTitle('Lustrace v rejstřících a seznamech');
-  const lkRows = (d.lookups || []).map(l => [
-    L_LOOKUP[l.type] || l.type,
-    L_LK_STATUS[l.status] || l.status || '—',
-    fmtDateCs(l.checked_at),
-  ]);
+  const SRC_CS = { EU: 'EU', UN: 'OSN', CZ: 'ČR' };
+  const lkRows = (d.lookups || []).map(l => {
+    let vysledek = L_LK_STATUS[l.status] || l.status || '—';
+    if (l.status === 'match' && SRC_CS[l.source]) vysledek += ` — ${SRC_CS[l.source]}`;   // který seznam
+    return [L_LOOKUP[l.type] || l.type, vysledek, fmtDateCs(l.checked_at)];
+  });
   if (lkRows.length) b.table(['Zdroj', 'Výsledek', 'Ověřeno'], lkRows, [5, 3, 3]);
   else b.para('Lustrace neproběhly.', { color: [0.42, 0.45, 0.52] });
+  b.para('Sankční kontrola zahrnuje konsolidovaný seznam EU, seznam Rady bezpečnosti OSN a národní seznam MZV ČR (zákon č. 1/2023 Sb.); seznamy se aktualizují denně. Datum ve sloupci Ověřeno je časové razítko provedené lustrace.', { size: 8.5, color: [0.42, 0.45, 0.52] });
   if (d.client?.nameOriginal) b.para('Sankční a PEP lustrace byly provedeny i pro jméno v originále.', { size: 9, color: [0.42, 0.45, 0.52] });
 
   // 5. Zdroj prostředků

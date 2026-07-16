@@ -115,10 +115,10 @@ export function renderLanding() {
           <div class="lnd-gcard-title">PEP databáze (ČR + globální)</div>
           <div class="lnd-gcard-text">Politicky exponované osoby vč. globálního pokrytí (OpenSanctions).</div>
         </div>
-        <div class="lnd-gcard lnd-gcard--soon">
-          <div class="lnd-gcard-top"><span class="lnd-gcard-icon"><i class="ti ti-world"></i></span><span class="lnd-gcard-state is-soon">Připravujeme</span></div>
+        <div class="lnd-gcard">
+          <div class="lnd-gcard-top"><span class="lnd-gcard-icon"><i class="ti ti-world"></i></span><span class="lnd-gcard-state is-active">Aktivní</span></div>
           <div class="lnd-gcard-title">Sankce OSN + národní seznam MZV ČR</div>
-          <div class="lnd-gcard-text">Kompletní sankční pokrytí: EU, OSN i ČR.</div>
+          <div class="lnd-gcard-text">Konsolidovaný seznam Rady bezpečnosti OSN a národní seznam MZV ČR (zákon č. 1/2023 Sb.), denní aktualizace.</div>
         </div>
         <div class="lnd-gcard lnd-gcard--soon">
           <div class="lnd-gcard-top"><span class="lnd-gcard-icon"><i class="ti ti-news"></i></span><span class="lnd-gcard-state is-soon">Připravujeme</span></div>

@@ -209,10 +209,10 @@ const LOOKUP_LABELS = {
   mvcr: 'Neplatné doklady (MVČR)',
   isir: 'Insolvenční rejstřík (ISIR)',
   ares: 'ARES (podnikatelský subjekt)',
-  sanctions: 'Sankční seznam EU',
+  sanctions: 'Sankční seznamy (EU · OSN · ČR)',
   pep: 'PEP databáze',
   isir_po: 'Insolvenční rejstřík (firma)',
-  sanctions_entity: 'Sankční seznam EU (firmy)',
+  sanctions_entity: 'Sankční seznamy — firmy (EU · OSN · ČR)',
 };
 // FO: plochý seznam 5 lustrací. PO: skupiny Společnost / Jednající osoba.
 const FO_LOOKUP_TYPES = ['mvcr', 'isir', 'ares', 'sanctions', 'pep'];
@@ -1012,7 +1012,7 @@ function ctxLookupRow(lk) {
   return `<div class="aml-ctx-lk aml-lk-${v.cls}${finding ? ' aml-ctx-lk--click' : ''}"${attrs}>
     <span class="aml-lk-ico aml-ctx-lk-ico">${v.icon}</span>
     <span class="aml-ctx-lk-name">${esc(name)}</span>
-    ${right ? `<span class="aml-ctx-lk-right">${esc(right)}</span>` : ''}
+    ${right ? `<span class="aml-ctx-lk-right">${esc(right)}${sanctionSourceBadge(lk)}</span>` : ''}
   </div>`;
 }
 
@@ -1825,7 +1825,7 @@ function buildRecordData(lookups) {
     deal: { relationType: wiz.data.relation_type, valueBand: wiz.data.deal_value_band, countries: wiz.data.deal_countries, category: wiz.data.purpose_category, purpose: wiz.data.business_purpose },
     source: { type: wiz.data.source_of_funds_type, detail: wiz.data.source_of_funds },
     consistency: wiz.consistency,
-    lookups: (lookups || []).map(l => ({ type: l.lookup_type, status: l.status, matched_against: l.matched_against, checked_at: l.checked_at })),
+    lookups: (lookups || []).map(l => ({ type: l.lookup_type, status: l.status, matched_against: l.matched_against, checked_at: l.checked_at, source: (l.details && l.details.source) || l.source || null })),
     documents: wiz.purposeDocs.filter(d => d.status === 'done').map(d => ({ doc_type: d.doc_type, filename: d.name, sha256: d.sha256, summary: d.summary })),
     risk: { suggestion: wiz.riskSuggestion, finalLevel: wiz.riskDecision.level, justification: wiz.riskDecision.justification, decidedAt: wiz.riskDecision.decided_at },
     declaration: declarationPayload(),
@@ -2063,11 +2063,11 @@ function lookupDetailHTML(lk) {
   if (typeof d === 'string') inner = esc(d);
   else if (d && typeof d === 'object') {
     inner = Object.entries(d)
-      .filter(([, v]) => v != null && v !== '')
+      .filter(([k, v]) => v != null && v !== '' && k !== 'source')   // source → badge, ne raw řádek
       .map(([k, v]) => `<div><span class="aml-lk-dk">${esc(CS_KEYS[k] || k)}:</span> ${esc(String(typeof v === 'object' ? JSON.stringify(v) : v))}</div>`)
       .join('');
   }
-  const matched = lk.matched_against ? `<div><span class="aml-lk-dk">Shoda s:</span> ${esc(lk.matched_against)}</div>` : '';
+  const matched = lk.matched_against ? `<div><span class="aml-lk-dk">Shoda s:</span> ${esc(lk.matched_against)}${sanctionSourceBadge(lk)}</div>` : '';
   return `<div class="aml-lk-detail" id="aml-lk-det-${lk.lookup_type}" hidden>${matched}${inner}</div>`;
 }
 
@@ -2082,6 +2082,14 @@ function fmtCheckedAt(iso) {
   } catch { return ''; }
 }
 
+// Badge, KTERÝ sankční seznam matchnul (EU / OSN / ČR) — jen u shody sankcí.
+const SANCTION_SRC_LABEL = { EU: 'EU', UN: 'OSN', CZ: 'ČR' };
+function sanctionSourceBadge(lk) {
+  const s = lk && lk.status === 'match' && lk.details && lk.details.source;
+  if (!SANCTION_SRC_LABEL[s]) return '';
+  return ` <span class="aml-src-badge aml-src-${String(s).toLowerCase()}">${SANCTION_SRC_LABEL[s]}</span>`;
+}
+
 function lookupRowHTML(type) {
   const lk = wiz.lookups?.find(x => x.lookup_type === type) || null;
   const v = lookupView(lk);
@@ -2091,7 +2099,7 @@ function lookupRowHTML(type) {
   const row = `<div class="aml-lk-row aml-lk-${v.cls}"${act}>
       <span class="aml-lk-ico">${v.icon}</span>
       <span class="aml-lk-label">${esc(LOOKUP_LABELS[type] || type)}${when}</span>
-      <span class="aml-lk-status">${esc(v.text)}${expandable ? ' <span class="aml-lk-caret">▾</span>' : ''}</span>
+      <span class="aml-lk-status">${esc(v.text)}${sanctionSourceBadge(lk)}${expandable ? ' <span class="aml-lk-caret">▾</span>' : ''}</span>
     </div>`;
   return row + (expandable ? lookupDetailHTML(lk) : '');
 }
@@ -2115,7 +2123,7 @@ function renderLustrace(root) {
     <div class="aml-h">Automatická lustrace</div>
     <div class="aml-sub">Prověřujeme klienta ve veřejných rejstřících a sankčních seznamech.</div>
     ${inner}
-    <div class="aml-lk-note">Sankční kontrola: EU (OFAC/OSN připravujeme).</div>
+    <div class="aml-lk-note">Sankční kontrola: konsolidovaný seznam EU, seznam Rady bezpečnosti OSN a národní seznam MZV ČR — denní aktualizace.</div>
     ${rerun}
   </div>`;
   if (wiz.lookupStatus === 'idle') initLustrace(root);

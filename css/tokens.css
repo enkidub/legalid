@@ -41,4 +41,8 @@
   /* ── Výšky ovládacích prvků ── */
   --ctrl-sm: 32px;
   --ctrl-md: 40px;
+
+  /* ── Vertikální layout stránek se seznamem (referenční = Archiv) ── */
+  --page-top: 6px;    /* odsazení mezi headerem a H1 */
+  --page-gap: 16px;   /* mezera H1 → lišta → seznam */
 }

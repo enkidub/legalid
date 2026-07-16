@@ -28,10 +28,7 @@ let _dupIds = new Set();       // klienti s možnou duplicitou
 let _dupGroups = new Map();    // klíč → [id,...]
 
 export function renderKlientiPage() {
-  return `<div class="page"><div class="wrap view-klienti-wrap" id="klientiRoot">
-    <div class="view-lp-head"><h1 class="view-lp-title">Klienti</h1></div>
-    <div class="aml-loading">Načítám…</div>
-  </div></div>`;
+  return `<div class="rl-page rl-page--klienti" id="klientiRoot"><div class="aml-loading">Načítám…</div></div>`;
 }
 
 // Volá se z app.js po vložení stránky do DOM.

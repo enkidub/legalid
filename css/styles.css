@@ -2037,13 +2037,17 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .aml-recap-v { color: var(--ink); font-weight: var(--fw-semibold); text-align: right; }
 .aml-recap-note { font-size: var(--fs-caption); color: var(--ink-fnt); line-height: 1.5; }
 
-/* ── Sdílený sloupcový seznam (Archiv + Klienti) — .rl-* ── */
-.view-archiv-wrap, .view-klienti-wrap { max-width: 940px; margin: 0 auto; padding: 6px var(--pad) 60px; }
+/* ── Sdílený page-shell stránek se seznamem (Archiv, Klienti, budoucí) — .rl-page ── */
+.rl-page { max-width: 940px; margin: 0 auto; padding: var(--page-top) var(--pad) 60px; }
+.rl-page--archiv { --rl-cols: minmax(0,1fr) 124px 92px 116px 108px 32px; }
+.rl-page--klienti { --rl-cols: minmax(0,1fr) 148px 90px 120px 100px 32px; }
+/* zpětná kompatibilita se starými wrappery */
+.view-archiv-wrap, .view-klienti-wrap { max-width: 940px; margin: 0 auto; padding: var(--page-top) var(--pad) 60px; }
 .view-archiv-wrap { --rl-cols: minmax(0,1fr) 124px 92px 116px 108px 32px; }
 .view-klienti-wrap { --rl-cols: minmax(0,1fr) 148px 90px 120px 100px 32px; }
 
 /* Lišta nástrojů */
-.rl-toolbar { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 14px; }
+.rl-toolbar { display: flex; flex-direction: column; gap: 10px; margin: 0 0 var(--page-gap); }
 .rl-seg { display: flex; gap: 4px; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 3px; overflow-x: auto; scrollbar-width: none; }
 .rl-seg::-webkit-scrollbar { display: none; }
 .rl-seg-btn { flex: 0 0 auto; white-space: nowrap; border: none; background: none; cursor: pointer; font-family: var(--sans); font-size: var(--fs-value); color: var(--ink-lt); padding: 6px 12px; border-radius: 8px; transition: background .12s, color .12s; }
@@ -2173,7 +2177,7 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 
 /* ── Plné stránky Klienti / Kniha ── */
 .view-lp { max-width: 720px; margin: 0 auto; padding-top: 6px; }
-.view-lp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.view-lp-head { display: flex; align-items: center; gap: 10px; margin-bottom: var(--page-gap); }
 .view-lp-title { font-family: var(--serif); font-size: var(--fs-h2); font-weight: var(--fw-semibold); color: var(--navy); }
 
 /* ════════════════════ LANDING ════════════════════ */

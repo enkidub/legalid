@@ -19,7 +19,7 @@ let _limit = 50;
 const PAGE = 50;
 
 export function renderArchiv() {
-  return `<div class="view-archiv" id="archivRoot"><div class="aml-loading">Načítám archiv…</div></div>`;
+  return `<div class="rl-page rl-page--archiv" id="archivRoot"><div class="aml-loading">Načítám archiv…</div></div>`;
 }
 
 export function initArchiv() {
@@ -68,17 +68,16 @@ function onClick(root, e) {
 }
 
 async function loadArchiv(root) {
-  root.innerHTML = `<div class="view-archiv-wrap"><div class="aml-loading">Načítám archiv…</div></div>`;
+  root.innerHTML = `<div class="aml-loading">Načítám archiv…</div>`;
   let error = false;
   try { const r = await apiAmlListCases(); _cases = r.cases || []; }
   catch { _cases = []; error = true; }
   if (error) {
-    root.innerHTML = `<div class="view-archiv-wrap">
-      <div class="view-lp-head"><div class="view-lp-title">Archiv AML kontrol</div></div>
+    root.innerHTML = `<div class="view-lp-head"><div class="view-lp-title">Archiv AML kontrol</div></div>
       <div class="aml-card"><div class="aml-src-state aml-src-state--err">
         <span>Archiv se nepodařilo načíst.</span>
         <button class="aml-btn aml-btn-sm" data-act="archiv-retry">Zkusit znovu</button>
-      </div></div></div>`;
+      </div></div>`;
     return;
   }
   _limit = PAGE;
@@ -135,8 +134,7 @@ function renderShell(root) {
     .map(([k, l]) => `<button class="rl-seg-btn${_filter === k ? ' is-on' : ''}" data-act="set-filter" data-filter="${k}">${l} <span class="rl-seg-n">${n[k]}</span></button>`).join('');
   const sortOpts = [['newest', 'Nejnovější'], ['review', 'Revize nejdříve'], ['risk', 'Podle rizika']]
     .map(([v, l]) => `<option value="${v}"${_sort === v ? ' selected' : ''}>${l}</option>`).join('');
-  root.innerHTML = `<div class="view-archiv-wrap">
-    <div class="view-lp-head">
+  root.innerHTML = `<div class="view-lp-head">
       <div class="view-lp-title">Archiv AML kontrol</div>
       <button class="aml-btn aml-btn-sm" data-act="new-check" style="margin-left:auto">Nová kontrola</button>
     </div>
@@ -149,8 +147,7 @@ function renderShell(root) {
     </div>
     ${headHTML()}
     <div class="rl-list" id="archList"></div>
-    <div class="rl-foot" id="archFoot"></div>
-  </div>`;
+    <div class="rl-foot" id="archFoot"></div>`;
 }
 
 function headHTML() {

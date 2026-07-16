@@ -9,9 +9,9 @@ import { initExitIntentDemo } from '../demo/demo.js';
 const EXIT_INTENT_DEMO = false;
 
 // Skok na sekci landingu z hlavičky/patičky/hamburgeru (i z jiné routy).
-// anchor: 'howto' → .lnd-howto | 'pricing' → #lnd-pricing
+// anchor: 'howto' → .lnd-howto | 'pricing'/'cenik' → #cenik (Pilotní přístup)
 export function gotoLandingSection(anchor) {
-  const sel = anchor === 'pricing' ? '#lnd-pricing' : '.lnd-howto';
+  const sel = (anchor === 'pricing' || anchor === 'cenik') ? '#cenik' : '.lnd-howto';
   const doScroll = () => {
     const el = document.querySelector(sel);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -38,18 +38,20 @@ export function renderLanding() {
         <button class="lnd-btn lnd-btn-primary" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
         <button class="lnd-btn lnd-btn-ghost" onclick="openDemoModal()">Domluvit ukázku</button>
       </div>
-      <div class="lnd-hero-trust">Záznam s náležitostmi § 8 a násl. · Archiv dle § 16 · Lustrace s časovým razítkem</div>
-      <div class="lnd-hero-ai">AI rozpozná doklad · 8 kontrol v jedné lustraci · AML záznam k archivaci</div>
+      <div class="lnd-hero-trust">Záznam dle § 8 a násl. · 8 kontrol v jedné lustraci · AI čte doklady i dokumenty · Archiv dle § 16</div>
 
       <!-- Product proof — rámeček ve stylu prohlížečového okna.
-           Autoplay je řízen z initLanding() (respektuje prefers-reduced-motion);
-           při nepřehrání zůstane poster. -->
+           Click-to-play (bez autoplay/loop): přes poster velký play button; klik →
+           přehrání s native controls; po skončení návrat na poster. Ovládá initLanding(). -->
       <div class="lnd-proof">
         <div class="lnd-proof-bar"><span></span><span></span><span></span></div>
         <div class="lnd-proof-media">
-          <video id="lndProofVideo" src="/assets/landing/wizard-demo.mp4" loop muted playsinline preload="metadata"
-                 poster="/assets/landing/wizard-demo.png"
+          <video id="lndProofVideo" src="/assets/landing/wizard-demo.mp4" muted playsinline preload="metadata"
+                 poster="/assets/landing/wizard-demo-poster.png"
                  aria-label="Ukázka AML wizardu Legalid — vyplnění údajů klienta a lustrace v rejstřících"></video>
+          <button class="lnd-proof-play" id="lndProofPlay" type="button" aria-label="Přehrát ukázku">
+            <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+          </button>
         </div>
       </div>
     </div>
@@ -144,28 +146,64 @@ export function renderLanding() {
     </div>
   </section>
 
-  <!-- PRÁVNÍ UKOTVENÍ — mapování na § zákona č. 253/2008 Sb. -->
+  <!-- PRÁVNÍ UKOTVENÍ — dvousloupcový layout (intro vlevo, § karty vpravo) -->
   <section class="lnd-section lnd-section--alt">
     <div class="lnd-wrap">
-      <div class="lnd-section-label">Právní ukotvení</div>
-      <h2 class="lnd-h2">Postaveno na zákoně č. 253/2008 Sb.</h2>
-      <p class="lnd-lead">Každý krok kontroly odpovídá konkrétní zákonné povinnosti.</p>
-      <div class="lnd-legal">
-        <div class="lnd-lcard">
-          <div class="lnd-lcard-tag">§ 7–8 · Identifikace klienta</div>
-          <div class="lnd-lcard-text">Povinnost identifikace při obchodu nad 1 000 EUR i u podezřelého obchodu. Legalid vede identifikaci krok za krokem a vytvoří záznam se všemi náležitostmi.</div>
+      <div class="lnd-legal-grid">
+        <div class="lnd-legal-intro">
+          <div class="lnd-section-label">Právní ukotvení</div>
+          <h2 class="lnd-h2">Postaveno přesně na zákoně <em class="lnd-gold-i">253/2008 Sb.</em></h2>
+          <p class="lnd-lead">Každý výstup Legalid odpovídá konkrétním paragrafům AML zákona — od identifikace přes hodnocení rizika po archivaci. Nemusíte hlídat, co má záznam obsahovat.</p>
         </div>
-        <div class="lnd-lcard">
-          <div class="lnd-lcard-tag">§ 9 · Kontrola klienta</div>
-          <div class="lnd-lcard-text">Zjištění účelu obchodu, přezkoumání zdrojů prostředků a průběžné sledování obchodního vztahu. V Legalid včetně AI kontroly konzistence s doloženými dokumenty.</div>
+        <div class="lnd-legal-cards">
+          <div class="lnd-lcard">
+            <span class="lnd-lcard-ico" aria-hidden="true">§</span>
+            <div class="lnd-lcard-body">
+              <div class="lnd-lcard-tag">§ 7–8 · Identifikace klienta</div>
+              <div class="lnd-lcard-text">Povinnost identifikace při obchodu nad 1 000 EUR i u podezřelého obchodu. Legalid vede identifikaci krok za krokem a vytvoří záznam se všemi náležitostmi.</div>
+            </div>
+          </div>
+          <div class="lnd-lcard">
+            <span class="lnd-lcard-ico" aria-hidden="true">§</span>
+            <div class="lnd-lcard-body">
+              <div class="lnd-lcard-tag">§ 9 · Kontrola klienta</div>
+              <div class="lnd-lcard-text">Zjištění účelu obchodu, přezkoumání zdrojů prostředků a průběžné sledování obchodního vztahu. V Legalid včetně AI kontroly konzistence s doloženými dokumenty.</div>
+            </div>
+          </div>
+          <div class="lnd-lcard">
+            <span class="lnd-lcard-ico" aria-hidden="true">§</span>
+            <div class="lnd-lcard-body">
+              <div class="lnd-lcard-tag">§ 16 · Uchovávání záznamů</div>
+              <div class="lnd-lcard-text">Údaje a doklady o obchodech se uchovávají 10 let. Legalid generuje PDF záznam s časovými razítky a hashem pro důkazní integritu.</div>
+            </div>
+          </div>
+          <div class="lnd-lcard">
+            <span class="lnd-lcard-ico" aria-hidden="true">§</span>
+            <div class="lnd-lcard-body">
+              <div class="lnd-lcard-tag">§ 21 a § 21a · Vnitřní zásady a hodnocení rizik</div>
+              <div class="lnd-lcard-text">Povinná osoba uplatňuje systém vnitřních zásad a písemné hodnocení rizik. Záznamy z Legalid slouží jako podklad rizikově orientovaného přístupu.</div>
+            </div>
+          </div>
         </div>
-        <div class="lnd-lcard">
-          <div class="lnd-lcard-tag">§ 16 · Uchovávání záznamů</div>
-          <div class="lnd-lcard-text">Údaje a doklady o obchodech se uchovávají 10 let. Legalid generuje PDF záznam s časovými razítky a hashem pro důkazní integritu.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- UKÁZKA ZÁZNAMU — vygenerovaná z reálné pdf-lib šablony (scripts/render-zaznam-ukazka.mjs) -->
+  <section class="lnd-section">
+    <div class="lnd-wrap">
+      <div class="lnd-zaznam">
+        <div class="lnd-zaznam-media">
+          <img src="/assets/landing/zaznam-ukazka.png" alt="Ukázka první strany AML záznamu z Legalid: hlavička s číslem kontroly, identifikace klienta dle § 8, výsledky lustrací s časovými razítky, hodnocení rizika a kryptografický otisk SHA-256." loading="lazy">
         </div>
-        <div class="lnd-lcard">
-          <div class="lnd-lcard-tag">§ 21 a § 21a · Vnitřní zásady a hodnocení rizik</div>
-          <div class="lnd-lcard-text">Povinná osoba uplatňuje systém vnitřních zásad a písemné hodnocení rizik. Záznamy z Legalid slouží jako podklad rizikově orientovaného přístupu.</div>
+        <div class="lnd-zaznam-text">
+          <div class="lnd-section-label">Výstup</div>
+          <h2 class="lnd-h2">Takto vypadá váš AML záznam</h2>
+          <ul class="lnd-zaznam-feat">
+            <li><span class="lnd-zaznam-tick">✓</span> Náležitosti § 8 a násl.</li>
+            <li><span class="lnd-zaznam-tick">✓</span> Časová razítka všech lustrací</li>
+            <li><span class="lnd-zaznam-tick">✓</span> Kryptografický otisk SHA-256</li>
+          </ul>
         </div>
       </div>
     </div>
@@ -224,6 +262,18 @@ export function renderLanding() {
   </section>
   -->
 
+  <!-- PILOTNÍ PŘÍSTUP (cíl kotvy #cenik) -->
+  <section class="lnd-section" id="cenik">
+    <div class="lnd-wrap lnd-wrap--narrow">
+      <div class="lnd-pilot">
+        <div class="lnd-pilot-eyebrow">Pilotní přístup</div>
+        <h2 class="lnd-pilot-title">Pilotní přístup zdarma</h2>
+        <p class="lnd-pilot-text">Prvních 30 povinných osob získává plný přístup zdarma výměnou za zpětnou vazbu — a garanci zaváděcí ceny po spuštění ceníku.</p>
+        <button class="lnd-btn lnd-btn-primary" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
+      </div>
+    </div>
+  </section>
+
   <!-- DEMO CTA sekce (Blok B) -->
   <section class="lnd-section lnd-demo">
     <div class="lnd-wrap lnd-wrap--narrow">
@@ -249,14 +299,28 @@ let _stickyIo = null;
 
 // Volá se po mountu landingu (app.js). Sticky CTA se odhalí, až hero opustí viewport.
 export function initLanding() {
-  // Product-proof video: přehraj jen když uživatel nemá prefers-reduced-motion.
-  // Jinak zůstane poster (poslední frame wizardu).
+  // Product-proof video: CLICK-TO-PLAY. Nic se nehýbe samo (žádný autoplay/loop),
+  // takže prefers-reduced-motion už není blokující. Poster + play button; klik →
+  // přehrání s native controls; po skončení návrat na poster.
   const video = document.getElementById('lndProofVideo');
-  const reduce = typeof window.matchMedia === 'function'
-    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (video && !reduce) {
-    const p = video.play();
-    if (p && typeof p.catch === 'function') p.catch(() => {});   // ignoruj block autoplay
+  const playBtn = document.getElementById('lndProofPlay');
+  if (video && playBtn) {
+    const showPoster = () => {
+      video.controls = false;
+      video.pause();
+      try { video.currentTime = 0; } catch {}
+      video.load();                       // obnoví poster
+      playBtn.style.display = '';
+      video.classList.remove('is-playing');
+    };
+    playBtn.addEventListener('click', () => {
+      playBtn.style.display = 'none';
+      video.controls = true;
+      video.classList.add('is-playing');
+      const p = video.play();
+      if (p && typeof p.catch === 'function') p.catch(() => { showPoster(); });
+    });
+    video.addEventListener('ended', showPoster);
   }
 
   initExitIntentDemo(EXIT_INTENT_DEMO);   // default false → žádný listener

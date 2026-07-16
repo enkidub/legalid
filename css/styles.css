@@ -2145,6 +2145,64 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .lnd-lcard-tag { font-family: var(--serif); font-size: 17px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
 .lnd-lcard-text { font-size: 14px; color: var(--ink-mid); line-height: 1.6; }
 
+/* ── Header CTA „Vyzkoušet zdarma" (primární, vedle Přihlásit) ── */
+.header-try-btn {
+  font-size: 12px; font-weight: 600; color: #fff; background: var(--navy);
+  border: 1.5px solid var(--navy); cursor: pointer; font-family: var(--sans);
+  padding: 6px 14px; border-radius: var(--r); transition: background .14s, border-color .14s; white-space: nowrap;
+}
+.header-try-btn:hover { background: var(--navy-h); border-color: var(--navy-h); }
+
+/* ── Video click-to-play — play button přes poster ── */
+.lnd-proof-media { position: relative; }
+.lnd-proof-play {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 72px; height: 72px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 30px rgba(11,25,41,.32); transition: transform .16s, background .16s;
+}
+.lnd-proof-play svg { margin-left: 3px; }
+.lnd-proof-play:hover { background: var(--navy-h); transform: translate(-50%, -50%) scale(1.06); }
+.lnd-proof-media video.is-playing { background: #000; }
+
+/* ── Právní ukotvení — dvousloupcový layout ── */
+.lnd-legal-grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: clamp(28px, 4vw, 56px); align-items: start; }
+.lnd-legal-intro { position: sticky; top: 84px; }
+.lnd-legal-intro .lnd-h2 { margin-bottom: 16px; }
+.lnd-gold-i { font-style: italic; color: var(--gold); }
+.lnd-legal-cards { display: flex; flex-direction: column; gap: 14px; }
+.lnd-legal-cards .lnd-lcard { display: flex; align-items: flex-start; gap: 16px; border-left: 1px solid #e7ddca; }
+.lnd-lcard-ico {
+  flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; background: var(--gold-p);
+  color: var(--gold); font-family: var(--serif); font-size: 24px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.lnd-lcard-body { min-width: 0; }
+.lnd-legal-cards .lnd-lcard-tag { margin-bottom: 6px; }
+
+/* ── Ukázka záznamu ── */
+.lnd-zaznam { display: grid; grid-template-columns: 1fr 0.8fr; gap: clamp(28px, 4vw, 56px); align-items: center; }
+.lnd-zaznam-media { perspective: 1200px; }
+.lnd-zaznam-media img {
+  display: block; width: 100%; height: auto; border-radius: 10px;
+  border: 1px solid var(--rule); box-shadow: 0 24px 60px rgba(11,25,41,.18);
+  transform: rotate(-1.6deg); transition: transform .3s;
+}
+.lnd-zaznam-media img:hover { transform: rotate(0deg); }
+.lnd-zaznam-text .lnd-h2 { margin-bottom: 18px; }
+.lnd-zaznam-feat { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.lnd-zaznam-feat li { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--ink); }
+.lnd-zaznam-tick { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: #eefaf2; color: #1a8a4a; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+/* ── Pilotní přístup (box) ── */
+.lnd-pilot {
+  background: var(--gold-p); border: 1.5px solid var(--gold); border-radius: 18px;
+  padding: clamp(28px, 4vw, 44px); text-align: center;
+}
+.lnd-pilot-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+.lnd-pilot-title { font-family: var(--serif); font-size: clamp(22px, 3vw, 30px); font-weight: 600; color: var(--navy); margin: 0 0 12px; }
+.lnd-pilot-text { font-size: 15px; color: var(--ink-mid); line-height: 1.7; max-width: 560px; margin: 0 auto 22px; }
+
 /* Jak to funguje — kroky */
 .lnd-steps { list-style: none; display: flex; flex-direction: column; gap: 18px; max-width: 680px; }
 .lnd-step { display: flex; gap: 16px; align-items: flex-start; }
@@ -2212,9 +2270,20 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 @media (max-width: 900px) {
   .lnd-grid { grid-template-columns: repeat(2, 1fr); }
 }
+/* Tablet: právní ukotvení + ukázka záznamu na jeden sloupec (text nad kartami/obrázkem). */
+@media (max-width: 900px) {
+  .lnd-legal-grid, .lnd-zaznam { grid-template-columns: 1fr; gap: 26px; }
+  .lnd-legal-intro { position: static; }
+}
 /* Mobil: vše na jeden sloupec, žádný horizontální scroll. */
 @media (max-width: 600px) {
   .lnd-grid, .lnd-legal { grid-template-columns: 1fr; }
+  .lnd-zaznam-media img { transform: none; }   /* mobil bez rotace */
+  .lnd-proof-play { width: 60px; height: 60px; }
+}
+/* Malý mobil: v headeru jen „Vyzkoušet zdarma", „Přihlásit" je v hamburgeru (stejný modal). */
+@media (max-width: 480px) {
+  #headerLoginBtn { display: none !important; }
 }
 
 @media (max-width: 720px) {

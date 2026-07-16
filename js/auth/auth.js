@@ -134,11 +134,13 @@ export async function checkSession() {
     loggedIn = !!data.loggedIn;
     email = data.email || '';
     const loginBtn   = document.getElementById('headerLoginBtn');
+    const tryBtn     = document.getElementById('headerTryBtn');
     const emailEl    = document.getElementById('headerUserEmail');
     const logoutBtn  = document.getElementById('headerLogoutBtn');
     const navItem    = document.getElementById('navLoginItem');
     if (data.loggedIn) {
       if (loginBtn)  loginBtn.style.display  = 'none';
+      if (tryBtn)    tryBtn.style.display    = 'none';
       if (emailEl)   { emailEl.textContent = data.email; emailEl.style.display = ''; }
       if (logoutBtn) logoutBtn.style.display = '';
       if (navItem) {
@@ -148,6 +150,7 @@ export async function checkSession() {
       }
     } else {
       if (loginBtn)  loginBtn.style.display  = '';
+      if (tryBtn)    tryBtn.style.display    = '';
       if (emailEl)   emailEl.style.display   = 'none';
       if (logoutBtn) logoutBtn.style.display = 'none';
       if (navItem) {

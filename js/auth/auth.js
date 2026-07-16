@@ -171,8 +171,8 @@ export async function checkSession() {
       if (emailEl)   emailEl.style.display   = 'none';
       if (logoutBtn) logoutBtn.style.display = 'none';
       if (navItem) {
-        navItem.querySelector('.nav-item-label').textContent = 'Upgradovat na Pro';
-        navItem.querySelector('.nav-item-sub').textContent   = 'Vyzkoušet zdarma 30 dní →';
+        navItem.querySelector('.nav-item-label').textContent = 'Vyzkoušet zdarma';
+        navItem.querySelector('.nav-item-sub').textContent   = 'Přihlásit se / registrovat →';
         navItem.onclick = () => { closeHamburger(); openRegistrationModal(); };
       }
     }

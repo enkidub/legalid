@@ -85,27 +85,32 @@ async function loadClients(root) {
   renderList(root);
 }
 
-// ── Duplicity (jen čteme dedup pravidla: rč → doklad → IČO → jméno+narození) ──
-function dupKey(c) {
-  if (c.rc) return 'rc:' + norm(c.rc);
-  if (c.doc_number) return 'doc:' + norm(c.doc_number);
-  if (c.ico) return 'ico:' + norm(c.ico);
-  const nm = norm([c.name, c.surname].filter(Boolean).join(' '));
-  if (nm && c.birth_date) return 'nb:' + nm + '|' + c.birth_date;
-  return null;
+// ── Duplicity (jen ČTEME dedup pravidla: rč / doklad / IČO / jméno+narození) ──
+// Dva klienti jsou duplicitní, shodují-li se v LIBOVOLNÉM z těch znaků — proto
+// union-find, ne jediný klíč (jinak by se minula shoda přes různé identifikátory).
+function sameIdentity(a, b) {
+  if (a.rc && b.rc && norm(a.rc) === norm(b.rc)) return true;
+  if (a.doc_number && b.doc_number && norm(a.doc_number) === norm(b.doc_number)) return true;
+  if (a.ico && b.ico && norm(a.ico) === norm(b.ico)) return true;
+  const na = norm([a.name, a.surname].filter(Boolean).join(' '));
+  const nb = norm([b.name, b.surname].filter(Boolean).join(' '));
+  if (na && na === nb && a.birth_date && a.birth_date === b.birth_date) return true;
+  return false;
 }
 function computeDuplicates() {
   _dupIds = new Set(); _dupGroups = new Map();
+  const parent = {};
+  const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  _clients.forEach(c => { parent[c.id] = c.id; });
+  for (let i = 0; i < _clients.length; i++) {
+    for (let j = i + 1; j < _clients.length; j++) {
+      if (sameIdentity(_clients[i], _clients[j])) parent[find(_clients[i].id)] = find(_clients[j].id);
+    }
+  }
   const groups = new Map();
-  for (const c of _clients) {
-    const k = dupKey(c);
-    if (!k) continue;
-    if (!groups.has(k)) groups.set(k, []);
-    groups.get(k).push(c.id);
-  }
-  for (const [k, ids] of groups) {
-    if (ids.length > 1) { _dupGroups.set(k, ids); ids.forEach(id => _dupIds.add(id)); }
-  }
+  for (const c of _clients) { const r = find(c.id); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(c.id); }
+  let gi = 0;
+  for (const ids of groups.values()) { if (ids.length > 1) { _dupGroups.set('g' + (gi++), ids); ids.forEach(id => _dupIds.add(id)); } }
 }
 function groupOf(id) {
   for (const ids of _dupGroups.values()) if (ids.includes(id)) return ids;

@@ -1080,8 +1080,7 @@ function ctxLookupRow(lk) {
   else if (lk.status === 'match') right = 'SHODA';
   else if (lk.status === 'manual') right = 'ověřte ručně';
   else if (lk.status === 'error') right = 'nedokončeno';
-  else if (lk.status === 'clean') right = cleanText(lk.lookup_type);
-  // stejné formulace jako v kroku Lustrace a v PDF
+  // clean → jen ikona+název (bez textu vpravo, šetří místo)
   const finding = ['match', 'warning', 'manual'].includes(lk.status);
   const attrs = finding ? ` data-act="ctx-lookup" data-type="${lk.lookup_type}" role="button" tabindex="0"` : '';
   return `<div class="aml-ctx-lk aml-lk-${v.cls}${finding ? ' aml-ctx-lk--click' : ''}"${attrs}>

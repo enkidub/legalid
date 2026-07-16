@@ -38,7 +38,7 @@ export function renderLanding() {
         <button class="lnd-btn lnd-btn-primary" onclick="openRegistrationModal()">Vyzkoušet zdarma</button>
         <button class="lnd-btn lnd-btn-ghost" onclick="openDemoModal()">Domluvit ukázku</button>
       </div>
-      <div class="lnd-hero-trust">Záznam dle § 8 a násl. · 8 kontrol v jedné lustraci · AI čte doklady i dokumenty · Archiv dle § 16</div>
+      <div class="lnd-hero-trust">Záznam dle § 8 a násl. · 8 kontrol v jedné lustraci · doklady i dokumenty se čtou samy · Archiv dle § 16</div>
 
       <!-- Product proof — rámeček ve stylu prohlížečového okna.
            Click-to-play (bez autoplay/loop): přes poster velký play button; klik →
@@ -129,19 +129,39 @@ export function renderLanding() {
     </div>
   </section>
 
-  <!-- JAK TO FUNGUJE (jeden centrovaný sloupec, AI features integrované do kroků) -->
+  <!-- JAK TO FUNGUJE — horizontální timeline (5 kroků) -->
   <section class="lnd-section">
     <div class="lnd-wrap">
       <div class="lnd-howto">
         <div class="lnd-section-label">Jak to funguje</div>
         <h2 class="lnd-h2">5 kroků, cca 3 minuty na klienta</h2>
-        <ul class="lnd-steps">
-          <li class="lnd-step"><span class="lnd-step-num">1</span><div><div class="lnd-step-title">Identifikace klienta</div><div class="lnd-step-text">Naskenujte doklad, nahrajte soubor nebo zadejte údaje ručně. Můžete i vybrat klienta z předchozích AML kontrol.</div><div class="lnd-step-ai">✨ AI rozpozná údaje z dokladu za 3 vteřiny</div></div></li>
-          <li class="lnd-step"><span class="lnd-step-num">2</span><div><div class="lnd-step-title">Lustrace v rejstřících</div><div class="lnd-step-text">Automatická kontrola v MVČR, ISIR, ARES, sankčních seznamech EU (osoby i společnosti) a v globální PEP databázi (OpenSanctions).</div><div class="lnd-step-ai">✨ Fuzzy matching jmen i přes překlepy a přepisy</div></div></li>
-          <li class="lnd-step"><span class="lnd-step-num">3</span><div><div class="lnd-step-title">Účel obchodu</div><div class="lnd-step-text">Popíšete, co pro klienta děláte.</div><div class="lnd-step-ai">✨ AI přečte podpůrné dokumenty a ověří konzistenci se zdrojem prostředků</div></div></li>
-          <li class="lnd-step"><span class="lnd-step-num">4</span><div><div class="lnd-step-title">Riziko</div><div class="lnd-step-text">AI navrhne rizikový profil (nízké / střední / vysoké). Vy rozhodujete závazně.</div></div></li>
-          <li class="lnd-step"><span class="lnd-step-num">5</span><div><div class="lnd-step-title">Záznam k archivaci</div><div class="lnd-step-text">Vygenerovaný PDF AML záznam si stáhnete a uložíte do vlastní evidence. PDF záznam s náležitostmi podle § 8 a násl. zákona č. 253/2008 Sb.</div></div></li>
-        </ul>
+        <ol class="lnd-timeline">
+          <li class="lnd-tl-step">
+            <div class="lnd-tl-num">1</div>
+            <div class="lnd-tl-title">Údaje klienta</div>
+            <div class="lnd-tl-text">Vyfoťte doklad, nahrajte soubor nebo vyberte existujícího klienta. Údaje se vyplní samy během vteřin.</div>
+          </li>
+          <li class="lnd-tl-step">
+            <div class="lnd-tl-num">2</div>
+            <div class="lnd-tl-title">Lustrace</div>
+            <div class="lnd-tl-text">Jedno kliknutí spustí 8 kontrol v rejstřících a sankčních seznamech. Každá s časovým razítkem.</div>
+          </li>
+          <li class="lnd-tl-step">
+            <div class="lnd-tl-num">3</div>
+            <div class="lnd-tl-title">Účel obchodu</div>
+            <div class="lnd-tl-text">Popíšete obchod a zdroj prostředků. Doložené dokumenty se automaticky porovnají s deklarací.</div>
+          </li>
+          <li class="lnd-tl-step">
+            <div class="lnd-tl-num">4</div>
+            <div class="lnd-tl-title">Riziko</div>
+            <div class="lnd-tl-text">Systém navrhne rizikový profil s odůvodněním. Závazně rozhodujete vy.</div>
+          </li>
+          <li class="lnd-tl-step">
+            <div class="lnd-tl-num">5</div>
+            <div class="lnd-tl-title">Záznam</div>
+            <div class="lnd-tl-text">PDF záznam s náležitostmi § 8 a násl. stáhnete a uložíte do své evidence.</div>
+          </li>
+        </ol>
       </div>
     </div>
   </section>

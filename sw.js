@@ -1,4 +1,4 @@
-const CACHE = 'legalid-v105'; // ← BUMP při každém deployi
+const CACHE = 'legalid-v106'; // ← BUMP při každém deployi
 
 const APP_SHELL = [
   '/',

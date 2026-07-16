@@ -147,13 +147,14 @@ function renderShell(root) {
         <select class="rl-sort" id="archSort" aria-label="Řazení">${sortOpts}</select>
       </div>
     </div>
+    ${headHTML()}
     <div class="rl-list" id="archList"></div>
     <div class="rl-foot" id="archFoot"></div>
   </div>`;
 }
 
 function headHTML() {
-  return `<div class="rl-head">
+  return `<div class="rl-head" id="archHead">
     <div class="rl-c1">Klient</div><div class="rl-c2">Stav</div><div class="rl-c3">Riziko</div>
     <div class="rl-c4">Revize</div><div class="rl-act"></div><div class="rl-more"></div>
   </div>`;
@@ -166,16 +167,20 @@ function renderList(root) {
   if (!listEl || !footEl) return;
 
   const filtered = sortCases(_cases.filter(c => statusMatchesFilter(c, _filter) && matchesQuery(c, _query)));
+  const head = root.querySelector('#archHead');
   if (!_cases.filter(isVisible).length) {
+    if (head) head.style.display = 'none';
     listEl.innerHTML = `<div class="rl-empty">Zatím nemáte žádné kontroly. Rozpracované i dokončené kontroly se objeví zde.</div>`;
     footEl.innerHTML = ''; return;
   }
   if (!filtered.length) {
+    if (head) head.style.display = 'none';
     listEl.innerHTML = `<div class="rl-empty">Žádné záznamy neodpovídají hledání.</div>`;
     footEl.innerHTML = ''; return;
   }
+  if (head) head.style.display = '';
   const shown = filtered.slice(0, _limit);
-  listEl.innerHTML = headHTML() + shown.map(rowHTML).join('');
+  listEl.innerHTML = shown.map(rowHTML).join('');
 
   const emptyCount = _cases.filter(isEmptyDraft).length;
   const more = filtered.length > _limit

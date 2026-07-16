@@ -147,13 +147,14 @@ function renderShell(root) {
         <input class="rl-search" id="klientiSearch" type="search" placeholder="Hledat jméno, IČO, doklad…" value="${esc(_query)}">
       </div>
     </div>
+    ${headHTML()}
     <div class="rl-list" id="klientiList"></div>
     <div class="rl-foot" id="klientiFoot"></div>`;
   renderBanner(root);
 }
 
 function headHTML() {
-  return `<div class="rl-head">
+  return `<div class="rl-head" id="klientiHead">
     <div class="rl-c1">Klient</div><div class="rl-c2">Poslední kontrola</div><div class="rl-c3">Riziko</div>
     <div class="rl-c4">Revalidace</div><div class="rl-act"></div><div class="rl-more"></div>
   </div>`;
@@ -164,16 +165,20 @@ function renderList(root) {
   const listEl = root.querySelector('#klientiList');
   const footEl = root.querySelector('#klientiFoot');
   if (!listEl || !footEl) return;
+  const head = root.querySelector('#klientiHead');
   if (!_clients.length) {
+    if (head) head.style.display = 'none';
     listEl.innerHTML = `<div class="rl-empty">Zatím nemáte uložené žádné klienty.</div>`;
     footEl.innerHTML = ''; return;
   }
   const filtered = _clients.filter(c => matchesFilter(c) && matchesQuery(c));
   if (!filtered.length) {
+    if (head) head.style.display = 'none';
     listEl.innerHTML = `<div class="rl-empty">Žádné záznamy neodpovídají hledání.</div>`;
     footEl.innerHTML = ''; return;
   }
-  listEl.innerHTML = headHTML() + filtered.map(rowHTML).join('');
+  if (head) head.style.display = '';
+  listEl.innerHTML = filtered.map(rowHTML).join('');
   footEl.innerHTML = `<div class="rl-foot-row"><span class="rl-foot-count">${filtered.length} klientů</span></div>`;
 }
 

@@ -252,6 +252,16 @@ function safeParse(s) { try { return s ? JSON.parse(s) : null; } catch { return 
 // Hodnota obchodu je VŽDY v EUR — explicitní label pro AI (žádné pásmo/kódy, žádné Kč).
 const DEAL_VALUE_EUR = { do_1k: 'do 1 000 EUR', '1k_15k': '1 000 – 15 000 EUR', '15k_plus': '15 000 EUR a více' };
 
+// Jméno na normální kapitalizaci — jen když je CELÉ velkými (typicky OCR z dokladu).
+// Jinak nech být (nerozbít „von/de/van" apod.).
+function titleCaseIfUpper(s) {
+  if (!s) return s;
+  if (s === s.toUpperCase() && s !== s.toLowerCase()) {
+    return s.toLowerCase().replace(/(^|[\s\-'’.])(\p{L})/gu, (m, p, ch) => p + ch.toUpperCase());
+  }
+  return s;
+}
+
 // Post-check AI výstupu: odstraní odkazy na paragrafy. Právní odkazy smí být jen ve
 // statických ověřených textech aplikace — v AI výstupu nikdy. Závorku s § maže celou.
 function stripLegalRefs(s) {
@@ -835,6 +845,35 @@ export default {
       const payload = token ? await verifyJWT(token, env.JWT_SECRET) : null;
       if (!payload || payload.email !== 'kuba.houser@gmail.com') return json({ error: 'forbidden' }, 403);
       return json(await sanctionsSelftest(env));
+    }
+
+    // POST /api/admin/clients/normalize-names — zpětná normalizace CELÝCH VELKÝCH jmen
+    // (Title Case) v clients i aml_cases. Idempotentní. Vrací počty změn.
+    if (url.pathname === '/api/admin/clients/normalize-names') {
+      const token = getSessionToken(request);
+      const payload = token ? await verifyJWT(token, env.JWT_SECRET) : null;
+      if (!payload || payload.email !== 'kuba.houser@gmail.com') return json({ error: 'forbidden' }, 403);
+      const now = new Date().toISOString();
+      let clientsFixed = 0, casesFixed = 0;
+      const { results: cls } = await env.DB.prepare('SELECT id, name, surname, company_name FROM clients').all();
+      for (const c of (cls || [])) {
+        const nn = titleCaseIfUpper(c.name), ns = titleCaseIfUpper(c.surname), nc = titleCaseIfUpper(c.company_name);
+        if (nn !== c.name || ns !== c.surname || nc !== c.company_name) {
+          await env.DB.prepare('UPDATE clients SET name = ?, surname = ?, company_name = ?, updated_at = ? WHERE id = ?')
+            .bind(nn ?? null, ns ?? null, nc ?? null, now, c.id).run();
+          clientsFixed++;
+        }
+      }
+      const { results: cases } = await env.DB.prepare('SELECT id, client_name, client_surname, company_name FROM aml_cases').all();
+      for (const c of (cases || [])) {
+        const nn = titleCaseIfUpper(c.client_name), ns = titleCaseIfUpper(c.client_surname), nc = titleCaseIfUpper(c.company_name);
+        if (nn !== c.client_name || ns !== c.client_surname || nc !== c.company_name) {
+          await env.DB.prepare('UPDATE aml_cases SET client_name = ?, client_surname = ?, company_name = ? WHERE id = ?')
+            .bind(nn ?? null, ns ?? null, nc ?? null, c.id).run();
+          casesFixed++;
+        }
+      }
+      return json({ ok: true, clients_fixed: clientsFixed, cases_fixed: casesFixed });
     }
 
     // GET/POST /api/admin/aml/client-link-audit — audit vazby Archiv↔Klienti.
@@ -1480,10 +1519,10 @@ export default {
               `SELECT * FROM clients WHERE user_id = ? AND (
                  name LIKE ? OR surname LIKE ? OR company_name LIKE ? OR ico LIKE ? OR doc_number LIKE ?
                  OR (COALESCE(name,'') || ' ' || COALESCE(surname,'')) LIKE ?)
-               ORDER BY updated_at DESC, created_at DESC LIMIT 50`
+               ORDER BY updated_at DESC, created_at DESC LIMIT 500`
             ).bind(userId, like, like, like, like, like, like).all();
           } else {
-            rows = await env.DB.prepare('SELECT * FROM clients WHERE user_id = ? ORDER BY updated_at DESC, created_at DESC LIMIT 50').bind(userId).all();
+            rows = await env.DB.prepare('SELECT * FROM clients WHERE user_id = ? ORDER BY updated_at DESC, created_at DESC LIMIT 500').bind(userId).all();
           }
           return json({ clients: rows.results || [] });
         }
@@ -1552,12 +1591,44 @@ export default {
           return json({ client: row });
         }
         if (request.method === 'DELETE') {
+          // § 16: smaže se JEN karta klienta. Navázané AML záznamy v Archivu zůstávají
+          // (odpojíme je — client_id = NULL), aby doložitelnost kontroly zůstala zachována.
           const { results: cases } = await env.DB.prepare('SELECT id FROM aml_cases WHERE client_id = ? AND user_id = ?').bind(id, userId).all();
-          if ((cases || []).length) return json({ error: 'has_aml_cases', message: 'Klienta nelze smazat — má navázané AML kontroly.' }, 409);
+          const n = (cases || []).length;
+          if (n) await env.DB.prepare('UPDATE aml_cases SET client_id = NULL WHERE client_id = ? AND user_id = ?').bind(id, userId).run();
           await env.DB.prepare('DELETE FROM clients WHERE id = ? AND user_id = ?').bind(id, userId).run();
-          return json({ ok: true });
+          return json({ ok: true, unlinked_cases: n });
         }
         return json({ error: 'method_not_allowed' }, 405);
+      }
+
+      // POST /api/clients/merge — sloučení duplicit. Přepojí AML případy sekundárního
+      // klienta na hlavního, doplní prázdná pole hlavního a sekundárního smaže. Loguje.
+      if (url.pathname === '/api/clients/merge') {
+        if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+        let b; try { b = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+        const primaryId = Number(b.primary_id), secondaryId = Number(b.secondary_id);
+        if (!primaryId || !secondaryId || primaryId === secondaryId) return json({ error: 'invalid_ids' }, 400);
+        const primary = await env.DB.prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?').bind(primaryId, userId).first();
+        const secondary = await env.DB.prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?').bind(secondaryId, userId).first();
+        if (!primary || !secondary) return json({ error: 'not_found' }, 404);
+        // 1) přepoj AML případy sekundárního → hlavní
+        const moved = await env.DB.prepare('UPDATE aml_cases SET client_id = ? WHERE client_id = ? AND user_id = ?').bind(primaryId, secondaryId, userId).run();
+        // 2) doplň prázdná pole hlavního z sekundárního
+        const fillSets = [], fillVals = [];
+        for (const c of CLIENT_COLS) {
+          if ((primary[c] == null || primary[c] === '') && secondary[c] != null && secondary[c] !== '') { fillSets.push(`${c} = ?`); fillVals.push(secondary[c]); }
+        }
+        if (fillSets.length) {
+          fillSets.push('updated_at = ?'); fillVals.push(new Date().toISOString());
+          await env.DB.prepare(`UPDATE clients SET ${fillSets.join(', ')} WHERE id = ? AND user_id = ?`).bind(...fillVals, primaryId, userId).run();
+        }
+        // 3) smaž sekundárního
+        await env.DB.prepare('DELETE FROM clients WHERE id = ? AND user_id = ?').bind(secondaryId, userId).run();
+        // 4) audit
+        console.log('[clients] merge', JSON.stringify({ user_id: userId, primary_id: primaryId, secondary_id: secondaryId, moved_cases: moved?.meta?.changes ?? null, filled_fields: fillSets.length, ts: new Date().toISOString() }));
+        const row = await env.DB.prepare('SELECT * FROM clients WHERE id = ? AND user_id = ?').bind(primaryId, userId).first();
+        return json({ ok: true, client: row, moved_cases: moved?.meta?.changes ?? 0 });
       }
 
       return json({ error: 'not_found' }, 404);

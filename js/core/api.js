@@ -188,6 +188,15 @@ export async function apiClientDelete(id) {
   return { ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) };
 }
 
+// Sloučení duplicitních klientů — přepojí případy na hlavního, sekundárního smaže.
+export async function apiClientMerge(primaryId, secondaryId) {
+  const r = await fetch(`${WORKER_URL}/api/clients/merge`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ primary_id: primaryId, secondary_id: secondaryId }),
+  });
+  return { ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) };
+}
+
 // Bulk import z localStorage → { created, merged }.
 export async function apiClientsImport(clients) {
   const r = await fetch(`${WORKER_URL}/api/clients/import`, {

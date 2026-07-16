@@ -2037,124 +2037,128 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
 .aml-recap-v { color: var(--ink); font-weight: 600; text-align: right; }
 .aml-recap-note { font-size: 11.5px; color: var(--ink-fnt); line-height: 1.5; }
 
-/* ── Archiv — kompaktní seznam ── */
-.view-archiv-wrap { max-width: 940px; margin: 0 auto; padding: 6px var(--pad) 60px; }
+/* ── Sdílený sloupcový seznam (Archiv + Klienti) — .rl-* ── */
+.view-archiv-wrap, .view-klienti-wrap { max-width: 940px; margin: 0 auto; padding: 6px var(--pad) 60px; }
+.view-archiv-wrap { --rl-cols: minmax(0,1fr) 124px 92px 116px 108px 32px; }
+.view-klienti-wrap { --rl-cols: minmax(0,1fr) 148px 90px 120px 100px 32px; }
 
 /* Lišta nástrojů */
-.arch-toolbar { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 14px; }
-.arch-seg { display: flex; gap: 4px; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 3px; overflow-x: auto; scrollbar-width: none; }
-.arch-seg::-webkit-scrollbar { display: none; }
-.arch-seg-btn { flex: 0 0 auto; white-space: nowrap; border: none; background: none; cursor: pointer; font-family: var(--sans); font-size: 13px; color: var(--ink-lt); padding: 6px 12px; border-radius: 8px; transition: background .12s, color .12s; }
-.arch-seg-btn:hover { color: var(--navy); }
-.arch-seg-btn.is-on { background: var(--white); color: var(--navy); font-weight: 600; box-shadow: var(--sh); }
-.arch-seg-n { font-size: 11px; color: var(--ink-fnt); font-weight: 600; }
-.arch-seg-btn.is-on .arch-seg-n { color: var(--gold-h); }
-.arch-tools { display: flex; gap: 8px; }
-.arch-search { flex: 1; min-width: 0; font-family: var(--sans); font-size: 13px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--white); color: var(--ink); }
-.arch-search:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(40,70,120,.1); }
-.arch-sort { flex: 0 0 auto; font-family: var(--sans); font-size: 13px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--white); color: var(--ink); cursor: pointer; }
+.rl-toolbar { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 14px; }
+.rl-seg { display: flex; gap: 4px; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 3px; overflow-x: auto; scrollbar-width: none; }
+.rl-seg::-webkit-scrollbar { display: none; }
+.rl-seg-btn { flex: 0 0 auto; white-space: nowrap; border: none; background: none; cursor: pointer; font-family: var(--sans); font-size: 13px; color: var(--ink-lt); padding: 6px 12px; border-radius: 8px; transition: background .12s, color .12s; }
+.rl-seg-btn:hover { color: var(--navy); }
+.rl-seg-btn.is-on { background: var(--white); color: var(--navy); font-weight: 600; box-shadow: var(--sh); }
+.rl-seg-n { font-size: 11px; color: var(--ink-fnt); font-weight: 600; }
+.rl-seg-btn.is-on .rl-seg-n { color: var(--gold-h); }
+.rl-tools { display: flex; gap: 8px; }
+.rl-search { flex: 1; min-width: 0; font-family: var(--sans); font-size: 13px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--white); color: var(--ink); }
+.rl-search:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(40,70,120,.1); }
+.rl-sort { flex: 0 0 auto; font-family: var(--sans); font-size: 13px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--white); color: var(--ink); cursor: pointer; }
 
-/* Sloupcová mřížka: Klient | Stav | Riziko | Revize | Akce | ⋯ */
-.arch-head, .arch-row {
+/* Mřížka: c1 (klient) | c2 | c3 | c4 | akce | ⋯ — šířky z --rl-cols */
+.rl-head, .rl-row {
   display: grid;
-  grid-template-columns: minmax(0,1fr) 124px 92px 116px 108px 32px;
-  grid-template-areas: "client stav risk review act more";
+  grid-template-columns: var(--rl-cols);
+  grid-template-areas: "c1 c2 c3 c4 act more";
   align-items: center; gap: 12px;
 }
-.arch-head { padding: 2px 14px 8px; font-size: 11.5px; color: var(--ink-fnt); }
-.arch-c-client { grid-area: client; min-width: 0; }
-.arch-c-stav { grid-area: stav; min-width: 0; }
-.arch-c-risk { grid-area: risk; min-width: 0; }
-.arch-c-review { grid-area: review; min-width: 0; }
-.arch-c-act { grid-area: act; }
-.arch-c-more { grid-area: more; justify-self: end; }
+.rl-head { padding: 6px 14px; font-size: 11.5px; color: var(--ink-fnt);
+  position: sticky; top: 52px; z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule); }
+.rl-c1 { grid-area: c1; min-width: 0; }
+.rl-c2 { grid-area: c2; min-width: 0; }
+.rl-c3 { grid-area: c3; min-width: 0; }
+.rl-c4 { grid-area: c4; min-width: 0; }
+.rl-act { grid-area: act; }
+.rl-more { grid-area: more; justify-self: end; }
+/* Datové sloupce zarovnané číslice */
+.rl-c2, .rl-c3, .rl-c4, .rl-review, .rl-rel, .rl-date { font-variant-numeric: tabular-nums; }
 
-.arch-list { border: 1px solid var(--rule); border-radius: 12px; background: var(--white); overflow: hidden; }
-.arch-row { padding: 8px 14px; border-bottom: 1px solid var(--rule); cursor: pointer; transition: background .1s; }
-.arch-row:last-child { border-bottom: none; }
-.arch-row:hover { background: var(--paper-w, #faf8f4); }
-.arch-row-l1 { display: flex; align-items: center; min-width: 0; }
-.arch-row-l2 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--ink-lt); margin-top: 2px; }
-.arch-name { font-size: 14px; font-weight: 500; color: var(--navy); text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.arch-name--empty { color: var(--ink-fnt); font-weight: 400; font-style: italic; }
-.arch-mid-dot { color: var(--ink-fnt); }
-.arch-case { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 11.5px; color: var(--ink-mid); cursor: pointer; border-radius: 4px; padding: 0 2px; }
-.arch-case:hover { background: var(--gold-p); color: var(--navy); }
-.arch-rel { color: var(--ink-fnt); }
-.arch-cell-empty { color: var(--ink-fnt); }
+.rl-list { border: 1px solid var(--rule); border-radius: 12px; background: var(--white); overflow: hidden; }
+.rl-row { padding: 10px 14px; border-bottom: 1px solid var(--rule); cursor: pointer; transition: background .1s; }
+.rl-row:last-child { border-bottom: none; }
+.rl-row:hover { background: var(--paper-w, #faf8f4); }
+.rl-l1 { display: flex; align-items: center; min-width: 0; }
+.rl-l2 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--ink-lt); margin-top: 2px; }
+.rl-l2-ell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rl-name { font-size: 14px; font-weight: 500; color: var(--navy); text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rl-name--empty { color: var(--ink-fnt); font-weight: 400; font-style: italic; }
+.rl-mid-dot { color: var(--ink-fnt); }
+.rl-mono { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 11.5px; color: var(--ink-mid); cursor: pointer; border-radius: 4px; padding: 0 2px; }
+.rl-mono:hover { background: var(--gold-p); color: var(--navy); }
+.rl-rel { color: var(--ink-fnt); }
+.rl-cell-empty { color: var(--ink-fnt); }
 
-/* Stav bez barev: ✓ zelená jen ikona, jinak šedý text; jediný badge = jantar */
-.arch-stav { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--ink-lt); }
-.arch-stav-muted { color: var(--ink-lt); }
-.arch-stav-ok { color: #1a8a4a; font-size: 15px; line-height: 1; }
-.arch-badge { font-size: 11px; font-weight: 600; text-transform: none; padding: 1px 8px; border-radius: 20px; white-space: nowrap; }
-.arch-badge-norecord { color: #b4530e; background: #fdecdd; }
+/* Stav bez barev: ✓ zelená jen ikona, jinak text-secondary; jediný badge = jantar */
+.rl-stav { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--ink-lt); }
+.rl-stav-ok { color: #1a8a4a; font-size: 15px; line-height: 1; }
+.rl-badge { font-size: 11px; font-weight: 600; text-transform: none; padding: 1px 8px; border-radius: 20px; white-space: nowrap; }
+.rl-badge-amber { color: #b4530e; background: #fdecdd; }
 
 /* Riziko — jediný semafor (tečka + text) */
-.arch-riskdot { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-mid); }
-.arch-riskdot .arch-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
-.arch-riskdot-vysoke .arch-dot { background: #c0392b; }
-.arch-riskdot-stredni .arch-dot { background: #e0912b; }
-.arch-riskdot-nizke .arch-dot { background: #1a8a4a; }
+.rl-riskdot { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-mid); }
+.rl-riskdot .rl-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.rl-riskdot-vysoke .rl-dot { background: #c0392b; }
+.rl-riskdot-stredni .rl-dot { background: #e0912b; }
+.rl-riskdot-nizke .rl-dot { background: #1a8a4a; }
 
-/* Revize */
-.arch-review { font-size: 12.5px; color: var(--ink-lt); }
-.arch-review--soon { display: inline-flex; align-items: center; gap: 4px; color: #b4530e; font-weight: 500; }
+/* Revize / revalidace */
+.rl-review { font-size: 12.5px; color: var(--ink-lt); }
+.rl-review--soon { display: inline-flex; align-items: center; gap: 4px; color: #b4530e; font-weight: 500; }
+.rl-review--over { display: inline-flex; align-items: center; gap: 4px; color: #c0392b; font-weight: 600; }
 
 /* Akce — jedno outline tlačítko + ⋯ */
-.arch-act-main { font-family: var(--sans); font-size: 12.5px; font-weight: 500; color: var(--navy); background: var(--white); border: 1px solid var(--rule); border-radius: 8px; padding: 5px 12px; cursor: pointer; transition: border-color .12s, background .12s; white-space: nowrap; }
-.arch-act-main:hover { border-color: var(--navy); background: var(--paper); }
-.arch-act-more { font-family: var(--sans); font-size: 18px; line-height: 1; color: var(--ink-lt); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
-.arch-act-more:hover { color: var(--navy); background: var(--paper); }
+.rl-act-main { font-family: var(--sans); font-size: 12.5px; font-weight: 500; color: var(--navy); background: var(--white); border: 1px solid var(--rule); border-radius: 8px; padding: 5px 12px; cursor: pointer; transition: border-color .12s, background .12s; white-space: nowrap; }
+.rl-act-main:hover { border-color: var(--navy); background: var(--paper); }
+.rl-act-more { font-family: var(--sans); font-size: 18px; line-height: 1; color: var(--ink-lt); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+.rl-act-more:hover { color: var(--navy); background: var(--paper); }
 
 /* „⋯" menu */
-.arch-menu { position: absolute; z-index: 3200; min-width: 190px; background: var(--white); border: 1px solid var(--rule); border-radius: 10px; box-shadow: 0 12px 34px rgba(0,0,0,.18); padding: 4px; }
-.arch-menu-item { display: block; width: 100%; text-align: left; font-family: var(--sans); font-size: 13px; color: var(--ink); background: none; border: none; cursor: pointer; padding: 8px 10px; border-radius: 6px; }
-.arch-menu-item:hover { background: var(--paper); }
-.arch-menu-item.is-danger { color: #c0392b; }
-.arch-menu-item.is-danger:hover { background: #fdeeec; }
+.rl-menu { position: absolute; z-index: 3200; min-width: 200px; background: var(--white); border: 1px solid var(--rule); border-radius: 10px; box-shadow: 0 12px 34px rgba(0,0,0,.18); padding: 4px; }
+.rl-menu-item { display: block; width: 100%; text-align: left; font-family: var(--sans); font-size: 13px; color: var(--ink); background: none; border: none; cursor: pointer; padding: 8px 10px; border-radius: 6px; }
+.rl-menu-item:hover { background: var(--paper); }
+.rl-menu-item.is-danger { color: #c0392b; }
+.rl-menu-item.is-danger:hover { background: #fdeeec; }
 
 /* Patička seznamu */
-.arch-foot { margin-top: 12px; }
-.arch-foot-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.arch-foot-count { font-size: 12px; color: var(--ink-lt); }
-.arch-foot-del { font-family: var(--sans); font-size: 12px; color: #c0392b; background: none; border: none; cursor: pointer; padding: 2px 4px; margin-left: 6px; }
-.arch-foot-del:hover { text-decoration: underline; }
-.arch-empty { padding: 40px 16px; text-align: center; font-size: 13px; color: var(--ink-lt); }
+.rl-foot { margin-top: 12px; }
+.rl-foot-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.rl-foot-count { font-size: 12px; color: var(--ink-lt); }
+.rl-foot-del { font-family: var(--sans); font-size: 12px; color: #c0392b; background: none; border: none; cursor: pointer; padding: 2px 4px; margin-left: 6px; }
+.rl-foot-del:hover { text-decoration: underline; }
+.rl-empty { padding: 40px 16px; text-align: center; font-size: 13px; color: var(--ink-lt); }
 
-/* Mobil: grid se sbalí — Stav/Riziko/Revize pod jméno (v tomto pořadí), akce vpravo.
+/* Mobil: grid se sbalí — c2/c3/c4 pod jméno (v tomto pořadí), akce vpravo.
    Flex + řádkový zlom (::after flex-basis:100%) — spolehlivé, bez sdílených tracků. */
 @media (max-width: 720px) {
-  .arch-head { display: none; }
-  .arch-row {
-    display: flex; flex-wrap: wrap; align-items: center;
-    column-gap: 12px; row-gap: 5px;
-  }
-  .arch-c-client { order: 1; flex: 1 1 0; min-width: 0; }
-  .arch-c-act { order: 2; flex: 0 0 auto; }
-  .arch-c-more { order: 3; flex: 0 0 auto; }
-  .arch-row::after { content: ""; flex-basis: 100%; height: 0; order: 4; }
-  .arch-c-stav { order: 5; }
-  .arch-c-risk { order: 6; }
-  .arch-c-review { order: 7; }
-  .arch-c-stav, .arch-c-risk, .arch-c-review { font-size: 12px; }
-  /* prázdné buňky („—") pod jménem jsou jen šum → skryj celou buňku (fallback: aspoň text) */
-  .arch-c-risk > .arch-cell-empty, .arch-c-review > .arch-cell-empty { display: none; }
-  .arch-c-risk:has(> .arch-cell-empty), .arch-c-review:has(> .arch-cell-empty) { display: none; }
+  .rl-head { display: none; }
+  .rl-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; row-gap: 5px; }
+  .rl-c1 { order: 1; flex: 1 1 0; min-width: 0; }
+  .rl-act { order: 2; flex: 0 0 auto; }
+  .rl-more { order: 3; flex: 0 0 auto; }
+  .rl-row::after { content: ""; flex-basis: 100%; height: 0; order: 4; }
+  .rl-c2 { order: 5; }
+  .rl-c3 { order: 6; }
+  .rl-c4 { order: 7; }
+  .rl-c2, .rl-c3, .rl-c4 { font-size: 12px; }
+  .rl-c3 > .rl-cell-empty, .rl-c4 > .rl-cell-empty { display: none; }
+  .rl-c3:has(> .rl-cell-empty), .rl-c4:has(> .rl-cell-empty) { display: none; }
 }
 
-/* Archiv confirm modal */
-.arch-modal-ov { position: fixed; inset: 0; z-index: 3000; background: rgba(20,18,14,.42); display: flex; align-items: center; justify-content: center; padding: 18px; }
-.arch-modal { background: #fff; border-radius: 14px; max-width: 460px; width: 100%; padding: 22px 22px 18px; box-shadow: 0 18px 50px rgba(0,0,0,.28); }
-.arch-modal-title { font-size: 17px; font-weight: 700; color: var(--ink, #22201b); margin-bottom: 10px; }
-.arch-modal-body { font-size: 14px; line-height: 1.5; color: var(--ink-lt, #555); }
-.arch-modal-body p { margin: 0 0 8px; }
-.arch-modal-warn { background: #fdf3e6; border: 1px solid #f0d9a8; border-radius: 8px; padding: 10px 12px; color: #8a5a12; }
-.arch-modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-.arch-risk { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
-.arch-risk-nizke { color: #1a8a4a; background: #eefaf2; }
-.arch-risk-stredni { color: #b8791a; background: #fff8ec; }
-.arch-risk-vysoke { color: #c0392b; background: #fdeeec; }
+/* Sdílený confirm/merge modal */
+.rl-modal-ov { position: fixed; inset: 0; z-index: 3000; background: rgba(20,18,14,.42); display: flex; align-items: center; justify-content: center; padding: 18px; }
+.rl-modal { background: #fff; border-radius: 14px; max-width: 480px; width: 100%; padding: 22px 22px 18px; box-shadow: 0 18px 50px rgba(0,0,0,.28); }
+.rl-modal-title { font-size: 17px; font-weight: 700; color: var(--ink, #22201b); margin-bottom: 10px; }
+.rl-modal-body { font-size: 14px; line-height: 1.5; color: var(--ink-lt, #555); }
+.rl-modal-body p { margin: 0 0 8px; }
+.rl-modal-warn { background: #fdf3e6; border: 1px solid #f0d9a8; border-radius: 8px; padding: 10px 12px; color: #8a5a12; }
+.rl-modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.rl-merge-opt { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+.rl-merge-opt:hover { border-color: var(--navy); }
+.kli-edit-grid { display: flex; flex-direction: column; gap: 10px; }
+.kli-edit-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-lt); }
+.kli-edit-grid input { font-family: var(--sans); font-size: 14px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 8px; color: var(--ink); }
+.kli-edit-grid input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(40,70,120,.1); }
 
 @media (max-width: 600px) {
   .aml-tiles { grid-template-columns: 1fr; }

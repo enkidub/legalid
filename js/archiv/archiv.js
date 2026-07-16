@@ -199,7 +199,7 @@ function renderList(root) {
     return;
   }
   const shown = filtered.slice(0, _limit);
-  listEl.innerHTML = shown.map(rowHTML).join('');
+  listEl.innerHTML = headHTML() + shown.map(rowHTML).join('');
 
   // Patička: počty + hromadné smazání prázdných rozpracovaných.
   const emptyCount = _cases.filter(isEmptyDraft).length;
@@ -210,7 +210,21 @@ function renderList(root) {
   footEl.innerHTML = `<div class="arch-foot-row"><span class="arch-foot-count">${filtered.length} záznamů${emptyPart}</span>${more}</div>`;
 }
 
-// ── Render: jeden řádek ──────────────────────────────────────────────
+// Hlavička sloupců (nad seznamem).
+function headHTML() {
+  return `<div class="arch-head">
+    <div class="arch-c-client">Klient</div>
+    <div class="arch-c-stav">Stav</div>
+    <div class="arch-c-risk">Riziko</div>
+    <div class="arch-c-review">Revize</div>
+    <div class="arch-c-act"></div>
+    <div class="arch-c-more"></div>
+  </div>`;
+}
+
+const EMPTY_CELL = `<span class="arch-cell-empty">—</span>`;
+
+// ── Render: jeden řádek (sloupcová mřížka) ───────────────────────────
 function rowHTML(c) {
   const decidedNoRecord = isDecidedNoRecord(c);
   const nm = nameText(c);
@@ -218,60 +232,66 @@ function rowHTML(c) {
     ? `<span class="arch-name">${esc(nm)}</span>`
     : `<span class="arch-name arch-name--empty">bez jména</span>`;
 
-  // stavový badge (jedna barevná řeč)
-  let badge;
-  if (c.status === 'completed') badge = `<span class="arch-badge arch-badge-done">Dokončeno</span>`;
-  else if (c.status === 'terminated') badge = `<span class="arch-badge arch-badge-term">Ukončeno § 15</span>`;
-  else if (decidedNoRecord) badge = `<span class="arch-badge arch-badge-norecord">Rozhodnuto — chybí záznam</span>`;
-  else badge = `<span class="arch-badge arch-badge-prog">Rozpracováno</span>`;
+  // Stav bez barev: Dokončeno = ✓ (zelená ikona) + šedý text; Rozpracováno /
+  // Ukončeno § 15 = prostý šedý text; jediný badge = jantarový „Chybí záznam".
+  let stav;
+  if (c.status === 'completed') stav = `<span class="arch-stav"><i class="ti ti-check arch-stav-ok"></i> Dokončeno</span>`;
+  else if (c.status === 'terminated') stav = `<span class="arch-stav arch-stav-muted">Ukončeno § 15</span>`;
+  else if (decidedNoRecord) stav = `<span class="arch-badge arch-badge-norecord" title="Rozhodnuto — chybí záznam">Chybí záznam</span>`;
+  else stav = `<span class="arch-stav arch-stav-muted">Rozpracováno</span>`;
 
-  // riziko odděleně (jen dokončené): barevná tečka + text
+  // Riziko — jediný semafor (tečka + text), jen dokončené; jinak „—".
   const risk = (c.status === 'completed' && c.final_risk_level)
-    ? `<span class="arch-riskdot arch-riskdot-${esc(c.final_risk_level)}"><span class="arch-dot"></span>${esc(RISK_CS[c.final_risk_level] || c.final_risk_level)}</span>` : '';
+    ? `<span class="arch-riskdot arch-riskdot-${esc(c.final_risk_level)}"><span class="arch-dot"></span>${esc(RISK_CS[c.final_risk_level] || c.final_risk_level)}</span>`
+    : EMPTY_CELL;
 
-  // revize (jen dokončené)
-  const review = (c.status === 'completed') ? reviewHTML(c.next_review_due) : '';
+  // Revize — vlastní sloupec, jen dokončené; jinak „—".
+  const review = (c.status === 'completed') ? (reviewHTML(c.next_review_due) || EMPTY_CELL) : EMPTY_CELL;
 
-  // řádek 2 — meta
+  // Řádek 2 (meta) — datum jen jednou (relativní), plné datum v title.
+  const iso = c.completed_at || c.created_at;
+  const rel = relDate(iso);
+  const full = fmtDateCs(iso);
+  const dateSpan = rel ? `<span class="arch-rel" title="${esc(full)}">${esc(rel)}</span>` : '';
   const l2parts = [];
   if (c.case_number) l2parts.push(`<span class="arch-case" data-act="copy-case" data-num="${esc(c.case_number)}" title="Kopírovat číslo případu">${esc(c.case_number)}</span>`);
   if (c.status === 'in_progress') {
-    l2parts.push(esc(decidedNoRecord ? 'dokončete krok 5 (Záznam)' : `krok ${(c.current_step || 0) + 1} z 5`));
+    l2parts.push(esc(decidedNoRecord ? 'dokončete krok 5' : `krok ${(c.current_step || 0) + 1} z 5`));
+    if (dateSpan) l2parts.push(dateSpan);
   } else {
     const label = c.status === 'terminated' ? 'ukončeno' : 'dokončeno';
-    if (c.completed_at) l2parts.push(esc(`${label} ${fmtDateCs(c.completed_at)}`));
+    l2parts.push(dateSpan ? `${esc(label)} ${dateSpan}` : esc(label));
   }
-  const rel = relDate(c.completed_at || c.created_at);
-  if (rel) l2parts.push(`<span class="arch-rel">${esc(rel)}</span>`);
   const l2 = l2parts.join('<span class="arch-mid-dot">·</span>');
 
-  // akce vpravo — jedno outline tlačítko + ⋯
   const mainLabel = c.status === 'in_progress' ? (decidedNoRecord ? 'Dokončit' : 'Pokračovat') : 'Zobrazit';
   const mainAct = c.status === 'in_progress' ? 'resume-aml' : 'view-pdf';
 
-  return `<div class="arch-row${decidedNoRecord ? ' arch-row--norecord' : ''}" data-act="row-main" data-id="${c.id}" role="button" tabindex="0">
-    <div class="arch-row-main">
-      <div class="arch-row-l1">${nameHTML}${badge}${risk}${review}</div>
+  return `<div class="arch-row" data-act="row-main" data-id="${c.id}" role="button" tabindex="0">
+    <div class="arch-c arch-c-client">
+      <div class="arch-row-l1">${nameHTML}</div>
       <div class="arch-row-l2">${l2}</div>
     </div>
-    <div class="arch-row-actions">
-      <button class="arch-act-main" data-act="${mainAct}" data-id="${c.id}">${mainLabel}</button>
-      <button class="arch-act-more" data-act="row-menu" data-id="${c.id}" aria-label="Další akce" title="Další akce">⋯</button>
-    </div>
+    <div class="arch-c arch-c-stav">${stav}</div>
+    <div class="arch-c arch-c-risk">${risk}</div>
+    <div class="arch-c arch-c-review">${review}</div>
+    <div class="arch-c arch-c-act"><button class="arch-act-main" data-act="${mainAct}" data-id="${c.id}">${mainLabel}</button></div>
+    <div class="arch-c arch-c-more"><button class="arch-act-more" data-act="row-menu" data-id="${c.id}" aria-label="Další akce" title="Další akce">⋯</button></div>
   </div>`;
 }
 
-// Revize: pod 30 dní / po termínu → jantarově s ikonou hodin; jinak datum.
+// Revize: pod 30 dní / po termínu → jantarově s ikonou hodin; jinak jen datum šedě.
 function reviewHTML(due) {
   if (!due) return '';
   const d = new Date(due);
   if (isNaN(d)) return '';
   const days = Math.ceil((d.getTime() - Date.now()) / 86400000);
   const clock = '<i class="ti ti-clock-hour-4"></i>';
-  if (days < 0) return `<span class="arch-review arch-review--soon">${clock} revize po termínu</span>`;
-  if (days === 0) return `<span class="arch-review arch-review--soon">${clock} revize dnes</span>`;
-  if (days < 30) return `<span class="arch-review arch-review--soon">${clock} revize za ${days} ${days === 1 ? 'den' : (days < 5 ? 'dny' : 'dní')}</span>`;
-  return `<span class="arch-review">revize ${esc(fmtDateCs(due))}</span>`;
+  const full = esc(fmtDateCs(due));
+  if (days < 0) return `<span class="arch-review arch-review--soon" title="${full}">${clock} po termínu</span>`;
+  if (days === 0) return `<span class="arch-review arch-review--soon" title="${full}">${clock} dnes</span>`;
+  if (days < 30) return `<span class="arch-review arch-review--soon" title="${full}">${clock} za ${days} ${days === 1 ? 'den' : (days < 5 ? 'dny' : 'dní')}</span>`;
+  return `<span class="arch-review" title="${full}">${full}</span>`;
 }
 
 // Relativní datum: dnes / včera, starší absolutně.

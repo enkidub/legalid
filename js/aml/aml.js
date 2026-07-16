@@ -335,7 +335,7 @@ function handleAction(root, act, ds) {
     case 'goto-step': goToStep(root, +ds.idx); break;
     case 'toggle-detail': toggleLookupDetail(ds.type); break;
     case 'ctx-lookup': openLookupDetail(root, ds.type); break;
-    case 'rerun-lookups': wiz.lookupStatus = 'idle'; wiz.lookups = null; renderLustrace(root); break;
+    case 'rerun-lookups': wiz.lookupStatus = 'idle'; wiz.lookups = null; wiz.forceRun = true; wiz._ctxLookupsTriedStep = null; renderLustrace(root); break;
     case 'copy-casenum': copyCaseNum(); break;
     case 'open-terminate': openTerminateModal(root); break;
     case 'close-terminate': closeTerminateModal(); break;

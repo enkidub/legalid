@@ -40,8 +40,13 @@ function parseCommon(block) {
     if (wn && !names.includes(wn)) names.push(wn);
   }
   if (names.length === 0) return null;
-  const fullName = names[0];
-  const aliases = names.slice(1);
+  // Primární jméno musí mít NEPRÁZDNÝ normalizovaný tvar — první alias bývá v azbuce
+  // (normalizeName ji smaže na ""), takže by ho prefiltr LIKE '%…%' nikdy nenašel.
+  // Vyber první latinkový alias; azbuku (i zbytek) nech v aliasech pro fuzzy.
+  let primaryIdx = names.findIndex(n => normalizeName(n).length >= 2);
+  if (primaryIdx < 0) primaryIdx = 0;
+  const fullName = names[primaryIdx];
+  const aliases = names.filter((_, i) => i !== primaryIdx);
 
   const czTags = allTags(block, 'citizenship');
   const nationality = czTags.length
@@ -101,37 +106,29 @@ const COLS = ['source', 'full_name', 'name_normalized', 'aliases', 'birth_date',
 const ENTITY_COLS = ['source', 'full_name', 'name_normalized', 'aliases', 'nationality', 'reason', 'listed_since', 'raw_record'];
 
 // ── zápis do D1 (cron ve Workeru) ──
-// Smaže staré EU záznamy a vloží nové po dávkách. Vrací počet vložených.
-export async function writeSanctionsToD1(env, records, chunkSize = 50) {
-  await env.DB.prepare("DELETE FROM sanctions WHERE source = 'EU'").run();
-  const placeholders = `(${COLS.map(() => '?').join(', ')})`;
-  let inserted = 0;
-  for (let i = 0; i < records.length; i += chunkSize) {
-    const chunk = records.slice(i, i + chunkSize);
-    const sql = `INSERT INTO sanctions (${COLS.join(', ')}) VALUES ${chunk.map(() => placeholders).join(', ')}`;
+// D1 má limit ~100 bind parametrů na jeden dotaz → víceřádkový INSERT musí mít
+// málo řádků na statement. Posíláme přes DB.batch() (méně round-tripů).
+const ROWS_PER_STMT = 11;     // 11 × 9 sloupců = 99 parametrů (< 100)
+const STMTS_PER_BATCH = 30;
+
+async function replaceEuRows(env, table, cols, records) {
+  const ph = `(${cols.map(() => '?').join(', ')})`;
+  const stmts = [env.DB.prepare(`DELETE FROM ${table} WHERE source = 'EU'`)];
+  for (let i = 0; i < records.length; i += ROWS_PER_STMT) {
+    const chunk = records.slice(i, i + ROWS_PER_STMT);
+    const sql = `INSERT INTO ${table} (${cols.join(', ')}) VALUES ${chunk.map(() => ph).join(', ')}`;
     const binds = [];
-    for (const r of chunk) for (const c of COLS) binds.push(r[c] ?? null);
-    await env.DB.prepare(sql).bind(...binds).run();
-    inserted += chunk.length;
+    for (const r of chunk) for (const c of cols) binds.push(r[c] ?? null);
+    stmts.push(env.DB.prepare(sql).bind(...binds));
   }
-  return inserted;
+  for (let i = 0; i < stmts.length; i += STMTS_PER_BATCH) {
+    await env.DB.batch(stmts.slice(i, i + STMTS_PER_BATCH));
+  }
+  return records.length;
 }
 
-// Zápis sankčních ENTIT (firem) do sanctions_entities (bez birth_date).
-export async function writeSanctionEntitiesToD1(env, records, chunkSize = 50) {
-  await env.DB.prepare("DELETE FROM sanctions_entities WHERE source = 'EU'").run();
-  const placeholders = `(${ENTITY_COLS.map(() => '?').join(', ')})`;
-  let inserted = 0;
-  for (let i = 0; i < records.length; i += chunkSize) {
-    const chunk = records.slice(i, i + chunkSize);
-    const sql = `INSERT INTO sanctions_entities (${ENTITY_COLS.join(', ')}) VALUES ${chunk.map(() => placeholders).join(', ')}`;
-    const binds = [];
-    for (const r of chunk) for (const c of ENTITY_COLS) binds.push(r[c] ?? null);
-    await env.DB.prepare(sql).bind(...binds).run();
-    inserted += chunk.length;
-  }
-  return inserted;
-}
+export function writeSanctionsToD1(env, records) { return replaceEuRows(env, 'sanctions', COLS, records); }
+export function writeSanctionEntitiesToD1(env, records) { return replaceEuRows(env, 'sanctions_entities', ENTITY_COLS, records); }
 
 // Kompletní cron krok: stáhnout → parse → zapsat osoby i entity.
 export async function importEuSanctions(env) {
@@ -139,6 +136,12 @@ export async function importEuSanctions(env) {
   if (!res.ok) throw new Error(`EU FSD download failed: ${res.status}`);
   const xml = await res.text();
   const { persons, entities } = parseEuSanctions(xml);
+  // POJISTKA: nikdy nepřepiš tabulku podezřele prázdným/vadným parse (změna formátu
+  // zdroje ap.). Zdroj má tisíce osob a musí obsahovat notoricky sankcionované jméno.
+  const putinOk = persons.some(p => /\bputin\b/.test(p.name_normalized || ''));
+  if (persons.length < 1000 || entities.length < 200 || !putinOk) {
+    throw new Error(`sanity_check_failed: persons=${persons.length} entities=${entities.length} putin=${putinOk} — import zrušen, stará data ponechána`);
+  }
   const insertedPersons = await writeSanctionsToD1(env, persons);
   const insertedEntities = await writeSanctionEntitiesToD1(env, entities);
   return { persons: insertedPersons, entities: insertedEntities };

@@ -16,9 +16,12 @@ async function dbCandidates(db, table, name) {
   const nn = normalizeName(name);
   const tokens = nn.split(' ').filter(t => t.length >= 3);
   const likeVals = (tokens.length ? tokens : [nn]).map(t => `%${t}%`);
-  const where = likeVals.map(() => 'name_normalized LIKE ?').join(' OR ');
+  // Hledej každý token v name_normalized NEBO v aliases (latinkové přepisy — LIKE je
+  // pro ASCII case-insensitive), aby se našel i záznam s primárním jménem v azbuce.
+  const where = likeVals.map(() => '(name_normalized LIKE ? OR aliases LIKE ?)').join(' OR ');
+  const binds = likeVals.flatMap(v => [v, v]);
   const sql = `SELECT * FROM ${table} WHERE ${where} LIMIT 500`;
-  const { results } = await db.prepare(sql).bind(...likeVals).all();
+  const { results } = await db.prepare(sql).bind(...binds).all();
   return results || [];
 }
 
@@ -395,4 +398,24 @@ export async function lookupPep(env, name, birthDate) {
   } catch (e) {
     return { status: 'error', source: 'cz_manual', details: `PEP kontrola selhala (${e.message}).` };
   }
+}
+
+// ── Regresní selftest sankčního screeningu (volá cron po importu + admin endpoint) ──
+// Proti aktuální D1 pustí notoricky sankcionovaná jména (musí být match) + jedno
+// smyšlené (musí být clean). Vrací { ok, results }.
+export async function sanctionsSelftest(env) {
+  const positives = ['Vladimir Putin', 'Ramzan Kadyrov', 'Sergej Lavrov', 'Alexandr Lukašenko'];
+  const negative = 'Karel Zkušební Neexistující Osoba';
+  const results = [];
+  let ok = true;
+  for (const name of positives) {
+    let r; try { r = await lookupSanctions(env, name, null); } catch (e) { r = { status: 'error', details: String(e.message || e) }; }
+    const hit = r.status === 'match';
+    if (!hit) ok = false;
+    results.push({ name, expected: 'match', status: r.status, matched_against: r.matched_against || null, score: r.match_score || null });
+  }
+  let rn; try { rn = await lookupSanctions(env, negative, null); } catch (e) { rn = { status: 'error', details: String(e.message || e) }; }
+  if (rn.status !== 'clean') ok = false;
+  results.push({ name: negative, expected: 'clean', status: rn.status });
+  return { ok, results };
 }

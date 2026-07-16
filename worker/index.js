@@ -1,4 +1,4 @@
-import { lookupMvcr, lookupIsir, lookupIsirCompany, lookupAres, fetchAresSubject, lookupSanctions, lookupSanctionsEntity, lookupPep } from './utils/lookups.js';
+import { lookupMvcr, lookupIsir, lookupIsirCompany, lookupAres, fetchAresSubject, lookupSanctions, lookupSanctionsEntity, lookupPep, sanctionsSelftest } from './utils/lookups.js';
 import { importEuSanctions } from './utils/sanctions.js';
 import { normalizeName } from './utils/fuzzy.js';
 
@@ -674,10 +674,19 @@ export default {
       if (!payload || payload.email !== 'kuba.houser@gmail.com') return json({ error: 'forbidden' }, 403);
       try {
         const r = await importEuSanctions(env);   // { persons, entities }
-        return json({ ok: true, ...r });
+        const selftest = await sanctionsSelftest(env);
+        return json({ ok: true, ...r, selftest });
       } catch (e) {
         return json({ error: 'import_failed', message: String(e.message || e) }, 502);
       }
+    }
+
+    // GET /api/admin/sanctions/selftest — regresní kontrola screeningu proti D1.
+    if (url.pathname === '/api/admin/sanctions/selftest') {
+      const token = getSessionToken(request);
+      const payload = token ? await verifyJWT(token, env.JWT_SECRET) : null;
+      if (!payload || payload.email !== 'kuba.houser@gmail.com') return json({ error: 'forbidden' }, 403);
+      return json(await sanctionsSelftest(env));
     }
 
     // --- POST /api/track ---
@@ -1393,9 +1402,13 @@ export default {
     ctx.waitUntil((async () => {
       try {
         const r = await importEuSanctions(env);
-        console.log(`[cron] EU sankce: parsed=${r.parsed} inserted=${r.inserted}`);
+        console.log(`[cron] EU sankce importovány: persons=${r.persons} entities=${r.entities}`);
+        const st = await sanctionsSelftest(env);
+        if (st.ok) console.log('[cron] selftest OK:', JSON.stringify(st.results));
+        else console.error('[cron] SELFTEST SELHAL po importu:', JSON.stringify(st.results));
       } catch (e) {
-        console.error('[cron] import EU sankcí selhal:', e?.message || e);
+        // Sanity check / síť / D1 chyba → stará data zůstala nedotčená (viz importEuSanctions).
+        console.error('[cron] import EU sankcí selhal (stará data ponechána):', e?.message || e);
       }
     })());
   },

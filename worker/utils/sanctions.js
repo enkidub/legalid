@@ -147,6 +147,172 @@ export async function importEuSanctions(env) {
   return { persons: insertedPersons, entities: insertedEntities };
 }
 
+// ════════════════════════════════════════════════════════════════════
+// OSN (UN Security Council) + MZV ČR — přidané zdroje. Stejná normalizační
+// pipeline jako EU (primární jméno = první alias s neprázdným normalizovaným
+// tvarem = latinka; originální písma → aliases), aby předfiltr LIKE fungoval.
+// ════════════════════════════════════════════════════════════════════
+
+// Sdílená tvorba záznamu (společné pro UN i CZ). `names` = všechny varianty jména.
+function makeRecord(names, extra = {}) {
+  const uniq = [];
+  for (const n of names) { const t = String(n || '').replace(/\s+/g, ' ').trim(); if (t && !uniq.includes(t)) uniq.push(t); }
+  if (!uniq.length) return null;
+  let idx = uniq.findIndex(n => normalizeName(n).length >= 2);   // první latinkové
+  if (idx < 0) idx = 0;
+  const fullName = uniq[idx];
+  const aliases = uniq.filter((_, i) => i !== idx);
+  return {
+    source: extra.source,
+    full_name: fullName,
+    name_normalized: normalizeName(fullName),
+    aliases: aliases.length ? JSON.stringify(aliases) : null,
+    birth_date: extra.birth_date || null,
+    nationality: extra.nationality || null,
+    reason: extra.reason || null,
+    listed_since: extra.listed_since || null,
+    raw_record: JSON.stringify({ names: uniq, ...(extra.raw || {}) }),
+  };
+}
+
+function innerText(block, tag) {
+  const m = String(block).match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
+  return m ? decodeEntities(m[1]).trim() : '';
+}
+function allBlocksOf(xml, tag) {
+  return String(xml).match(new RegExp(`<${tag}>[\\s\\S]*?</${tag}>`, 'g')) || [];
+}
+
+// Zápis jednoho zdroje: DELETE WHERE source=? + batched INSERT (11 řádků / ≤99 params).
+async function replaceSourceRows(env, table, cols, records, source) {
+  const ph = `(${cols.map(() => '?').join(', ')})`;
+  const stmts = [env.DB.prepare(`DELETE FROM ${table} WHERE source = ?`).bind(source)];
+  for (let i = 0; i < records.length; i += ROWS_PER_STMT) {
+    const chunk = records.slice(i, i + ROWS_PER_STMT);
+    const sql = `INSERT INTO ${table} (${cols.join(', ')}) VALUES ${chunk.map(() => ph).join(', ')}`;
+    const binds = [];
+    for (const r of chunk) for (const c of cols) binds.push(r[c] ?? null);
+    stmts.push(env.DB.prepare(sql).bind(...binds));
+  }
+  for (let i = 0; i < stmts.length; i += STMTS_PER_BATCH) await env.DB.batch(stmts.slice(i, i + STMTS_PER_BATCH));
+  return records.length;
+}
+
+// ── OSN — konsolidovaný seznam Rady bezpečnosti (INDIVIDUALS + ENTITIES) ──
+export const UN_SANCTIONS_URL = 'https://scsanctions.un.org/resources/xml/en/consolidated.xml';
+export function parseUnSanctions(xml) {
+  const persons = [], entities = [];
+  for (const block of allBlocksOf(xml, 'INDIVIDUAL')) {
+    const primary = ['FIRST_NAME', 'SECOND_NAME', 'THIRD_NAME', 'FOURTH_NAME'].map(t => innerText(block, t)).filter(Boolean).join(' ');
+    const names = primary ? [primary] : [];
+    for (const al of allBlocksOf(block, 'INDIVIDUAL_ALIAS')) { const a = innerText(al, 'ALIAS_NAME'); if (a) names.push(a); }
+    const dob = allBlocksOf(block, 'INDIVIDUAL_DATE_OF_BIRTH')[0] || '';
+    const rec = makeRecord(names, {
+      source: 'UN', birth_date: innerText(dob, 'DATE') || innerText(dob, 'YEAR') || '',
+      nationality: innerText(allBlocksOf(block, 'NATIONALITY')[0] || '', 'VALUE'),
+      reason: innerText(block, 'UN_LIST_TYPE'), listed_since: innerText(block, 'LISTED_ON'),
+      raw: { ref: innerText(block, 'REFERENCE_NUMBER') },
+    });
+    if (rec) persons.push(rec);
+  }
+  for (const block of allBlocksOf(xml, 'ENTITY')) {
+    const names = [];
+    const primary = innerText(block, 'FIRST_NAME'); if (primary) names.push(primary);
+    for (const al of allBlocksOf(block, 'ENTITY_ALIAS')) { const a = innerText(al, 'ALIAS_NAME'); if (a) names.push(a); }
+    const rec = makeRecord(names, { source: 'UN', reason: innerText(block, 'UN_LIST_TYPE'), listed_since: innerText(block, 'LISTED_ON'), raw: { ref: innerText(block, 'REFERENCE_NUMBER') } });
+    if (rec) entities.push(rec);
+  }
+  return { persons, entities };
+}
+
+export async function importUnSanctions(env) {
+  const res = await fetch(UN_SANCTIONS_URL);
+  if (!res.ok) throw new Error(`OSN download failed: ${res.status}`);
+  const { persons, entities } = parseUnSanctions(await res.text());
+  if (persons.length + entities.length < 500) throw new Error(`sanity_check_failed (OSN): persons=${persons.length} entities=${entities.length} < 500 — nepřepsáno`);
+  if (persons.concat(entities).some(r => !(r.name_normalized || '').trim())) throw new Error('sanity_check_failed (OSN): záznam s prázdným name_normalized');
+  const p = await replaceSourceRows(env, 'sanctions', COLS, persons, 'UN');
+  const e = await replaceSourceRows(env, 'sanctions_entities', ENTITY_COLS, entities, 'UN');
+  return { persons: p, entities: e };
+}
+
+// ── MZV ČR — vnitrostátní sankční seznam (CSV; URL zjišťujeme dynamicky z NKOD) ──
+// jednoduchý RFC4180 CSV parser (uvozovky, čárky i zalomení uvnitř uvozovek).
+export function parseCsv(text) {
+  const rows = []; let row = [], field = '', inQ = false;
+  text = String(text).replace(/^﻿/, '');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+      else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\r') { /* skip */ }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+export function parseCzSanctions(csvText) {
+  const rows = parseCsv(csvText);
+  const persons = [], entities = [];
+  for (let r = 1; r < rows.length; r++) {           // řádek 0 = hlavička
+    const row = rows[r];
+    const surnameField = (row[0] || '').trim();
+    const nameField = (row[1] || '').trim();
+    if (!surnameField && !nameField) continue;      // prázdný oddělovací řádek
+    const surnames = surnameField.split('/').map(s => s.trim()).filter(Boolean);
+    const given = nameField.split('/').map(s => s.trim()).filter(Boolean);
+    const isPerson = given.length > 0;              // má jméno FO → osoba; jinak entita
+    const names = [];
+    if (isPerson) {
+      const n = Math.max(surnames.length, given.length);
+      for (let i = 0; i < n; i++) {
+        const full = `${given[i] || given[0] || ''} ${surnames[i] || surnames[0] || ''}`.trim();
+        if (full) names.push(full);
+      }
+    } else for (const s of surnames) names.push(s);
+    const rec = makeRecord(names, {
+      source: 'CZ', birth_date: isPerson ? (row[2] || '').trim() : null,
+      nationality: (row[3] || '').trim(), reason: ((row[8] || '') || (row[9] || '')).trim().slice(0, 500),
+      listed_since: (row[5] || '').trim(), raw: { usneseni: (row[6] || '').trim() },
+    });
+    if (!rec) continue;
+    (isPerson ? persons : entities).push(rec);
+  }
+  return { persons, entities };
+}
+
+// URL CSV z MZV se mění (datovaný název) → zjisti aktuální distribuci z Národního
+// katalogu otevřených dat (NKOD SPARQL). Filtr jen ASCII substringy (kvůli diakritice).
+export async function resolveCzCsvUrl() {
+  const q = 'PREFIX dcterms:<http://purl.org/dc/terms/> PREFIX dcat:<http://www.w3.org/ns/dcat#> '
+    + 'SELECT ?dl WHERE { ?ds a dcat:Dataset; dcterms:title ?t; dcat:distribution ?d. ?d dcat:downloadURL ?dl. '
+    + 'FILTER(CONTAINS(LCASE(STR(?t)),"vnitrost")) FILTER(CONTAINS(LCASE(STR(?t)),"sank")) '
+    + 'FILTER(CONTAINS(LCASE(STR(?dl)),".csv")) } LIMIT 1';
+  const res = await fetch('https://data.gov.cz/sparql?query=' + encodeURIComponent(q), { headers: { Accept: 'application/sparql-results+json' } });
+  if (!res.ok) throw new Error(`NKOD SPARQL ${res.status}`);
+  const j = await res.json();
+  const url = j?.results?.bindings?.[0]?.dl?.value;
+  if (!url) throw new Error('CZ CSV URL nenalezena v NKOD');
+  return url;
+}
+
+export async function importCzSanctions(env) {
+  const url = await resolveCzCsvUrl();
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`MZV CSV download failed: ${res.status}`);
+  const { persons, entities } = parseCzSanctions(await res.text());
+  if (persons.length + entities.length < 3) throw new Error(`sanity_check_failed (MZV): total=${persons.length + entities.length} < 3 — nepřepsáno`);
+  if (persons.concat(entities).some(r => !(r.name_normalized || '').trim())) throw new Error('sanity_check_failed (MZV): záznam s prázdným name_normalized');
+  const p = await replaceSourceRows(env, 'sanctions', COLS, persons, 'CZ');
+  const e = await replaceSourceRows(env, 'sanctions_entities', ENTITY_COLS, entities, 'CZ');
+  return { persons: p, entities: e, url };
+}
+
 // ── generování SQL souboru (jednorázový Node import přes wrangler) ──
 function sqlStr(v) {
   if (v == null) return 'NULL';

@@ -15,7 +15,11 @@ import { normalizeName, findBestMatch } from './fuzzy.js';
 async function dbCandidates(db, table, name) {
   const nn = normalizeName(name);
   const tokens = nn.split(' ').filter(t => t.length >= 3);
-  const likeVals = (tokens.length ? tokens : [nn]).map(t => `%${t}%`);
+  // BEZPEČNOSTNÍ GUARD: bez použitelných latinkových tokenů (vstup jen v azbuce/
+  // arabštině → normalizace prázdná) NEHLEDEJ podle prázdného vzoru — matchoval by
+  // VŠECHNY záznamy s prázdným name_normalized a dával falešné shody se skóre ~1.0.
+  if (!tokens.length) return [];
+  const likeVals = tokens.map(t => `%${t}%`);
   // Hledej každý token v name_normalized NEBO v aliases (latinkové přepisy — LIKE je
   // pro ASCII case-insensitive), aby se našel i záznam s primárním jménem v azbuce.
   const where = likeVals.map(() => '(name_normalized LIKE ? OR aliases LIKE ?)').join(' OR ');
@@ -403,21 +407,48 @@ export async function lookupPep(env, name, birthDate) {
 }
 
 // ── Regresní selftest sankčního screeningu (volá cron po importu + admin endpoint) ──
-// Proti aktuální D1 pustí notoricky sankcionovaná jména (musí být match) + jedno
-// smyšlené (musí být clean). Vrací { ok, results }.
+// Per zdroj (eu/un/cz) + entity path (EU) + bezpečnostní kontroly. Kotvy jsou
+// STABILNÍ záznamy vybrané z reálných dat (OSN-only osoby z výboru DRC; CZ osoba
+// Gunďajev/Kirill). Jména jsou veřejné sankcionované subjekty (žádná data klientů).
 export async function sanctionsSelftest(env) {
-  const positives = ['Vladimir Putin', 'Ramzan Kadyrov', 'Sergej Lavrov', 'Alexandr Lukašenko'];
-  const negative = 'Karel Zkušební Neexistující Osoba';
-  const results = [];
-  let ok = true;
-  for (const name of positives) {
+  const out = { eu: { ok: true, checks: [] }, un: { ok: true, checks: [] }, cz: { ok: true, checks: [] }, safety: { ok: true, checks: [] } };
+
+  const cnt = async (t, s) => { try { return (await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${t} WHERE source=?`).bind(s).first())?.n ?? -1; } catch { return -1; } };
+  async function person(bucket, name, { expect = 'match', source = null } = {}) {
     let r; try { r = await lookupSanctions(env, name, null); } catch (e) { r = { status: 'error', details: String(e.message || e) }; }
-    const hit = r.status === 'match';
-    if (!hit) ok = false;
-    results.push({ name, expected: 'match', status: r.status, matched_against: r.matched_against || null, score: r.match_score || null });
+    const src = r.details?.source || null;
+    const pass = r.status === expect && (expect !== 'match' || !source || src === source);
+    out[bucket].checks.push({ name, expected: expect + (source ? '/' + source : ''), status: r.status, source: src, matched_against: r.matched_against || null, score: r.match_score || null, pass });
+    if (!pass) out[bucket].ok = false;
   }
-  let rn; try { rn = await lookupSanctions(env, negative, null); } catch (e) { rn = { status: 'error', details: String(e.message || e) }; }
-  if (rn.status !== 'clean') ok = false;
-  results.push({ name: negative, expected: 'clean', status: rn.status });
-  return { ok, results };
+  async function entity(bucket, name, { source = null } = {}) {
+    let r; try { r = await lookupSanctionsEntity(env, name); } catch (e) { r = { status: 'error', details: String(e.message || e) }; }
+    const src = r.details?.source || null;
+    const pass = r.status === 'match' && (!source || src === source);
+    out[bucket].checks.push({ entity: name, expected: 'match' + (source ? '/' + source : ''), status: r.status, source: src, matched_against: r.matched_against || null, score: r.match_score || null, pass });
+    if (!pass) out[bucket].ok = false;
+  }
+
+  // EU: osoba + ENTITA (entity path dosud selftest nekryl)
+  await person('eu', 'Vladimir Putin', { source: 'EU' });
+  await entity('eu', 'Sberbank', { source: 'EU' });
+  // OSN: 2 stabilní OSN záznamy (výbor DRC). Source se NEfixuje — EU přebírá většinu
+  // OSN sankcí, takže fuzzy legitimně vrátí i EU; přítomnost OSN dat potvrzuje count.
+  await person('un', 'Jamil Mukulu');
+  await person('un', 'Sylvestre Mudacumura');
+  out.un.count = await cnt('sanctions', 'UN');
+  if (out.un.count < 500) out.un.ok = false;   // OSN má stovky osob (sanity)
+  // MZV ČR: 2 stabilní záznamy (jen v CZ)
+  await person('cz', 'Vladimir Gundyayev', { source: 'CZ' });
+  await person('cz', 'Vladimir Gundajev', { source: 'CZ' });
+  out.cz.count = await cnt('sanctions', 'CZ');
+  if (out.cz.count < 1) out.cz.ok = false;
+  // Bezpečnost: azbukový vstup NESMÍ dělat falešnou shodu (guard proti prázdné
+  // normalizaci) + smyšlené jméno musí být clean.
+  await person('safety', 'Владимир Путин', { expect: 'clean' });
+  await person('safety', 'Karel Zkušební Neexistující Osoba', { expect: 'clean' });
+  out.safety.note = 'Azbukový vstup se normalizací redukuje na prázdno → nematchuje (guard proti falešné shodě). Skutečné screeningy jedou přes latinku (viz EU test) + originál se ukládá do aliases.';
+
+  out.ok = out.eu.ok && out.un.ok && out.cz.ok && out.safety.ok;
+  return out;
 }

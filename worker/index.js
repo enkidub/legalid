@@ -1,5 +1,5 @@
 import { lookupMvcr, lookupIsir, lookupIsirCompany, lookupAres, fetchAresSubject, lookupSanctions, lookupSanctionsEntity, lookupPep, sanctionsSelftest } from './utils/lookups.js';
-import { importEuSanctions } from './utils/sanctions.js';
+import { importEuSanctions, importUnSanctions, importCzSanctions } from './utils/sanctions.js';
 import { normalizeName } from './utils/fuzzy.js';
 
 const SYSTEM_PROMPT = `Jsi asistent pro extrakci dat z českých občanských průkazů.
@@ -304,36 +304,49 @@ async function runAllLookups(env, c) {
   }));
 }
 
-// ── Noční cron: import EU sankcí + selftest, s e-mailovým alertingem při problému ──
-// Reporting/obal kolem stávající logiky — import, sanity guard i selftest zůstávají
-// beze změny. Alert e-mail JEN při problému (úspěch = žádný e-mail); max 1 souhrn na běh.
+// ── Noční cron: import 3 sankčních zdrojů (EU · OSN · MZV ČR) + selftest, s e-mailovým
+// alertingem při problému. Reporting/obal kolem stávající logiky (import, sanity guard,
+// selftest beze změny). Každý zdroj samostatný try/catch → selhání jednoho neblokuje
+// ostatní. Alert e-mail JEN při problému; max 1 souhrn na běh.
+const SANCTION_SOURCES = [
+  { label: 'EU', key: 'eu', fn: importEuSanctions },
+  { label: 'OSN', key: 'un', fn: importUnSanctions },
+  { label: 'MZV ČR', key: 'cz', fn: importCzSanctions },
+];
+
 async function runSanctionsCron(env, opts = {}) {
   const startedUtc = new Date().toISOString();
   const t0 = Date.now();
-  const failures = [];            // { step, message } — posbíráme a pošleme jednou
-  let importResult = null, selftest = null;
+  const failures = [];
+  const importResults = {};       // { EU:{persons,entities}, OSN:…, MZV ČR:… }
+  let selftest = null;
 
-  // 1./2. Import (sanity guard je uvnitř importEuSanctions → při selhání tabulka nepřepsána).
+  // Import per zdroj (sanity guard je uvnitř každé import funkce → při selhání se
+  // DANÝ zdroj nepřepíše, ostatní zdroje běží dál).
   if (!opts.skipImport) {
-    try {
-      importResult = await importEuSanctions(env);
-      console.log(`[cron] EU sankce importovány: persons=${importResult.persons} entities=${importResult.entities}`);
-    } catch (e) {
-      const message = String(e?.message || e);
-      console.error('[cron] import EU sankcí selhal (stará data ponechána):', message);
-      const step = /sanity_check_failed/.test(message)
-        ? 'Sanity check importu neprošel (tabulka NEPŘEPSÁNA)'
-        : 'Import EU sankcí selhal výjimkou';
-      failures.push({ step, message });
+    for (const s of SANCTION_SOURCES) {
+      try {
+        const r = await s.fn(env);
+        importResults[s.label] = r;
+        console.log(`[cron] ${s.label} importováno: persons=${r.persons} entities=${r.entities}`);
+        try { await env.DB.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)").bind(`last_import_ok_${s.key}`, startedUtc).run(); } catch {}
+      } catch (e) {
+        const message = String(e?.message || e);
+        console.error(`[cron] import ${s.label} selhal (data zdroje ponechána):`, message);
+        const step = /sanity_check_failed/.test(message)
+          ? `Sanity check ${s.label} neprošel (zdroj NEPŘEPSÁN)`
+          : `Import ${s.label} selhal výjimkou`;
+        failures.push({ step, message, sourceKey: s.key });
+      }
     }
   }
 
-  // 3./4. Selftest (běží i po selhání importu — ověří skutečný stav D1).
+  // Selftest (běží i po selhání importu — ověří skutečný stav D1).
   try {
     selftest = await sanctionsSelftest(env);
     if (opts.forceSelftestFail) selftest = { ...selftest, ok: false, _forced: true };
-    if (selftest.ok) console.log('[cron] selftest OK:', JSON.stringify(selftest.results));
-    else { console.error('[cron] SELFTEST SELHAL:', JSON.stringify(selftest.results)); failures.push({ step: 'Selftest vrátil ok=false', message: JSON.stringify(selftest.results) }); }
+    if (selftest.ok) console.log('[cron] selftest OK');
+    else { console.error('[cron] SELFTEST SELHAL:', JSON.stringify(selftest)); failures.push({ step: 'Selftest vrátil ok=false', message: JSON.stringify(selftest.results || selftest) }); }
   } catch (e) {
     const message = String(e?.message || e);
     console.error('[cron] selftest se nespustil / spadl:', message);
@@ -342,44 +355,49 @@ async function runSanctionsCron(env, opts = {}) {
 
   if (opts.injectFailure) failures.push(opts.injectFailure);
 
-  // Čas posledního plně OK běhu (jen reporting; import logiku nesahá).
-  if (failures.length === 0) {
-    try { await env.DB.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('last_sanctions_import_ok', ?)").bind(startedUtc).run(); }
-    catch (e) { console.error('[cron] zápis app_meta selhal:', e?.message || e); }
-  } else {
+  if (failures.length) {
     // Odeslání alertu NESMÍ shodit cron ani ovlivnit import → try/catch, jen log.
-    try { await sendCronAlert(env, { failures, importResult, selftest, startedUtc, durationMs: Date.now() - t0 }); }
+    try { await sendCronAlert(env, { failures, importResults, selftest, startedUtc, durationMs: Date.now() - t0 }); }
     catch (e) { console.error('[cron] odeslání alertu selhalo (cron pokračuje):', e?.message || e); }
   }
-  return { ok: failures.length === 0, failures, importResult, selftest };
+  return { ok: failures.length === 0, failures, importResults, selftest };
 }
 
-async function sendCronAlert(env, { failures, importResult, selftest, startedUtc, durationMs }) {
+async function sendCronAlert(env, { failures, importResults, selftest, startedUtc, durationMs }) {
   const to = String(env.ADMIN_ALERT_EMAIL || '').trim();
   if (!to) { console.error('[cron] ADMIN_ALERT_EMAIL není nastaven → alert nelze odeslat'); return; }
 
-  // Aktuální počty v D1 po běhu (jen systémové info, žádná data klientů).
-  let dbPersons = '?', dbEntities = '?', lastOk = null;
-  try { dbPersons = (await env.DB.prepare("SELECT COUNT(*) AS n FROM sanctions WHERE source='EU'").first())?.n ?? '?'; } catch {}
-  try { dbEntities = (await env.DB.prepare("SELECT COUNT(*) AS n FROM sanctions_entities WHERE source='EU'").first())?.n ?? '?'; } catch {}
-  try { lastOk = (await env.DB.prepare("SELECT value FROM app_meta WHERE key='last_sanctions_import_ok'").first())?.value || null; } catch {}
+  // Aktuální počty v D1 po běhu per zdroj (jen systémové info, žádná data klientů).
+  const counts = {};
+  for (const s of SANCTION_SOURCES) {
+    try {
+      const p = (await env.DB.prepare("SELECT COUNT(*) AS n FROM sanctions WHERE source=?").bind(s.label === 'EU' ? 'EU' : s.key.toUpperCase()).first())?.n ?? '?';
+      const e = (await env.DB.prepare("SELECT COUNT(*) AS n FROM sanctions_entities WHERE source=?").bind(s.label === 'EU' ? 'EU' : s.key.toUpperCase()).first())?.n ?? '?';
+      counts[s.label] = { p, e };
+    } catch { counts[s.label] = { p: '?', e: '?' }; }
+  }
+  const lastOk = async (key) => { try { return (await env.DB.prepare("SELECT value FROM app_meta WHERE key=?").bind(`last_import_ok_${key}`).first())?.value || null; } catch { return null; } };
 
-  const type = failures.map(f => f.step).join(' + ');
   const L = [];
-  L.push('Legalid noční cron (import EU sankcí + selftest) hlásí PROBLÉM.');
+  L.push('Legalid noční cron (import sankcí EU · OSN · MZV ČR + selftest) hlásí PROBLÉM.');
   L.push(`Čas běhu (UTC): ${startedUtc}  ·  trvání: ${(durationMs / 1000).toFixed(1)} s`);
   L.push('');
   L.push('SELHALO:');
-  for (const f of failures) L.push(`  • ${f.step}\n    ${String(f.message).slice(0, 1500)}`);
+  for (const f of failures) {
+    L.push(`  • ${f.step}\n    ${String(f.message).slice(0, 1200)}`);
+    if (f.sourceKey && /NEPŘEPSÁN|selhal výjimkou/.test(f.step)) {
+      const d = await lastOk(f.sourceKey);
+      L.push(`    → zdroj NEBYL přepsán, běží předchozí data${d ? ` z ${d} (UTC)` : ''}.`);
+    }
+  }
   L.push('');
-  L.push(`Stav D1 po běhu: sanctions(EU)=${dbPersons}, sanctions_entities(EU)=${dbEntities}`);
-  if (importResult) L.push(`Zpracováno tímto během: persons=${importResult.persons}, entities=${importResult.entities}`);
-  if (selftest) { L.push(''); L.push('SELFTEST (jména jsou veřejné testovací subjekty):'); L.push(JSON.stringify(selftest, null, 2)); }
-  L.push('');
-  const notWritten = failures.some(f => /Sanity check|Import EU sankcí selhal výjimkou/.test(f.step));
-  if (notWritten) L.push('Význam: tabulka NEBYLA přepsána — běží předchozí data' + (lastOk ? ` z posledního úspěšného importu ${lastOk} (UTC).` : '.'));
-  else L.push('Význam: import proběhl, ale screening/selftest hlásí problém — zkontroluj matching/normalizaci.');
+  L.push('Počty v D1 po běhu (osoby / entity):');
+  for (const s of SANCTION_SOURCES) L.push(`  ${s.label}: ${counts[s.label].p} / ${counts[s.label].e}`);
+  const proc = Object.entries(importResults || {}).map(([k, v]) => `${k}: ${v.persons}/${v.entities}`).join(', ');
+  if (proc) L.push(`Zpracováno tímto během: ${proc}`);
+  if (selftest) { L.push(''); L.push('SELFTEST (jména = veřejné testovací subjekty, žádná data klientů):'); L.push(JSON.stringify(selftest, null, 2)); }
 
+  const type = failures.map(f => f.step).join(' + ');
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
@@ -763,13 +781,15 @@ export default {
       const token = getSessionToken(request);
       const payload = token ? await verifyJWT(token, env.JWT_SECRET) : null;
       if (!payload || payload.email !== 'kuba.houser@gmail.com') return json({ error: 'forbidden' }, 403);
-      try {
-        const r = await importEuSanctions(env);   // { persons, entities }
-        const selftest = await sanctionsSelftest(env);
-        return json({ ok: true, ...r, selftest });
-      } catch (e) {
-        return json({ error: 'import_failed', message: String(e.message || e) }, 502);
+      // Všechny zdroje per try/catch (selhání jednoho neblokuje ostatní) + selftest.
+      const sources = {}, errors = {};
+      for (const [label, fn] of [['EU', importEuSanctions], ['OSN', importUnSanctions], ['CZ', importCzSanctions]]) {
+        try { sources[label] = await fn(env); }
+        catch (e) { errors[label] = String(e.message || e); }
       }
+      let selftest = null;
+      try { selftest = await sanctionsSelftest(env); } catch (e) { selftest = { ok: false, error: String(e.message || e) }; }
+      return json({ ok: Object.keys(errors).length === 0, sources, errors, selftest });
     }
 
     // GET /api/admin/sanctions/selftest — regresní kontrola screeningu proti D1.

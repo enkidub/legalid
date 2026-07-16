@@ -178,11 +178,6 @@ async function regenerate(root, id) {
   }
 }
 
-function resumeAml(id) {
-  try { sessionStorage.setItem('legalid_aml_resume', String(id)); } catch {}
-  if (window.navigate) window.navigate('/aml');
-}
-
 // Lehký modal se 2–3 tlačítky. Vrací klíč zvoleného tlačítka (null při Esc / kliku mimo).
 function choiceModal({ title, body, buttons }) {
   return new Promise(resolve => {
@@ -214,29 +209,14 @@ async function confirmDeleteDraft(root, id) {
   if (!c) return;
   const name = esc(caseName(c));
   const num = c.case_number ? ' — ' + esc(c.case_number) : '';
-  let choice;
-  if (draftHasLustrace(c)) {
-    choice = await choiceModal({
-      title: 'Smazat rozpracovanou kontrolu?',
-      body: `<p><strong>${name}</strong>${num}</p>
-        <p class="arch-modal-warn">Proběhla lustrace — smazáním nezůstane žádný záznam. Alternativně můžete kontrolu ukončit dle § 15 (zůstane doklad o provedené kontrole).</p>`,
-      buttons: [
-        { key: 'terminate', label: 'Ukončit dle § 15', cls: 'aml-btn-primary' },
-        { key: 'delete', label: 'Smazat', cls: 'aml-btn-danger' },
-        { key: 'cancel', label: 'Zpět', cls: '' },
-      ],
-    });
-  } else {
-    choice = await choiceModal({
-      title: 'Smazat rozpracovanou kontrolu?',
-      body: `<p><strong>${name}</strong>${num}</p><p>Tato rozpracovaná kontrola bude trvale odstraněna.</p>`,
-      buttons: [
-        { key: 'delete', label: 'Smazat', cls: 'aml-btn-danger' },
-        { key: 'cancel', label: 'Zpět', cls: '' },
-      ],
-    });
-  }
-  if (choice === 'terminate') { resumeAml(id); return; }
+  const choice = await choiceModal({
+    title: 'Smazat rozpracovanou kontrolu?',
+    body: `<p><strong>${name}</strong>${num}</p><p>Tato rozpracovaná kontrola bude trvale odstraněna.</p>`,
+    buttons: [
+      { key: 'delete', label: 'Smazat', cls: 'aml-btn-danger' },
+      { key: 'cancel', label: 'Zpět', cls: '' },
+    ],
+  });
   if (choice !== 'delete') return;
   try {
     const r = await apiAmlDeleteCase(id);

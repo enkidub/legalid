@@ -112,12 +112,11 @@ function isEmptyDraft(c) { return c.status === 'in_progress' && !draftHasName(c)
 function isDecidedNoRecord(c) { return c.status === 'in_progress' && !!c.risk_decided_at; }
 
 // ── Filtr / hledání / řazení ─────────────────────────────────────────
+// V archivu ukazujeme jen tyto stavy — např. 'abandoned' (mrtvé drafty) se skrývá.
+function isVisible(c) { return c.status === 'in_progress' || c.status === 'completed' || c.status === 'terminated'; }
 function statusMatchesFilter(c, f) {
-  if (f === 'all') return true;
-  if (f === 'in_progress') return c.status === 'in_progress';
-  if (f === 'completed') return c.status === 'completed';
-  if (f === 'terminated') return c.status === 'terminated';
-  return true;
+  if (f === 'all') return isVisible(c);
+  return c.status === f;
 }
 function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 function matchesQuery(c, q) {
@@ -152,7 +151,7 @@ function sortCases(list) {
 // ── Render: lišta nástrojů (jednou) ──────────────────────────────────
 function renderShell(root) {
   const n = {
-    all: _cases.length,
+    all: _cases.filter(isVisible).length,
     in_progress: _cases.filter(c => c.status === 'in_progress').length,
     completed: _cases.filter(c => c.status === 'completed').length,
     terminated: _cases.filter(c => c.status === 'terminated').length,
@@ -188,7 +187,7 @@ function renderList(root) {
   if (!listEl || !footEl) return;
 
   const filtered = sortCases(_cases.filter(c => statusMatchesFilter(c, _filter) && matchesQuery(c, _query)));
-  if (!_cases.length) {
+  if (!_cases.filter(isVisible).length) {
     listEl.innerHTML = `<div class="arch-empty">Zatím nemáte žádné kontroly. Rozpracované i dokončené kontroly se objeví zde.</div>`;
     footEl.innerHTML = '';
     return;

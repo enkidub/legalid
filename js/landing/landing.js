@@ -172,52 +172,9 @@ export function renderLanding() {
   </section>
 
   <!-- CENA (pilot) -->
-  <section class="lnd-section" id="lnd-pricing">
-    <div class="lnd-wrap lnd-wrap--narrow">
-      <div class="lnd-section-label">Cena</div>
-      <h2 class="lnd-h2">Zdarma pro prvních 10 povinných osob</h2>
-      <p class="lnd-sub">Pilotní přístup zdarma pro první povinné osoby. Napište: <a href="mailto:info@legalid.cz">info@legalid.cz</a></p>
-    </div>
-    <!-- Ceníkové karty zakomentovány do spuštění Stripe (nemazat, vrátíme se k nim):
-      <div class="lnd-price-cards">
-        <div class="lnd-price-card">
-          <div class="lnd-price-name">Zdarma</div>
-          <div class="lnd-price-amt">0 <span>Kč</span></div>
-          <div class="lnd-price-sub">5 doložek bez registrace · po trialu 2 / měsíc</div>
-          <ul class="lnd-price-feat">
-            <li>Ověřovací doložka</li>
-            <li>Rozpoznání údajů z OP</li>
-            <li>Tisk, .docx, PDF</li>
-          </ul>
-          <button class="lnd-btn lnd-btn-ghost lnd-btn-block" onclick="navigate('/dolozka')">Začít zdarma</button>
-        </div>
-        <div class="lnd-price-card">
-          <div class="lnd-price-name">Pro měsíční</div>
-          <div class="lnd-price-amt">220 <span>Kč/měs</span></div>
-          <div class="lnd-price-sub">zrušíte kdykoli</div>
-          <ul class="lnd-price-feat">
-            <li>Neomezené doložky</li>
-            <li>AML kontrola (brzy)</li>
-            <li>Faktura na IČO</li>
-          </ul>
-          <button class="lnd-btn lnd-btn-ghost lnd-btn-block" onclick="selectPlan('monthly')">Vybrat měsíční</button>
-        </div>
-        <div class="lnd-price-card lnd-price-card--featured">
-          <div class="lnd-price-badge">2 měsíce zdarma</div>
-          <div class="lnd-price-name">Pro roční</div>
-          <div class="lnd-price-amt">182 <span>Kč/měs</span></div>
-          <div class="lnd-price-sub">2 190 Kč/rok · ušetříte 450 Kč</div>
-          <ul class="lnd-price-feat">
-            <li>Neomezené doložky</li>
-            <li>AML kontrola (brzy)</li>
-            <li>Faktura na IČO</li>
-          </ul>
-          <button class="lnd-btn lnd-btn-primary lnd-btn-block" onclick="selectPlan('annual')">Vybrat roční</button>
-        </div>
-      </div>
-      <div class="lnd-price-note">30 dní zdarma neomezeně po registraci · žádná karta při registraci</div>
-    -->
-  </section>
+  <!-- Sekce Ceník skryta pro fázi free (pilot zdarma pro prvních 10 testerů).
+       Vrátíme se k ní při spuštění předplatného — původní znění včetně cenových
+       karet je v gitu (commit s vypnutím Pro/ceníku). -->
 
   <!-- FAQ -->
   <section class="lnd-section lnd-section--alt">

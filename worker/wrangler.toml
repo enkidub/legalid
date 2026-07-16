@@ -9,6 +9,9 @@ ALLOWED_ORIGINS = "https://legalid.cz,http://localhost:8080"
 # Sem vlož Client ID z Google Cloud Console a nasaď `npx wrangler deploy`.
 # Dokud je prázdné, /api/auth/google vrací oauth_not_configured.
 GOOGLE_CLIENT_ID = "717906522944-muikrcrptugpskr0nnbva32d1slq91fl.apps.googleusercontent.com"
+# Příjemce e-mailových alertů nočního cronu (import sankcí + selftest). Doplň hodnotu
+# a nasaď `npx wrangler deploy` (nebo použij secret). Prázdné → alerty se neodesílají.
+ADMIN_ALERT_EMAIL = ""
 
 [triggers]
 crons = ["0 3 * * *"]  # denně 3:00 UTC — přepis EU sankcí v D1

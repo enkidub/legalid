@@ -20,7 +20,9 @@
   --max:    1160px; --pad: clamp(16px, 3vw, 36px);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 15px; -webkit-font-smoothing: antialiased; }
+html { font-size: 15px; -webkit-font-smoothing: antialiased; scrollbar-gutter: stable; }
+/* scrollbar-gutter: stable rezervuje místo pro scrollbar vždy → šířka viewportu
+   se nemění při objevení/zmizení scrollbaru → media query panelu neflappuje. */
 body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.6; }
 
 /* ── HEADER ── */
@@ -1555,6 +1557,10 @@ body.view-aml { background: linear-gradient(180deg, #fbf9f4 0%, #f6f2e8 100%); b
   font-family: var(--sans);
 }
 .aml-tile:hover:not(.aml-tile--disabled) { border-color: var(--navy); }
+/* Focus jen pro klávesnici (jemný offset outline) — po kliku myší se nezobrazí,
+   aby tmavý rámeček nevypadal jako výběr. Výběr = zlatý rámeček + zlaté pozadí. */
+.aml-tile:focus { outline: none; }
+.aml-tile:focus-visible { outline: 2px solid var(--navy); outline-offset: 3px; }
 .aml-tile--selected { border-color: var(--gold); background: var(--gold-p); }
 .aml-tile--disabled { opacity: .55; cursor: default; }
 .aml-tile-title { font-size: 14px; font-weight: 600; color: var(--navy); display: flex; align-items: center; gap: 6px; }

@@ -100,9 +100,7 @@ const VERIFIER_CHECKBOX = 'Potvrzuji totožnost klienta z předložených doklad
 // Způsoby potvrzení totožnosti (dolní radia). Jen 'personal' aktivní v MVP.
 const METHODS = [
   { id: 'personal', enabled: true, title: 'Osobní setkání' },
-  { id: 'video', enabled: false, title: 'Video hovor' },
-  { id: 'bankid', enabled: false, title: 'BankID' },
-  { id: 'micropayment', enabled: false, title: 'Mikroplatba' },
+  { id: 'remote', enabled: false, title: 'Vzdálené ověření (připravujeme)' },
 ];
 
 // ── Blok 3 — Účel obchodu (krok index 2) ──
@@ -415,6 +413,7 @@ async function createNewCase(root) {
     wiz.frontImg = wiz.backImg = wiz.frontExtracted = wiz.backExtracted = null;
     wiz.uploadFiles = []; wiz.ocrLoading = null; wiz.clients = null; wiz.clientQuery = ''; wiz.clientsError = false;
     wiz.lookups = null; wiz.lookupStatus = 'idle'; wiz.maxStep = 0; wiz.forceRun = false;
+    wiz._ctxLookupsTriedStep = null;
     wiz.verifierConfirmed = false; wiz.terminating = false;
     wiz.purposeDocs = []; wiz.consistency = null; wiz.consistencyLoading = false;
     wiz.riskSuggestion = null; wiz.riskSuggestLoading = false;
@@ -422,9 +421,8 @@ async function createNewCase(root) {
     wiz.riskDecision = { level: null, justification: '' };
     wiz.riskDecided = false; wiz.riskDeciding = false;
     wiz.generating = false; wiz.recordSha = null; wiz.completeResult = null; wiz.verifierTimestamp = null;
-    wiz._profileTried = false;
-    if (wiz.source === 'list') loadClients(root);
-    renderStep(root);
+    wiz._profileTried = false; wiz._clientsLoading = false;
+    renderStep(root);   // renderClientStep → ensureClientsLoaded načte list, je-li aktivní
   } catch {
     renderError('Nepodařilo se založit AML případ. Zkuste to prosím znovu.');
   }
@@ -465,8 +463,9 @@ async function resumeCase(root, id) {
     wiz.step = c.current_step || 0;   // DB je již v novém schématu (migrace v4)
     wiz.maxStep = wiz.step; wiz.forceRun = false;
     wiz.source = hasClientData() ? 'manual' : loadLastMethod();   // s daty rovnou ukaž formulář
-    wiz.lookups = null; wiz.lookupStatus = 'idle';
-    renderStep(root);
+    wiz.lookups = null; wiz.lookupStatus = 'idle'; wiz._ctxLookupsTriedStep = null;
+    wiz.clients = null; wiz.clientQuery = ''; wiz.clientsError = false; wiz._clientsLoading = false;
+    renderStep(root);   // renderClientStep → ensureClientsLoaded načte list i po resume (C)
   } catch {
     renderError('Případ se nepodařilo načíst.');
   }
@@ -481,8 +480,7 @@ function pickSource(root, id) {
   if (!SOURCES.some(s => s.id === id)) return;
   wiz.source = id;
   try { localStorage.setItem(LAST_METHOD_KEY, id); } catch {}
-  if (id === 'list' && wiz.clients === null) loadClients(root);
-  renderStep(root);
+  renderStep(root);   // renderClientStep → ensureClientsLoaded načte seznam, je-li aktivní
 }
 
 // Segmentový přepínač typu subjektu (FO / Podnikající FO / PO).
@@ -806,6 +804,8 @@ async function saveDoc(type, img, extracted) {
 // ── Ze seznamu (uložení klienti z předchozích případů) ───────────────
 // Centrální evidence: hledání klientů přes GET /api/clients?q= (server-side fulltext).
 async function loadClients(root, q = '') {
+  if (wiz._clientsLoading) return;    // pojistka proti souběžným/opakovaným fetchům
+  wiz._clientsLoading = true;
   wiz.clientsError = false;
   wiz.clients = null;                 // loading stav
   if (wiz.step === 0 && wiz.source === 'list') renderClientList();
@@ -817,7 +817,16 @@ async function loadClients(root, q = '') {
     wiz.clients = null;               // ne prázdný seznam — chyba ≠ „nemáte klienty"
     wiz.clientsError = true;
   }
+  wiz._clientsLoading = false;
   if (wiz.step === 0 && wiz.source === 'list') renderClientList();
+}
+
+// Zajistí načtení seznamu klientů, jakmile je aktivní dlaždice „Existující klient"
+// (funguje pro čerstvý případ i resume). Guard brání opakovaným fetchům při re-renderu.
+function ensureClientsLoaded(root) {
+  if (wiz.source === 'list' && wiz.clients === null && !wiz._clientsLoading && !wiz.clientsError) {
+    loadClients(root, (wiz.clientQuery || '').trim());
+  }
 }
 
 let _clientSearchTimer = null;
@@ -836,9 +845,12 @@ function pickClient(root, key) {
     client_doc_type: c.doc_type, client_doc_number: c.doc_number, client_rc: c.rc,
     client_ico: c.ico, company_name: c.company_name,
   };
-  Object.entries(map).forEach(([col, v]) => { if (v != null && v !== '') wiz.data[col] = v; });
-  // Naváž případ na klienta z evidence (client_id) + subject_type.
+  // Naváž případ na klienta z evidence (client_id) + subject_type + ULOŽ client_* pole
+  // do case (jinak resume ztratí jméno i předvyplnění — bug B).
   const patch = { client_id: c.id };
+  Object.entries(map).forEach(([col, v]) => {
+    if (v != null && v !== '') { wiz.data[col] = v; patch[col] = v; }
+  });
   if (c.subject_type) { wiz.subject_type = c.subject_type; patch.subject_type = c.subject_type; }
   patchCase(patch);
   renderStep(root);
@@ -1005,9 +1017,13 @@ function ctxLookupRow(lk) {
 }
 
 // Dotáhne uložené lustrace pro panel (když nejsou v paměti — např. po resume).
+// POJISTKA proti smyčce: fetch max JEDNOU na daný krok. Bez toho by prázdná
+// odpověď (renderContext → fetch → prázdno → renderContext → fetch …) zacyklila
+// hlavní vlákno request stormem = freeze.
 async function fetchContextLookups() {
-  if (wiz._ctxLookupsLoading || !wiz.caseId) return;
+  if (wiz._ctxLookupsLoading || wiz._ctxLookupsTriedStep === wiz.step || !wiz.caseId) return;
   wiz._ctxLookupsLoading = true;
+  wiz._ctxLookupsTriedStep = wiz.step;
   try { const r = await apiAmlGetLookups(wiz.caseId); if (r.results?.length) wiz.lookups = r.results; } catch {}
   wiz._ctxLookupsLoading = false;
   renderContext();
@@ -1038,7 +1054,8 @@ function renderContext() {
   if (wiz.step < 1) {
     lustraceHTML = `<div class="aml-ctx-empty">Lustrace zatím neproběhla</div>`;
   } else if (!wiz.lookups || !wiz.lookups.length) {
-    lustraceHTML = `<div class="aml-ctx-empty">Načítám lustrace…</div>`;
+    const loading = wiz._ctxLookupsLoading || wiz.lookupStatus === 'running' || wiz.lookupStatus === 'loading';
+    lustraceHTML = `<div class="aml-ctx-empty">${loading ? 'Načítám lustrace…' : 'Lustrace zatím neproběhla'}</div>`;
   } else {
     const RANK = { match: 4, warning: 3, manual: 2, clean: 1, pending: 0, error: 0 };
     const sorted = [...wiz.lookups].sort((a, b) => (RANK[b.status] ?? 0) - (RANK[a.status] ?? 0));
@@ -1102,7 +1119,7 @@ function renderClientStep(root) {
   const methods = METHODS.map(m => {
     const checked = wiz.method === m.id ? ' checked' : '';
     const dis = m.enabled ? '' : ' disabled';
-    const badge = m.enabled ? '' : ' <span class="aml-radio-badge">brzy</span>';
+    const badge = '';   // „(připravujeme)" je přímo v názvu metody
     return `<label class="aml-radio${m.enabled ? '' : ' aml-radio--disabled'}">
       <input type="radio" name="amlMethod" value="${m.id}"${checked}${dis}>
       <span>${esc(m.title)}${badge}</span>
@@ -1141,6 +1158,7 @@ function renderClientStep(root) {
     </button>
     ${hasAnything ? `<button class="aml-reset-link" data-act="restart-step">Vymazat vše</button>` : ''}
   </div>`;
+  ensureClientsLoaded(root);   // C: list se načte VŽDY při aktivaci (fresh i resume)
 }
 
 // U3 — rámeček prohlášení ověřující osoby (jen „Osobní setkání").

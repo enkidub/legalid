@@ -61,6 +61,24 @@ const FORM_FIELDS = [
 ];
 // Pohlaví je povinné, jen když není vyplněné rodné číslo (§ 5 odst. 1 písm. a).
 function genderRequired() { return !String(wiz.data.client_rc || '').trim(); }
+// Pohlaví z rodného čísla: ženy mají měsíc +50 (51–62), příp. +70 při přetečení dne
+// (71–82); muži 01–12 nebo +20 (21–32) u novějších přidělení. Vrací 'M' | 'Ž' | ''.
+function genderFromRc(rc) {
+  const digits = String(rc || '').replace(/\D/g, '');
+  if (digits.length < 4) return '';
+  const mm = parseInt(digits.slice(2, 4), 10);
+  if (isNaN(mm)) return '';
+  if ((mm >= 51 && mm <= 62) || (mm >= 71 && mm <= 82)) return 'Ž';
+  if ((mm >= 1 && mm <= 12) || (mm >= 21 && mm <= 32)) return 'M';
+  return '';
+}
+// Po zadání rč odvodí pohlaví, uloží a překreslí formulář (select zůstane disabled).
+function applyGenderFromRc(root) {
+  const g = genderFromRc(wiz.data.client_rc);
+  if (g && wiz.data.client_gender !== g) { wiz.data.client_gender = g; patchCase({ client_gender: g }); }
+  const fc = document.getElementById('amlClientForm');
+  if (fc) fc.innerHTML = clientFormHTML();
+}
 const REQUIRED_COLS = FORM_FIELDS.filter(f => f.req).map(f => f.col);
 
 // Cesty získání dat (horní dlaždice). SVG line ikony ve stylu landingu (stroke, bez fill).
@@ -296,6 +314,8 @@ function bindRoot(root) {
       if (!wiz.caseId && ['aml_f_client_name', 'aml_f_client_surname', 'aml_f_company_name'].includes(e.target.id) && e.target.value.trim()) ensureCase();
       // Duplicity: po opuštění identifikačního pole prověř evidenci (nenápadná nabídka).
       if (['aml_f_client_name', 'aml_f_client_surname', 'aml_f_client_birth_date', 'aml_f_client_rc', 'aml_f_client_doc_number', 'aml_f_client_ico'].includes(e.target.id)) maybeCheckDuplicate(root);
+      // Rodné číslo → odvoď pohlaví a zamkni jeho select.
+      if (e.target.id === 'aml_f_client_rc') applyGenderFromRc(root);
     }
   });
   // Live validace formuláře + průběžné čtení do wiz.data (bez re-renderu → nezahodí fokus).
@@ -493,7 +513,7 @@ function resetWizard() {
   wiz.lookups = null; wiz.lookupStatus = 'idle'; wiz.maxStep = 0; wiz.forceRun = false;
   wiz._ctxLookupsTriedStep = null;
   wiz.verifierConfirmed = false; wiz.terminating = false;
-  wiz.purposeDocs = []; wiz.consistency = null; wiz.consistencyLoading = false;
+  wiz.purposeDocs = []; wiz.consistency = null; wiz.consistencyLoading = false; wiz._consistencyHint = null;
   wiz.riskSuggestion = null; wiz.riskSuggestLoading = false; wiz._aiEdited = false;
   wiz.declaration = { pep: null, sanctions: false, source: false };
   wiz.riskDecision = { level: null, justification: '' };
@@ -501,6 +521,7 @@ function resetWizard() {
   wiz.generating = false; wiz.recordSha = null; wiz.completeResult = null; wiz.verifierTimestamp = null;
   wiz._profileTried = false; wiz._clientsLoading = false; wiz._creating = false;
   wiz._dupMatch = null; wiz._dupDismissed = false; wiz._dupDismissedId = null;
+  wiz._lastRenderedStep = null;
   wiz._started = true;
 }
 
@@ -1284,6 +1305,7 @@ function contextHelp(step) {
 }
 
 function renderStep(root) {
+  const stepChanged = wiz._lastRenderedStep !== wiz.step;
   renderCaseNum();
   renderSteps();
   renderContext();
@@ -1294,6 +1316,14 @@ function renderStep(root) {
   else if (wiz.step === 4) renderRecord(root);
   else renderPlaceholder();
   renderFoot();
+  wiz._lastRenderedStep = wiz.step;
+  // Přechod na jiný krok → vždy začni na začátku kroku (ne u patičky, kde uživatel
+  // klikl Další). Jen při skutečné změně kroku, ať běžné re-rendery nescrollují.
+  if (stepChanged) scrollWizardTop();
+}
+// Scroll na začátek wizardu (okno je scroll kontejner — viz mountRoute).
+function scrollWizardTop() {
+  try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); } catch { try { window.scrollTo(0, 0); } catch {} }
 }
 
 // ── Krok 1 (index 0) — Údaje klienta ─────────────────────────────────
@@ -1478,20 +1508,26 @@ function uploadZoneHTML() {
 // U PO se IČO vynechá (je v bloku Společnost). U podnikající FO je IČO povinné.
 function clientFormHTML() {
   const fields = FORM_FIELDS.filter(f => !(f.col === 'client_ico' && wiz.subject_type === 'po'));
+  const genderLocked = !genderRequired();   // rč vyplněno → pohlaví se určí z rč
   return `<div class="aml-fields">` + fields.map(f => {
-    const val = wiz.data[f.col] || '';
+    // Pohlaví: při zadaném rč odvoď hodnotu a zamkni select (neotevírat dropdown).
+    const val = (f.col === 'client_gender' && genderLocked)
+      ? (wiz.data.client_gender || genderFromRc(wiz.data.client_rc) || '')
+      : (wiz.data[f.col] || '');
     const req = f.req
       || (f.col === 'client_ico' && wiz.subject_type === 'fo_podnikatel')
       || (f.col === 'client_gender' && genderRequired());
     const star = req ? ' <span class="aml-req">*</span>' : '';
     let input;
     if (f.type === 'select') {
+      const dis = (f.col === 'client_gender' && genderLocked) ? ' disabled' : '';
       const opts = f.opts.map(([v, l]) => `<option value="${esc(v)}"${v === val ? ' selected' : ''}>${esc(l)}</option>`).join('');
-      input = `<select id="aml_f_${f.col}">${opts}</select>`;
+      input = `<select id="aml_f_${f.col}"${dis}>${opts}</select>`;
     } else {
       input = `<input id="aml_f_${f.col}" value="${esc(val)}"${f.ph ? ` placeholder="${esc(f.ph)}"` : ''}>`;
     }
-    const note = f.note ? `<span class="aml-field-note">${esc(f.note)}</span>` : '';
+    const noteText = (f.col === 'client_gender' && genderLocked) ? 'Určeno z rodného čísla.' : f.note;
+    const note = noteText ? `<span class="aml-field-note">${esc(noteText)}</span>` : '';
     return `<label class="aml-field"><span>${esc(f.label)}${star}</span>${input}${note}</label>`;
   }).join('') + `</div>`;
 }
@@ -1703,6 +1739,12 @@ function consistencyHTML() {
     result = `<div class="aml-cons-result">
       <div class="aml-cons-badge aml-lk-${v.cls}"><span class="aml-lk-ico">${v.icon}</span> ${esc(v.label)}</div>
       ${summary}${signals}</div>`;
+  } else {
+    // Trvalá inline nápověda pod tlačítkem (ne mizející tooltip/toast). Při chybějícím
+    // dokladu / selhání se sem zapíše konkrétní hláška (wiz._consistencyHint).
+    const warn = !!wiz._consistencyHint;
+    const hint = wiz._consistencyHint || 'Porovná uvedený účel a zdroj prostředků s obsahem nahraných dokumentů.';
+    result = `<div class="aml-cons-hint${warn ? ' aml-cons-hint--warn' : ''}">${esc(hint)}</div>`;
   }
   return `<div class="aml-pfield aml-cons">
     <button class="aml-btn aml-btn-sm" data-act="check-consistency"${btnDis}>Zkontrolovat konzistenci</button>
@@ -1754,7 +1796,8 @@ function removePurposeDoc(root, idx) {
 async function runConsistency(root) {
   readFieldsFromForm();
   const docs = wiz.purposeDocs.filter(d => d.status === 'done');
-  if (!docs.length) { showToast('Nejdřív nahrajte alespoň jeden dokument.'); return; }
+  if (!docs.length) { wiz._consistencyHint = 'Nejdřív nahrajte alespoň jeden dokument, pak lze porovnat konzistenci.'; renderPurpose(root); return; }
+  wiz._consistencyHint = null;
   wiz.consistencyLoading = true; renderPurpose(root);
   let res;
   try {
@@ -1766,7 +1809,8 @@ async function runConsistency(root) {
     });
   } catch { res = null; }
   wiz.consistencyLoading = false;
-  if (!res || res.error) { showToast('Kontrola konzistence selhala, zkuste to znovu.'); renderPurpose(root); return; }
+  if (!res || res.error) { wiz._consistencyHint = 'Kontrola konzistence selhala — zkuste to znovu.'; renderPurpose(root); return; }
+  wiz._consistencyHint = null;
   wiz.consistency = res;
   renderPurpose(root); renderContext();
 }
@@ -1966,6 +2010,7 @@ async function runRiskDecision(root) {
   wiz.riskDecision.decided_at = res.risk_decided_at;
   wiz.maxStep = Math.max(wiz.maxStep, 4);
   renderRisk(root); renderSteps(); renderFoot(); renderContext();
+  scrollWizardTop();   // po zamčení rozhodnutí ukaž začátek kroku (ne patičku)
 }
 
 // ── Krok 5 (index 4) — Záznam ────────────────────────────────────────

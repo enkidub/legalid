@@ -192,6 +192,8 @@ function mountRoute(path) {
   }
   document.title = VIEW_TITLES[view] || DEFAULT_TITLE;
   document.body.classList.toggle('view-aml', view === 'aml');   // krémový gradient za wizardem
+  // Přihlášené app pohledy → skrytá marketingová patička + minimální app patička.
+  document.body.classList.toggle('app-view', ['aml', 'klienti', 'archiv'].includes(view));
   document.querySelectorAll('.main-nav-item').forEach(b =>
     b.classList.toggle('active', b.dataset.route === view));
   window.scrollTo(0, 0);

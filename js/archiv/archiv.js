@@ -29,6 +29,7 @@ export function initArchiv() {
     if (!t) return;
     if (t.dataset.act === 'archiv-retry') loadArchiv(root);
     if (t.dataset.act === 'regen') regenerate(root, +t.dataset.id);
+    if (t.dataset.act === 'view-pdf') viewPdf(root, +t.dataset.id);
     if (t.dataset.act === 'new-check' && window.navigate) window.navigate('/aml');
     if (t.dataset.act === 'resume-aml') {
       try { sessionStorage.setItem('legalid_aml_resume', t.dataset.id); } catch {}
@@ -132,6 +133,7 @@ function archivHTML(inprog, list) {
         <div class="arch-name">${esc(name)} ${badge} ${risk}</div>
         <div class="arch-meta">${esc(meta)}</div>
       </div>
+      <button class="aml-btn aml-btn-sm aml-btn-primary" data-act="view-pdf" data-id="${c.id}">Zobrazit</button>
       <button class="aml-btn aml-btn-sm" data-act="regen" data-id="${c.id}">Regenerovat PDF</button>
     </div>`;
   }).join('');
@@ -156,33 +158,57 @@ function downloadPdf(bytes, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
+// Sestaví PDF bajty případu (záznam / ukončení) — sdíleno pro stažení i zobrazení.
+async function buildCasePdfBytes(id) {
+  const cr = await apiAmlGetCase(id);
+  const c = cr.case;
+  if (!c) throw new Error('not_found');
+  const profile = cr.profile || null;
+  if (c.status === 'terminated') {
+    const bytes = await buildTerminationPdf({
+      caseNumber: c.case_number, povinnaOsoba: profile, dateISO: c.completed_at || c.created_at,
+      clientName: [c.client_name, c.client_surname].filter(Boolean).join(' '),
+      clientNameOriginal: c.client_name_original || '', clientBirthDate: c.client_birth_date || '',
+      clientDocNumber: c.client_doc_number || '', reasonLabel: c.terminated_reason || 'Ukončeno', reasonText: '',
+    });
+    return { bytes, filename: `${c.case_number || 'AML'}-ukonceno.pdf` };
+  }
+  let lookups = [], documents = [];
+  try { const l = await apiAmlGetLookups(id); lookups = l.results || []; } catch {}
+  try { const d = await apiAmlGetDocuments(id); documents = d.documents || []; } catch {}
+  const bytes = await buildRecordPdf(recordDataFromCase(c, lookups, documents, profile));
+  return { bytes, filename: `${c.case_number || 'AML'}-zaznam.pdf` };
+}
+
 async function regenerate(root, id) {
   const btn = root.querySelector(`[data-act="regen"][data-id="${id}"]`);
   if (btn) { btn.disabled = true; btn.textContent = 'Generuji…'; }
   try {
-    const cr = await apiAmlGetCase(id);
-    const c = cr.case;
-    if (!c) throw new Error('not_found');
-    const profile = cr.profile || null;
-    let bytes;
-    if (c.status === 'terminated') {
-      bytes = await buildTerminationPdf({
-        caseNumber: c.case_number, povinnaOsoba: profile, dateISO: c.completed_at || c.created_at,
-        clientName: [c.client_name, c.client_surname].filter(Boolean).join(' '),
-        clientNameOriginal: c.client_name_original || '', clientBirthDate: c.client_birth_date || '',
-        clientDocNumber: c.client_doc_number || '', reasonLabel: c.terminated_reason || 'Ukončeno', reasonText: '',
-      });
-    } else {
-      let lookups = [], documents = [];
-      try { const l = await apiAmlGetLookups(id); lookups = l.results || []; } catch {}
-      try { const d = await apiAmlGetDocuments(id); documents = d.documents || []; } catch {}
-      bytes = await buildRecordPdf(recordDataFromCase(c, lookups, documents, profile));
-    }
-    downloadPdf(bytes, `${c.case_number || 'AML'}-zaznam.pdf`);
+    const { bytes, filename } = await buildCasePdfBytes(id);
+    downloadPdf(bytes, filename);
   } catch {
     showToast('Regenerace PDF se nezdařila.');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Regenerovat PDF'; }
+  }
+}
+
+// Zobrazit PDF v nové kartě (blob URL) bez stažení. Okno se otevře hned v rámci
+// klik-gesta (jinak by ho prohlížeč zablokoval), obsah se doplní po sestavení.
+async function viewPdf(root, id) {
+  const btn = root.querySelector(`[data-act="view-pdf"][data-id="${id}"]`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Otevírám…'; }
+  const w = window.open('', '_blank');
+  try {
+    const { bytes } = await buildCasePdfBytes(id);
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    if (w) w.location = url; else window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch {
+    if (w) w.close();
+    showToast('PDF se nepodařilo otevřít.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Zobrazit'; }
   }
 }
 

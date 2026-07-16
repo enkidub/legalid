@@ -460,6 +460,7 @@ export function openCfgPanel(section) {
     overlay.classList.add('open');
     panel.classList.add('open');
   }
+  document.body.classList.add('cfg-open');   // zamkni scroll pozadí (izolace scrollu panelu)
 }
 
 
@@ -468,12 +469,14 @@ export function closeCfgPanel() {
   document.getElementById('cfgOverlay').classList.remove('open');
   const panel = document.getElementById('cfgPanel');
   panel.classList.remove('open', 'from-menu');
+  document.body.classList.remove('cfg-open');
   // Hamburger je při otevření panelu zavřený (viz _openPanelFromMenu) — není co uklízet.
 }
 
 
 export function closeCfgPanelToMenu() {
   const panel = document.getElementById('cfgPanel');
+  document.body.classList.remove('cfg-open');
   if (panel.classList.contains('from-menu')) {
     _closePanelToMenu(panel, document.getElementById('cfgOverlay'));
     state.diagramActive = null;

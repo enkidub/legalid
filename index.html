@@ -157,10 +157,6 @@
           <span class="nav-item-sub">Profil povinné osoby</span>
         </div>
       </button>
-      <button class="nav-item" onclick="closeHamburger();window.open('mailto:info@legalid.cz?subject=N%C3%A1pov%C4%9Bda','_blank')">
-        <span class="nav-item-icon"><i class="ti ti-help-circle"></i></span>
-        <div class="nav-item-text"><span class="nav-item-label">Nápověda</span></div>
-      </button>
       <button class="nav-item" onclick="closeHamburger();openAboutModal()">
         <span class="nav-item-icon"><i class="ti ti-info-circle"></i></span>
         <div class="nav-item-text"><span class="nav-item-label">O aplikaci</span></div>
@@ -615,6 +611,20 @@
   <div class="wrap sf-bottom">© 2026 Legalid · AML povinnosti podle zákona č. 253/2008 Sb.</div>
 </footer>
 
+<!-- Minimální patička pro přihlášenou aplikaci (AML / Klienti / Archiv) — marketingová
+     site-footer se v těchto pohledech skryje (viz body.app-view v styles.css). -->
+<footer class="app-footer" id="appFooter">
+  <div class="wrap app-footer-row">
+    <span class="af-ver">Verze 1.0</span>
+    <span class="af-sep" aria-hidden="true">·</span>
+    <button class="af-link" onclick="navigate('/soukromi')">Ochrana dat</button>
+    <span class="af-sep" aria-hidden="true">·</span>
+    <button class="af-link" onclick="navigate('/soukromi#bezpecnost')">Bezpečnost</button>
+    <span class="af-sep" aria-hidden="true">·</span>
+    <a class="af-link" href="mailto:info@legalid.cz">info@legalid.cz</a>
+  </div>
+</footer>
+
 <div class="toast" id="toast"></div>
 
 <div class="post-print-toast" id="postPrintToast">
@@ -771,6 +781,11 @@
     <!-- Sekce „Doložka — rozměry" a „Štítky do knihy — rozměry" odstraněny z globálního
          Nastavení (modulové nastavení patří do modulu). Doložka — rozměry se nastavuje
          přímo v náhledu tisku (Doložka). Tuning rozměrů štítků smazán — obnovitelné z gitu. -->
+
+    <div class="cfg-links">
+      <button class="cfg-link" onclick="closeCfgPanel();navigate('/soukromi')">Ochrana dat</button>
+      <button class="cfg-link" onclick="closeCfgPanel();navigate('/soukromi#bezpecnost')">Bezpečnost</button>
+    </div>
 
   </div>
 </div>
